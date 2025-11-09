@@ -1,0 +1,142 @@
+---
+title: getPresence
+description: Retrieves the full presence data for a given wallet address from the node's local presence list.
+status: Finalized
+---
+
+## Introduction
+
+The `getPresence` method is a key part of Ixian's peer discovery system. It allows a client to query a node for the "presence" of another network participant, using their wallet address as a unique identifier.
+
+Presence data is a signed, time-limited data structure that serves as a verifiable claim that a node is online and provides the necessary information to establish a connection with it (e.g., its IP address and port). This endpoint queries the node's local `PresenceList` cache for the most recently received presence data for the specified address.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                            |
+| :------- | :------- | :------- | :----------------------------------------------------- |
+| `wallet` | `string` | Yes      | The base58-encoded Ixian wallet address to look up.    |
+
+### Example POST Request
+
+```json
+POST /getPresence
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getPresence",
+  "params": {
+    "wallet": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getPresence?wallet=16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo
+```
+
+---
+
+## Response
+
+If a presence record for the given address exists in the node's cache, the `result` is a complex `Presence` object. If the address is not found (i.e., the peer is offline or its presence has not propagated to this node), the `result` will be `null`.
+
+### Result: `Presence` Object Structure
+
+The top-level object contains the core identity and a list of network endpoints.
+
+| Name      | Type                    | Description                                                                                         |
+| :-------- | :---------------------- | :-------------------------------------------------------------------------------------------------- |
+| `version` | `integer`               | The version of the presence data structure.                                                         |
+| `wallet`  | `Address Object`        | A nested object containing various representations of the wallet's address. See table below.        |
+| `pubkey`  | `string`                | The full public key of the wallet address.                                                          |
+| `metadata`| `any \| null`           | Optional, application-specific metadata.                                                            |
+| `addresses`| `PresenceAddress[]`    | An array of network endpoints where the peer can be reached. See `PresenceAddress` table below.     |
+
+### Nested Structure: `Address` Object
+
+This object provides the wallet address in multiple formats.
+
+| Name                | Type     | Description                                                          |
+| :------------------ | :------- | :------------------------------------------------------------------- |
+| `base58Address`     | `string` | The standard, human-readable base58-encoded address with checksum.   |
+| `addressWithChecksum`| `string` | The raw bytes of the address including checksum, Base64-encoded.    |
+| `addressNoChecksum` | `string` | The raw bytes of the address without checksum, Base64-encoded.      |
+| `sectorPrefix`      | `string` | The S2 sector prefix derived from the address, Base64-encoded.      |
+
+### Nested Structure: `PresenceAddress` Object
+
+Each object in the `addresses` array represents a specific network endpoint for the peer.
+
+| Name           | Type                | Description                                                                                     |
+| :------------- | :------------------ | :---------------------------------------------------------------------------------------------- |
+| `version`      | `integer`           | The version of this address entry structure.                                                    |
+| `device`       | `string`            | A unique identifier for the specific device or client.                                          |
+| `address`      | `string`            | The network endpoint, typically in `IP_ADDRESS:PORT` format.                                    |
+| `type`         | `string`            | A single character indicating the node type (`M` for Master, `R` for Relay, `C` for Client).    |
+| `nodeVersion`  | `string`            | The software version of the client at this endpoint.                                            |
+| `lastSeenTime` | `integer`           | The Unix Epoch timestamp when this presence was last updated.                                   |
+| `signature`    | `string`            | A cryptographic signature of the presence data, proving authenticity.                           |
+| `powSolution`  | `PoWSolution Object`| **Conditional.** If present, contains the Proof of Work solution that grants signing eligibility. See table below. |
+
+### Nested Structure: `PoWSolution` Object
+
+This object contains the details of a valid PoW solution.
+
+| Name          | Type        | Description                                                          |
+| :------------ | :---------- | :------------------------------------------------------------------- |
+| `blockNum`    | `integer`   | The block height for which this solution is valid.                   |
+| `solution`    | `string`    | The successful hash solution, Base64-encoded.                        |
+| `signingPubKey`| `string`    | The public key used for signing.                                     |
+| `checksum`    | `string`    | A checksum of the PoW solution data.                                 |
+| `difficulty`  | `IxiNumber` | The difficulty target achieved by this solution, as a string.        |
+| `bits`        | `integer`   | The difficulty represented in a compact "bits" format.                 |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "version": 1,
+    "wallet": {
+      "base58Address": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo",
+      "...": "..."
+    },
+    "pubkey": "AAIAAMNDF...AAEAAQ==",
+    "metadata": null,
+    "addresses": [
+      {
+        "address": "10.24.150.3:11235",
+        "type": "M",
+        "lastSeenTime": 1763047461,
+        "signature": "lcbeph...R0s=",
+        "powSolution": {
+          "blockNum": 69060,
+          "difficulty": "443751014.36978950",
+          "...": "..."
+        }
+      }
+    ]
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Liveness Check:** A `null` result is the expected response when a peer is offline. Applications should treat a `null` result as "user not found" or "user offline."
+*   **Local Cache:** This endpoint queries the node's local `PresenceList`, which is a cache. The data is only as fresh as the last `keep-alive` message received from the target peer. There may be a small delay between a peer coming online and its presence propagating to the queried node.
+*   **Multiple Endpoints:** A single identity (wallet address) can have multiple `PresenceAddress` entries if, for example, the user is running a wallet on their desktop and mobile phone simultaneously. The `device` field helps differentiate these endpoints.

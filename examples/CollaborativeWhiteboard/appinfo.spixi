@@ -1,0 +1,8 @@
+caVersion = 0
+id = com.yourname.whiteboard
+publisher = YourName
+name = Collaborative Whiteboard
+version = 1.0.0
+capabilities = multiUser
+minUsers = 2
+maxUsers = 2

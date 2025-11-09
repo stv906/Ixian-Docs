@@ -1,0 +1,92 @@
+---
+title: myPubKey
+description: Retrieves the public key of the primary address for a given wallet.
+status: Finalized
+---
+
+## Introduction
+
+The `myPubKey` method retrieves the full public key associated with the primary address of a wallet managed by the node. The public key is a core component of a wallet's cryptographic identity and is used to verify signatures on transactions originating from the wallet's primary address.
+
+This endpoint provides a direct way to query this essential piece of data.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                             |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded Ixian wallet address to query. If omitted, it defaults to the node's primary wallet. |
+
+### Example POST Request
+
+```json
+POST /myPubKey
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "myPubKey",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /myPubKey?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a single hex-encoded string representing the public key.
+
+### Result Fields
+
+| Name     | Type     | Description                                                          |
+| :------- | :------- | :------------------------------------------------------------------- |
+| `result` | `string` | The hex-encoded public key of the wallet's primary address. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "04a3f8c...9e5a5dbba6806b373a395795eaa0a78126cb455e7682fd275842d8e87c2b357fa7663f57b8d023070d4dd85a3d5ec1bff5244091383101e0ccc928f386ad995dfe10b8230a4fda055984f32859caaff4956fcabcbd941825fba67dae3bb488b25c752195b4b923153a9598308c48b83bb7c32091494403d7d33332bd1b794849242ac9c03f096985af863f86b422adcf7419e3f24529685375103f89f55191f255428398f6e61be60031dcea382c9caa09cbb85620c8535cc8142878539b7de8ae8070583ff61e63b9d02edee163fd082a31722778ba7b5c14645af78b8848c7acec20e565f985e9ef153371cef7",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error may be returned if, for example, the provided wallet address is in an invalid format.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid address format."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Primary Address Only:** This method returns the public key for the wallet's **primary address**. It does not provide the public keys for any other addresses that may be controlled by the same wallet (e.g., change addresses).
+*   **Encoding:** The public key is always returned as a hexadecimal string.
+*   **Default Wallet:** If the `wallet` parameter is not provided, the query will execute on the default wallet loaded by the DLT node.

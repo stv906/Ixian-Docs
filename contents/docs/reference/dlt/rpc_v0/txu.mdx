@@ -1,0 +1,111 @@
+---
+title: txu
+description: Retrieves a paginated list of unapplied (unconfirmed) transactions from the node's memory pool.
+status: Finalized
+---
+
+## Introduction
+
+The `txu` method provides a direct view into the node's transaction memory pool (often called the "mempool"). It retrieves a list of transactions that have been received and validated by the node but are still waiting to be included in a block by the consensus algorithm.
+
+This endpoint is essential for monitoring the state of pending transactions, checking if a recently broadcast transaction is present in the network's queue, or for applications that need to react to transactions before they are officially confirmed.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `fromIndex` | `integer` | No | The starting index (offset) for the transaction list within the mempool. Defaults to `0`. |
+| `count` | `integer` | No | The maximum number of transactions to return. Defaults to `50`. |
+
+### Example POST Request
+
+```json
+POST /txu
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "txu",
+  "params": {
+    "fromIndex": 0,
+    "count": 5
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /txu?fromIndex=0&count=5
+```
+
+---
+
+## Response
+
+The `result` is a JSON object where each key is a unique transaction ID and its corresponding value is the full `Transaction` object.
+
+### Result Structure
+
+The returned object is a map of transaction IDs to transaction objects.
+
+```json
+{
+    "unconfirmed-tx-id-1": { ...Transaction Object 1... },
+    "unconfirmed-tx-id-2": { ...Transaction Object 2... },
+    ...
+}
+```
+
+The structure of the inner `Transaction` object is identical to the one defined in the [`getTransaction`](./tx_get-transaction#result-1-transaction-object-default) documentation. A key characteristic of these transactions is that their `applied` field will be `0`.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "69501-ABcde...": {
+      "id": "69501-ABcde...",
+      "version": 7,
+      "blockHeight": "69501",
+      "type": "0",
+      "amount": "10.00000000",
+      "applied": "0",
+      "from": { "...": "..." },
+      "to": { "...": "..." },
+      ...
+    },
+    "69502-FGhij...": {
+      "id": "69502-FGhij...",
+      "version": 7,
+      "blockHeight": "69502",
+      "type": "0",
+      "amount": "123.45600000",
+      "applied": "0",
+      "from": { "...": "..." },
+      "to": { "...": "..." },
+      ...
+    }
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Mempool Only:** This method exclusively queries the transaction memory pool. It will **not** return any transaction that has already been confirmed and included in the blockchain. For confirmed transactions, use [`getTransaction`](./tx_get-transaction) or [`tx`](./tx).
+*   **Node-Specific View:** The contents of the mempool can differ between nodes on the network based on which transactions they have received and validated. The response reflects the state of the mempool on the specific node you are querying.
+*   **Volatile Data:** The list of unapplied transactions is highly dynamic. Transactions are removed from this list as soon as they are included in a new block. Therefore, subsequent calls to this endpoint may yield different results.
+*   **Pagination:** The `fromIndex` and `count` parameters can be used to page through the current list of unapplied transactions.
+*   **Response Format:** The response is a JSON object (a map), not an array. This allows for direct lookup of a transaction by its ID if it exists in the result set.

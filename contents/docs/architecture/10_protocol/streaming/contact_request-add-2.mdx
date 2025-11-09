@@ -1,0 +1,25 @@
+---
+title: requestAdd2 (40)
+description: A request to add a user as a contact.
+---
+
+The `requestAdd2` message is the standard, version-aware method for initiating a new contact connection. The sender includes their public key and the maximum protocol version they support. The entire message is signed to prove ownership of the sending address.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `maxVersion` | `IxiVarUInt` | 1 | | The maximum S2 protocol version the sender supports. |
+| `publicKey` | `IxiBytes` | * | * | The sender's public key. The address derived from this key must match the sender's address in the `StreamMessage` envelope. |
+
+## Behavioral Notes
+
+*   **Sending:** A user sends this message to a new contact's address. The `StreamMessage` containing it MUST be signed using the private key corresponding to the `publicKey` in the payload.
+*   **Receiving:** Upon receipt, the recipient's client verifies the signature of the `StreamMessage`. If valid, it adds the sender to its contact list with a "Request Received" status and stores their public key and protocol version.
+*   **User Action:** The recipient's client should then display a notification to the user, allowing them to accept or decline the contact request. Accepting the request triggers sending an `acceptAdd2` message.
+*   **Version Negotiation:** The `maxVersion` field allows for future protocol upgrades. The recipient will use this information to decide which protocol version to use when replying with `acceptAdd2`.

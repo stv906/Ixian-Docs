@@ -1,0 +1,107 @@
+---
+title: unloadWallet
+description: Unloads a specified wallet from the node's active memory, making it unavailable for subsequent API calls.
+status: Finalized
+---
+
+## Introduction
+
+The `unloadWallet` method is a state-changing administrative endpoint that removes a previously loaded wallet from the node's active memory. This is the direct counterpart to the [`loadWallet`](./wallet_load-wallet) method.
+
+Unloading a wallet securely purges its private keys and other sensitive data from the node's memory. Once unloaded, the wallet can no longer be used for signing transactions, checking balances, or any other wallet-related operations until it is loaded again. This is an essential security practice for wallets that are not in active use.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                |
+| :------- | :------- | :------- | :----------------------------------------------------------------------------------------- |
+| `wallet` | `string` | Yes      | The base58-encoded primary address of the wallet to unload from the node's active memory. |
+
+### Example POST Request
+
+```json
+POST /unloadWallet
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "unloadWallet",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /unloadWallet?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a simple string indicating the outcome of the operation.
+
+### Result Fields
+
+| Name     | Type     | Description                                                          |
+| :------- | :------- | :------------------------------------------------------------------- |
+| `result` | `string` | A status message, either `"OK"` on success or `"FAIL"` on failure. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "OK",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Failure Response
+
+This response is returned if the specified wallet was not found among the loaded wallets.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "FAIL",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error is returned if the mandatory `wallet` parameter is missing.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Missing parameter 'wallet'."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Security:** This is a security-critical operation as it directly affects the availability of private keys in memory. Access to this endpoint should be tightly controlled.
+*   **Stateful Operation:** This call changes the state of the node. After a wallet is successfully unloaded, any subsequent API call that attempts to use that wallet (by specifying its address in the `wallet` parameter) will fail.
+*   **No File Deletion:** This method **only** removes the wallet from the node's active memory. The original wallet file on the server's filesystem is **not** deleted or modified in any way.
+*   **Identification:** The node identifies the wallet to unload based on the provided address.
+:** The node identifies the wallet to unload based on the provided address.

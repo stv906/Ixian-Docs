@@ -1,0 +1,161 @@
+---
+title: status
+description: Retrieves a comprehensive overview of the node's current state, including network, blockchain, and performance metrics.
+status: Finalized
+---
+
+## Introduction
+
+The `status` method is a powerful diagnostic endpoint that provides a detailed snapshot of the node's health and operational state. It returns a wide range of information, from basic version and network details to in-depth blockchain statistics, memory pool counts, and internal queue lengths.
+
+This endpoint is the primary tool for administrators to monitor a node's performance, diagnose issues, and verify its synchronization with the rest of the network. It offers multiple verbosity levels to tailor the amount of detail returned.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `verbose` | `boolean` | No | If present (or set to `true`), returns a more detailed set of statistics, including consensus details, supply, and presence counts. |
+| `vv` | `boolean` | No | If present (or set to `true`), returns the most detailed set of statistics, including all `verbose` fields plus internal queue depths and state checksums. |
+
+### Example POST Request
+
+```json
+POST /status
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "status",
+  "params": {
+    "vv": true
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /status?verbose=true
+```
+
+---
+
+## Response
+
+The `result` is a JSON object containing key-value pairs that describe the node's status. The fields are grouped below by verbosity level.
+
+### Standard Fields (Always Returned)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Core Version` | `string` | The version of the Ixian Core software. |
+| `Node Version` | `string` | The specific version of the node application (e.g., `xdc-0.9.7-r`). |
+| `Network type` | `string` | The network the node is connected to (e.g., `main`, `test`, `reg`). |
+| `My time` | `long` | The node's current Unix timestamp. |
+| `Network time difference` | `long` | The time difference in seconds between the node and the perceived network time. |
+| `My External IP` | `string` | The public IP address of the node as seen by its peers. |
+| `My Listening Port` | `integer` | The port on which the node is listening for incoming P2P connections. |
+| `Node Deprecation Block Limit`| `long` | The block height at which this node version will be considered deprecated. |
+| `Update` | `string` | Indicates if a software update is available. |
+| `DLT Status` | `string` | The overall status of the DLT, can be "Active", "Synchronizing", or an error state. |
+| `Core Status` | `integer` | The internal status code of the Ixian Core. |
+| `Block Processor Status` | `string` | The status of the block processing module, typically "Running" or "Stopped". |
+| `Block Height` | `long` | The block number of the latest block in the node's local blockchain. |
+| `Block Version` | `integer` | The version of the latest block. |
+| `Block Signature Count` | `integer` | The number of signatures on the latest block. |
+| `Block Total Signer Difficulty`| `string` | The sum of the PoW difficulty of all signers for the latest block. |
+| `Block generated seconds ago`| `long` | The time elapsed since the last block was received. |
+| `Network Block Height` | `long` | The highest block height known to the node from its peers. |
+| `Node Type` | `char` | The node's presence type (e.g., 'M' for Master Node, 'R' for Relay). |
+| `Connectable` | `boolean` | Indicates if the node is reachable from the public internet on its listening port. |
+| `Blockchain Scanning Active`| `boolean` | `true` if the activity scanner is currently running. |
+| `Activity Scanner Last Block`| `long` | The last block number processed by the activity scanner. |
+| `Network Clients` | `array` | A list of incoming peer connections. |
+| `Network Servers` | `array` | A list of outgoing peer connections. |
+
+### Verbose Fields (`verbose` or `vv`)
+
+Includes all Standard fields plus the following:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Required Consensus` | `integer` | The number of signatures required for the next block to be accepted. |
+| `Signer Difficulty` | `string` | The minimum PoW difficulty required to become an eligible signer. |
+| `Signer Bits` | `string` | The compact representation of the signer difficulty target (hex). |
+| `Signer Hashrate` | `double` | The node's current hashrate for solving signer PoW challenges. |
+| `Signer Last PoW Solution`| `object` | Details of the last valid PoW solution found by the node. |
+| `Signer Active PoW Solution`| `object` | Details of the best (highest difficulty) PoW solution the node is currently using. |
+| `Wallets` | `long` | The total number of wallets in the global wallet state. |
+| `Presences` | `integer` | The total number of active presences known to the node. |
+| `Supply` | `string` | The total calculated supply of IXI coins. |
+| `Applied TX Count` | `long` | The total number of confirmed transactions on the blockchain. |
+| `Unapplied TX Count` | `long` | The number of unconfirmed transactions in the node's memory pool. |
+| `Names` | `long` | The total number of registered names in the IXI-NS. |
+| `Names Reward Pool` | `string` | The current balance of the IXI-NS reward pool. |
+| `Masters` / `Relays` / `Clients` | `integer` | The count of each presence type on the network. |
+
+### Very Verbose Fields (`vv` only)
+
+Includes all Standard and Verbose fields plus the following:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Queues` | `object` | An object detailing the current size of various internal processing queues (e.g., network receive/send, logging, storage). |
+| `WS Checksum` | `string` | The checksum of the node's entire Wallet State. Used for debugging state inconsistencies. |
+| `RN Checksum` | `string` | The checksum of the node's entire Registered Name State. Used for debugging state inconsistencies. |
+
+### Example Success Response (`vv`)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "Core Version": "xcore-0.9.7c",
+    "Node Version": "xdc-0.9.7-r",
+    "Network type": "reg",
+    "My time": 1763059207,
+    "DLT Status": "Active",
+    "Core Status": 1,
+    "Block Height": 69476,
+    "Network Block Height": 69476,
+    "Connectable": true,
+    "Required Consensus": 2,
+    "Signer Difficulty": "20000000.00000002",
+    "Wallets": 2,
+    "Supply": "1000068017377.32344721",
+    "Applied TX Count": 10007,
+    "Unapplied TX Count": 0,
+    "Queues": {
+      "RcvLow": 0, "RcvMedium": 0, "RcvHigh": 0, "SendClients": 0, "SendServers": 0,
+      "Logging": 0, "Pending Transactions": 0, "Storage": 0, "Inventory": 65262,
+      "Inventory Processed": 65262
+    },
+    "WS Checksum": "dbed3430ab...",
+    "RN Checksum": "b6205c8de5...",
+    "Network Clients": [],
+    "Network Servers": [ "10.24.150.3:11235" ],
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **`DLT Status` States:**
+    *   `Active`: The node is synchronized and operating normally.
+    *   `Synchronizing`: The node is actively downloading blocks to catch up with the network.
+    *   `ErrorLongTimeNoBlock`: The node has not seen a new block for an extended period (1800 seconds), suggesting a network or consensus problem.
+    *   `ErrorForkedViaUpgrade`: The node has detected a network upgrade and may be on a fork.
+*   **Time Synchronization:** The `Network time difference` fields are crucial for consensus. A large difference may indicate a local clock issue that could affect the node's ability to participate in block signing.
+*   **Queue Monitoring (`vv`):** High or persistently growing numbers in the `Queues` object can indicate performance bottlenecks, such as a slow disk (`Storage`), a busy network, or a high volume of transactions (`Pending Transactions`).

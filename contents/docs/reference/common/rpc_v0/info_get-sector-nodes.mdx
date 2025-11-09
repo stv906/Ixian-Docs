@@ -1,0 +1,124 @@
+---
+title: getSectorNodes
+description: Retrieves a list of S2 Relay Nodes responsible for a specific network sector, identified by address or prefix.
+status: Finalized
+---
+
+## Introduction
+
+The `getSectorNodes` method is the first step in the trustless client discovery process on the Ixian S2 network. The S2 network is partitioned into "sectors" to ensure scalability. Each Ixian address algorithmically belongs to exactly one sector. This endpoint allows a client to query the DLT for a list of S2 Relay Nodes that are currently responsible for managing a specific sector.
+
+A sector can be identified in one of two ways:
+1.  By providing an `address`, from which the node will calculate the corresponding sector prefix.
+2.  By providing the raw `prefixHex` of the sector directly.
+
+Once a client has this list, it can proceed to query one of these S2 nodes for the specific presence data of the target address using the [`getPresence`](./info_get-presence) method.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name            | Type     | Required    | Description                                                                                                   |
+| :-------------- | :------- | :---------- | :------------------------------------------------------------------------------------------------------------ |
+| `maxRelayCount` | `string` | Yes         | A string-encoded integer specifying the maximum number of S2 Relay Node addresses to return.                  |
+| `address`       | `string` | Conditional | The base58-encoded Ixian address of the peer you are trying to find. The node will derive the sector from this. |
+| `prefixHex`     | `string` | Conditional | The hex-encoded sector prefix to query directly.                                                              |
+
+**Note:** Exactly one of `address` or `prefixHex` must be provided in the request.
+
+### Example POST Request (using `address`)
+
+```json
+POST /getSectorNodes
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getSectorNodes",
+  "params": {
+    "address": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo",
+    "maxRelayCount": "10"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (using `address`)
+
+```
+GET /getSectorNodes?address=16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo&maxRelayCount=10
+```
+
+---
+
+## Response
+
+The response `result` is a JSON array of `Address` objects, where each object represents an S2 Relay Node responsible for the queried sector.
+
+### Result: `Address` Object Structure
+
+Each object in the array provides the address of an S2 Relay Node in multiple formats.
+
+| Name                | Type     | Description                                                          |
+| :------------------ | :------- | :------------------------------------------------------------------- |
+| `version`           | `integer`| The version of the address data structure.                           |
+| `base58Address`     | `string` | The standard, human-readable base58-encoded address with checksum.   |
+| `addressWithChecksum`| `string` | The raw bytes of the address including checksum, Base64-encoded.    |
+| `addressNoChecksum` | `string` | The raw bytes of the address without checksum, Base64-encoded.      |
+| `sectorPrefix`      | `string` | The S2 sector prefix derived from this node's address, Base64-encoded. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "version": 1,
+      "base58Address": "5EUhCdjovkDBaSrtMYL5ziKRZL...RS9ZJUvJXhgLRsaUvfBS3SVaJY",
+      "addressNoChecksum": "Af1BvK8SjeZQAv2Aqw5Ae...T3pXojIJ88miN0ojBZcDNUIF0XEb",
+      "sectorPrefix": "6AndBvpD/1w0mA==",
+      "nonce": null,
+      "pubKey": null
+    },
+    {
+      "version": 1,
+      "base58Address": "4NbHDUyDDVQknShqc5AagG2...5hWr43PkpyWApbQMwR4vUF",
+      "addressNoChecksum": "AZXDuoGAcmDquPWUa0JG...kcKE2IpqtMWv3zRPZv2bBnyTDq3yKk6",
+      "sectorPrefix": "7NS91EfToki4Kg==",
+      "nonce": null,
+      "pubKey": null
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if neither `address` nor `prefixHex` is provided.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "prefixHex or address parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Discovery Lifecycle Step 1:** This endpoint is the first of two main steps in locating a peer. After getting the list of sector nodes from this endpoint, the client must then query one of those nodes using [`getPresence`](./info_get-presence) to get the target's specific connection details.
+*   **Sector Derivation:** When you provide an `address`, the node calculates the corresponding sector prefix by taking a truncated `sha3_512` hash of the address's raw bytes (without the checksum).
+*   **Decentralized Source of Truth:** The mapping of S2 Relay Nodes to sectors is maintained and secured by the Ixian DLT itself, making this a decentralized and trustless lookup mechanism.

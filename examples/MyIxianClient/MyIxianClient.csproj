@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Import Ixian-Core shared project -->
+  <Import Project="..\Ixian-Core\IXICore.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <!-- Ixian-Core dependencies -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Open.Nat" Version="2.1.0" />
+  </ItemGroup>
+</Project>

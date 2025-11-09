@@ -1,0 +1,29 @@
+---
+title: s2data (26)
+description: Envelope for transmitting Streaming Protocol messages across the S2 overlay network.
+status: Finalized
+---
+
+The `s2data` message is a Core Protocol envelope that wraps a complete **[Streaming Protocol message](../streaming/aa_stream-message)** for transmission across the S2 overlay network. It allows the more complex Streaming Protocol to be serialized and routed on top of the Core Protocol layer.
+
+S2 nodes receive `s2data` messages and forward them toward their final recipient based on the destination address contained within the inner `StreamMessage`. This enables efficient message routing without requiring S2 nodes to process the full message contents.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The entire payload of an `s2data` message consists of a single field: the raw bytes of a complete, serialized `StreamMessage` object.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :-
+| `streamMessage` | `IxiBytes` | | | The full binary representation of a single `StreamMessage` object. |
+
+For a detailed breakdown of the internal structure of the `streamMessage` field, see the **[Streaming Protocol Envelope](../streaming/aa_stream-message)** document.
+
+## Behavioral Notes
+
+-   **Routing by S2 Nodes:** S2 nodes parse the inner `StreamMessage` to extract the `recipient` address and forward the message toward that destination using the sector-based routing system.
+-   **Forwarding:** S2 nodes forward the entire, original `s2data` payload without modification. They act as message relays rather than message processors.
+-   **Error Handling:** If an S2 node cannot find a route to the recipient, it generates an `s2failed` error message back to the original sender.

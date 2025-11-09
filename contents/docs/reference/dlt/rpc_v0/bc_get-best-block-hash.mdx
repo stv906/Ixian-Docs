@@ -1,0 +1,68 @@
+---
+title: getBestBlockHash
+description: Retrieves the checksum (hash) of the most recent block in the node's local blockchain.
+status: Finalized
+---
+
+## Introduction
+
+The `getBestBlockHash` method is a simple utility endpoint that returns the unique identifier - the block checksum or hash - of the latest block at the tip of the node's local blockchain.
+
+This hash serves as a precise fingerprint for the head of the chain. It is commonly used to verify that a node is on the same chain as its peers, which is a more accurate synchronization check than just comparing block heights, as it also detects potential forks.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /getBestBlockHash
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getBestBlockHash",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getBestBlockHash
+```
+
+---
+
+## Response
+
+The `result` is a single string containing the hexadecimal representation of the latest block's checksum.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The hex-encoded checksum of the best known block. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local State:** The returned hash is for the head of the node's **local** blockchain. If the node is not fully synchronized, this will be the hash of an older block.
+*   **Unique Chain Identifier:** Unlike the block height, this hash uniquely identifies a specific block and, by extension, the specific version of the blockchain history leading up to it.
+*   **Fork Detection:** Comparing the `getBestBlockHash` result between two nodes is the most reliable way to confirm they are on the same chain. If their block heights are identical but their best block hashes differ, it indicates that one or both nodes are on a fork.

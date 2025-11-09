@@ -1,0 +1,25 @@
+---
+title: nick (2)
+description: Provides the nickname of a contact.
+---
+
+The `nick` message provides a user's chosen display name (nickname) to a contact. It is sent in direct response to a `getNick` message and may also be sent proactively after a handshake is completed to ensure peers have up-to-date information.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string. Its length is handled by the `SpixiMessage` envelope.
+
+## Payload Structure
+
+The entire payload of a `nick` message consists of a single field containing the user's nickname.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `nickname` | `string` | 1 | * | The UTF-8 encoded public nickname of the user. |
+
+## Behavioral Notes
+
+*   **Receiving:** When a node receives a `nick` message, it must update its local address book or contact list, associating the provided nickname with the sender's address.
+*   **Verification:** The `StreamMessage` that carries this payload must be signed. The recipient MUST verify the signature against the sender's public key before accepting the nickname. This prevents a malicious actor from spoofing another user's display name.
+*   **Bot Context:** In a group chat managed by a bot, the `real_sender_address` from the `StreamMessage` envelope is used to associate the nickname with the correct group member, rather than the bot's own address.
+*   **Proactive Update:** A client may send a `nick` message to all contacts after the user changes their nickname locally.

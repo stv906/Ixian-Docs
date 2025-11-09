@@ -1,0 +1,20 @@
+---
+title: pubKey (27)
+description: Provides a public key in response to a request.
+---
+
+The `pubKey` message is sent in response to a `getPubKey` request. It provides the public key associated with a specific address, enabling signature verification.
+
+### Core DataTypes
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `publicKey` | `IxiBytes` | * | * | The public key being provided. |
+
+## Behavioral Notes
+
+*   **Recipient Action:** Upon receiving a `pubKey` message, the client should store the `publicKey` and associate it with the corresponding user's address. It can then use this key to verify any past or future signed messages from that user.

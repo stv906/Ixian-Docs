@@ -1,0 +1,145 @@
+---
+title: getLastMessages
+description: Retrieves a list of the most recent messages from the local history for a specific contact and channel.
+status: Finalized
+---
+
+## Introduction
+
+The `getLastMessages` method is a read-only endpoint that allows applications to query the node's local message database. It retrieves a specified number of the most recent messages for a given contact on a particular communication channel.
+
+This is the primary method for fetching conversation history to display in a chat interface or for an application to review the recent state of its communication with a peer.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the contact whose messages you want to retrieve. |
+| `count` | `integer` | No | The maximum number of messages to return. Defaults to `10`. |
+| `channel` | `integer` | No | The communication channel ID to retrieve messages from. Defaults to `0`. |
+
+### Example POST Request
+
+```json
+POST /getLastMessages
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getLastMessages",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "count": 3,
+    "channel": 0
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getLastMessages?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&count=3
+```
+
+---
+
+## Response
+
+The `result` is a JSON array of `Message` objects, ordered from oldest to newest within the retrieved set.
+
+### Result: `Message` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | A unique identifier for the message. |
+| `message` | `string` | The plain-text content of the message. |
+| `timestamp` | `long` | The Unix timestamp of when the message was originally created. |
+| `receivedTimestamp`| `long` | The Unix timestamp of when the message was processed by the local node. |
+| `localSender` | `boolean` | `true` if the message was sent by the local node; `false` if it was received from the contact. |
+| `senderNick` | `string` | The nickname of the sender at the time the message was sent. |
+| `type` | `integer` | A numeric code indicating the message type (e.g., `0` for standard chat, `11` for handshake events). |
+| `read` | `boolean` | For received messages, `true` if the message has been marked as read. |
+| `confirmed` | `boolean` | For sent messages, `true` if the recipient has confirmed delivery. |
+| `errorSending` | `boolean` | For sent messages, `true` if an error occurred during transmission. |
+| `reactions` | `object` | A map of reactions that have been applied to this message. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "id": "z9n583V7kEG9SZr9OLKZUg==",
+      "message": "Hi",
+      "timestamp": 1761072734,
+      "receivedTimestamp": 1761072734,
+      "localSender": true,
+      "senderNick": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "type": 11,
+      "read": false,
+      "confirmed": false,
+      "errorSending": false,
+      "reactions": {}
+    },
+    {
+      "id": "jTyH736QB0GEzHs+wX7XCw==",
+      "message": "Temp",
+      "timestamp": 1761569723,
+      "receivedTimestamp": 1761590522,
+      "localSender": false,
+      "senderNick": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "type": 0,
+      "read": false,
+      "confirmed": false,
+      "errorSending": false,
+      "reactions": {}
+    },
+    {
+      "id": "t6HOvYZ0Mkq8MCYyKUcsCg==",
+      "message": "Temperature: 46.2'C",
+      "timestamp": 1761590524,
+      "receivedTimestamp": 1761590524,
+      "localSender": true,
+      "senderNick": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "type": 0,
+      "read": true,
+      "confirmed": true,
+      "errorSending": false,
+      "reactions": {}
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Data Query:** This method reads from the node's local database. It does not perform any network requests. The history is only as complete as what the node has stored.
+*   **Pagination:** This endpoint provides a simple way to get the *last N* messages. For full, paginated history, a different method with offset support may be required.
+*   **Channels:** The `channel` parameter is used to separate different types of conversations or data streams with the same contact. Most standard text chats occur on channel `0`.
+*   **Message Types:** The `type` field can indicate system messages (like handshake events, where `message` may be empty) or different kinds of application messages beyond standard chat.

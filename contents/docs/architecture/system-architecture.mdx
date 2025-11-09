@@ -1,0 +1,407 @@
+---
+title: System Architecture Overview
+description: High-level architecture of the Ixian Platform, covering the DLT consensus layer, S2 streaming network, and client discovery mechanisms.
+---
+
+## Production Capacity
+
+**The Ixian Platform is running at production scale with proven throughput:**
+- **DLT Consensus Layer**: 2,340 TPS (soft-limited, scalable beyond)
+- **S2 Streaming Network**: Horizontal scalability through relay node addition
+- **Current Deployment**: Live network capable of handling millions of daily transactions
+
+---
+
+## The No-Lemma Approach
+
+Traditional blockchains face the **scalability trilemma**: security, decentralization, and scalability. Pick two. Ixian's architecture sidesteps this entirely through two design choices:
+
+**1. Node Clustering (Not Network Sharding)**
+
+Instead of sharding the blockchain into separate chains (creating coordination complexity, cross-shard atomicity problems), individual DLT nodes scale horizontally. A single logical node can be implemented as a microservices cluster across multiple computers:
+- Network sees one node identity, one consensus participant
+- Reality: distributed transaction validation, parallel state management, coordinated block signing across machines
+- Load-balanced multi-IP ingestion for parallel data ingest over distinct internet connections
+- Result: **Unbounded throughput scaling by adding hardware, with unified ledger consistency**
+
+**2. Decoupled Consensus & Communication**
+
+The DLT handles consensus and state. The S2 overlay handles P2P communication and transaction routing. They're separate layers:
+- DLT doesn't need to broadcast every message to every node
+- Direct P2P negotiation happens on S2, then only finalized transactions hit the ledger
+- Result: **Massive scalability without sacrificing decentralization or security**
+
+**No Trilemma = All Three:**
+- **Security**: Post-quantum cryptography (ML-KEM), RSA-4096, no consensus dependency for confidentiality
+- **Decentralization**: Anyone runs a node (single machine or cluster), no validator cartel, no shard coordination required
+- **Scalability**: 2,340 TPS per node today, unbounded with clustering. Live network can handle millions of daily transactions
+
+---
+
+## Platform Components
+
+The Ixian Platform consists of three interconnected layers:
+
+### 1. Ixian DLT (Distributed Ledger Technology)
+
+The **consensus and coordination layer** that maintains the authoritative state of:
+- **Wallet Balances**: Account-based balance tracking for all addresses
+- **Transaction History**: Immutable record of all value transfers
+- **IXI Names**: Decentralized name registry (human-readable identities)
+- **Base Presence Records**: Authoritative list of active Master nodes and S2 nodes
+
+**Node Types**:
+- **Master Nodes (M)**: Full consensus participants that:
+  - Validate and sign blocks (requiring PoW eligibility)
+  - Maintain complete blockchain state
+  - Serve blockchain data to clients
+  - Participate in block generation election
+  - Require minimum PoW for consensus participation
+
+**Consensus**: Proof of Collaborative Work (PoCW) - see [Ixiac Consensus](./ixiac-consensus)
+
+### 2. Ixian S2 (Streaming Layer)
+
+The **peer-to-peer communication overlay** providing:
+- **Client Discovery**: Cryptographic address-based lookup (no DNS/IP required)
+- **Message Routing**: Encrypted end-to-end message delivery
+- **Presence Distribution**: Real-time availability information
+- **Session Management**: Establishes secure communication channels
+
+**Node Types**:
+- **Relay Nodes (R)**: S2 servers that:
+  - Maintain client presences in assigned sectors
+  - Route encrypted messages between clients
+  - Provide presence lookup services
+- **Client Nodes (C)**: End-user applications:
+  - Register presence with sector-specific relay nodes
+  - Discover other clients via relay queries
+  - Establish direct P2P connections when possible
+  - Fall back to relay-mediated communication if needed
+
+**Architecture**: Starling sector-based routing - see [Trustless Client Discovery](./trustless-client-discovery)
+
+### 3. Applications & Integrations
+
+**Native Applications**:
+- **Spixi**: Secure messenger with cryptocurrency wallet
+- **QuIXI**: Integration gateway (REST API, MQTT/RabbitMQ bridges)
+- **Ixian Wallet**: Desktop/mobile cryptocurrency wallet
+
+**Third-Party Integrations**:
+- Any application implementing Ixian-Core SDK
+- IoT devices via QuIXI bridge
+- Custom decentralized applications
+
+---
+
+## Core Architecture Principles
+
+### Cryptographic Self-Authentication
+
+Traditional systems rely on:
+- **Username/Password**: Vulnerable to theft, phishing, centralized breach
+- **SSL/TLS Certificates**: Requires trusted Certificate Authorities
+- **DNS**: Centralized, censorship-prone, subject to hijacking
+
+**Ixian replaces all of this** with:
+
+```
+Identity = Cryptographic Address (derived from public key)
+Authentication = Proving ownership of corresponding private key via digital signature
+Discovery = Cryptographic address lookup (no DNS, no IP required)
+```
+
+**Key Properties**:
+- No passwords to steal or forget
+- No certificate authorities to trust or compromise
+- No centralized directories to censor or monitor
+- Identity is permanent and globally unique
+
+### Starling Sectorization Model
+
+To achieve massive scalability (billions of devices), the S2 network partitions the address space into **sectors** using deterministic cryptographic hashing:
+
+```
+addressBytes = addressNoChecksum  // Version byte + payload (without 3-byte checksum)
+fullHash = SHA3-512(addressBytes)  // 64-byte hash
+sectorPrefix = fullHash[0:10]      // First 10 bytes = sector identifier
+```
+
+**Key Properties**:
+- **Deterministic**: Same address always maps to same sector
+- **Uniform Distribution**: SHA-3 ensures even spread across 2^80 possible sectors
+- **Address Space**: 10-byte prefix provides 1,208,925,819,614,629,174,706,176 possible sector values
+- **Dynamic Assignment**: S2 relay nodes randomly select ~8 sectors to serve, weighted by their PoW
+- **Scalability**: O(1) lookup time regardless of total network size
+
+**Lookup Process**:
+1. Client A wants to contact Client B
+2. Calculate Client B's sector: `sectorPrefix = SHA3-512(B.addressNoChecksum)[0:10]`
+3. Query DLT for relay nodes currently serving that sector prefix
+4. Request Client B's presence from those sector-specific relays
+5. Verify signed presence and establish connection
+
+**Sector Assignment**:
+- Each S2 relay node periodically selects 8 random sector prefixes to serve
+- Selection weighted by relay's PoW difficulty (higher PoW = more responsibility)
+- Assignments broadcast via presence updates and frozen in DLT superblocks
+- Provides dynamic load balancing and attack resistance
+
+This architecture enables the network to scale horizontally: adding more clients requires adding more S2 relays, but **no single node** needs to track all clients.
+
+### Post-Quantum Cryptography
+
+All cryptographic operations use **hybrid schemes** combining classical and post-quantum algorithms:
+
+**Key Exchange**:
+```
+sharedSecret = RSA(ECDH(secp521r1) || ML-KEM-1024)
+```
+
+**Encryption**:
+```
+AES-256-GCM(message, key1, nonce1) -> ciphertext1
+ChaCha20-Poly1305(ciphertext1, key2, nonce2) -> finalCiphertext
+```
+
+This ensures security against both classical and quantum adversaries.
+
+---
+
+## Data Flow Examples
+
+### Transaction Submission
+
+```
+1. User creates transaction:
+   - From: source address
+   - To: destination addresses + amounts
+   - Signs with private key
+
+2. Submits to any S2 node
+
+3. Transaction is relayed by S2 to any DLT node
+
+4. Master node validates:
+   - Sufficient balance
+   - Valid signatures
+   - Correct fee
+   
+5. Broadcasts to network mempool
+
+6. Next block producer includes transaction
+
+7. Eligible signers validate block:
+   - Verify all transactions
+   - Check block structure
+   - Sign if valid
+   
+8. Once adaptive quorum reached -> block accepted
+   (Quorum = 75% of average signature count from blocks N-7 to N-16)
+
+9. After depth 5 (block N+5 accepted) -> block N signatures frozen
+
+10. After maturity period (960 blocks, ~8 hours) -> rewards distributed
+```
+
+### Client-to-Client Messaging
+
+```
+1. Client A knows Client B's Ixian address
+
+2. Client A calculates Client B's sector:
+   sector = SHA3-512(addressB_noChecksum)[0:10]
+
+3. Client A queries DLT:
+   "Which relay nodes serve this sector?"
+   
+4. DLT returns list of relay addresses
+
+5. Client A sends GetPresence to relay nodes:
+   "What's Client B's network endpoint?"
+   
+6. Relay returns signed presence:
+   {
+     address: "1.2.3.4:16262",
+     timestamp: 1700000000,
+     signature: \<Client B's signature>
+   }
+   
+7. Client A verifies signature with Client B's public key
+
+8. Client A establishes direct encrypted connection to 1.2.3.4:16262
+
+9. If direct connection fails (NAT/firewall):
+   -> Relay node acts as intermediary
+   -> End-to-end encryption maintained (relay cannot decrypt)
+```
+
+### IXI Name Resolution
+
+```
+1. User wants to contact "alice.ixi"
+
+2. Query DLT for registered name:
+   GET_REGNAME("alice.ixi")
+   
+3. DLT returns name record:
+   {
+     name: "alice.ixi",
+     address: \<Alice's Ixian address>,
+     metadata: \<optional service endpoints, contact info>,
+     expiration: block_height,
+     signature: \<registration signature>
+   }
+   
+4. Verify record signature, expiration and inclusion proofs
+
+5. Use Alice's address for standard client discovery
+```
+
+---
+
+## Network Synchronization
+
+### Block Synchronization
+
+**Full Nodes (Master/History)**:
+1. Connect to seed nodes from genesis or local directory of known peers
+2. Request missing block headers via `getBlockHeaders`
+3. Validate headers (PoW, signatures, checksums)
+4. Request full block data via `getBlockTransactions`
+5. Apply blocks to local state (WalletState, RegNameState)
+6. Verify state checksums match block headers
+7. Continue until synchronized with network tip
+
+**Light Clients**:
+1. Request only superblocks and block headers
+2. Verify Merkle proofs for included transactions
+3. Trust Master node consensus (SPV-style security)
+
+### Presence Synchronization
+
+**Master/Relay Nodes**:
+1. Receive presence updates from clients via `updatePresence`
+2. Validate PoW solutions (for M/H types)
+3. Verify signatures on keep-alive packets
+4. Store in local presence cache
+5. Broadcast to peer nodes in same sector
+6. Respond to `getPresence` requests from clients
+
+**Presence Expiration**:
+- Entries expire after 300 seconds without refresh
+- Clients must send `keepAlivePresence` every 100-200 seconds
+- Expired entries removed from presence cache
+- Network maintains only active, reachable clients
+
+---
+
+## Security Model
+
+### Threat Protection
+
+**Sybil Attacks**:
+- PoW requirement for Master/History nodes
+- Cost to create fake identities ≈ cost of PoW computation
+- Adaptive consensus adjusts to actual network participation
+
+**51% Attacks**:
+- Would require >=75% of signing power (not just hashrate)
+- Requires maintaining PoW solutions for eligibility window
+- Economically unfeasible due to reward distribution model
+
+**Eclipse Attacks**:
+- Clients connect to multiple relay nodes in target sector
+- Cross-verify presence data from different sources
+- DLT provides authoritative list of relay nodes
+
+**Replay Attacks**:
+- All messages timestamped and signed
+- Network checksum lock prevents cross-network replay
+- Presence packets expire after 300 seconds
+
+**Man-in-the-Middle**:
+- End-to-end encryption with hybrid key exchange
+- No reliance on external PKI or certificate authorities
+- Cryptographic address = public key eliminates trust requirements
+
+### Trust Assumptions
+
+**Required Trust**:
+- Cryptographic primitives (SHA3, RSA-4096, ML-KEM-1024, AES-256, ChaCha20)
+- Majority of Master nodes are honest (>50% by signing power)
+
+**NOT Required**:
+- Certificate Authorities
+- DNS providers
+- Central directories
+- Relay node operators (end-to-end encryption)
+- Any single Master node (distributed consensus)
+
+---
+
+## Performance Characteristics
+
+### Block Production
+
+- **Target Block Time**: 30 seconds
+- **Actual Variance**: ±10 seconds typical
+- **Finality**: 5 blocks (~2.5 minutes) for signature freeze
+- **Transaction Throughput**: Up to 307,020 transactions per block
+- **Block Size**: ~4.2 MB base + transaction ID data
+
+### Network Scalability
+
+- **Master Nodes**: Thousands
+- **Relay Nodes**: Millions
+- **Clients**: No practical limit (sector-based routing)
+- **Presence Lookup**: O(1) average case
+- **Message Latency**: \<1 second typical
+
+---
+
+## Evolution & Versioning
+
+### Block Versions
+
+The protocol evolves through block version upgrades:
+
+- **v0-v9**: Legacy pre-Omega
+- **v10**: Omega Lock-in (PoW eligibility activation)
+- **v11**: Omega Full (40k block difficulty adjustment)
+- **v12**: Time-based DAA, 30-block PoW validity
+- **v13**: Current mainnet version
+- **v14**: Upcoming (4x difficulty change limit factor)
+
+### Address Versions
+
+- **v0**: SHA-512 quad hash, 48 bytes
+- **v1**: SHA-512 squared + nonce, 48 bytes
+- **v2**: SHA-3-512 squared + nonce, 64 bytes (current)
+
+### Protocol Compatibility
+
+**Backward Compatibility**:
+- New blocks reference old block hashes for chain continuity
+- Legacy transaction types still supported
+- Address versions coexist on same network
+
+---
+
+## Related Documentation
+
+- **[Ixiac Consensus](./ixiac-consensus)**: Detailed PoCW specification
+- **[Trustless Client Discovery](./trustless-client-discovery)**: Starling presence system
+- **[Cryptographic Primitives](./cryptographic-primitives)**: Hash functions, ciphers, key exchange
+- **[Core Data Structures](./10_data-structures)**: Block, Transaction, Presence formats
+- **[Network Parameters](./network-parameters)**: Consensus constants and network configuration
+
+---
+
+This architecture enables a truly decentralized platform where:
+- Identity requires no central authority
+- Communication requires no trusted intermediaries
+- Discovery requires no DNS or IP knowledge
+- Security is future-proof against quantum computers
+- Scalability approaches internet-scale without central bottlenecks

@@ -1,0 +1,148 @@
+---
+title: activity2
+description: Retrieves a paginated list of historical activities for a specified wallet address.
+status: Finalized
+---
+
+## Introduction
+
+The `activity2` method is used to query the node's `ActivityStorage` for a historical log of events associated with a specific wallet. This includes transactions, mining rewards, signing rewards, and other on-chain activities.
+
+The endpoint supports pagination, allowing clients to efficiently retrieve the activity list in discrete chunks. This is the primary method for populating a user-facing transaction or activity history view.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body (recommended for complex requests) or `HTTP GET` with URL query parameters (useful for simple queries and browser-based access).
+
+### Parameters
+
+| Name         | Type     | Required | Description                                                                                                                              |
+| :----------- | :------- | :------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `wallet`     | `string` | Yes      | The base58-encoded Ixian wallet address for which to retrieve activity.                                                                  |
+| `fromId`     | `string` | No       | The Base64-encoded `id` of the last activity from the previous page. Used for pagination. If omitted, the query starts from the latest activity. |
+| `count`      | `string` | No       | The maximum number of activity items to return. Defaults to `50`.                                                                        |
+| `type`       | `string` | No       | A string-encoded integer representing the `ActivityType` to filter by. If omitted, all activity types are returned.                      |
+| `descending` | `string` | No       | If set to `"true"`, results are returned in descending order (newest first). Defaults to `false` (ascending).                             |
+
+### Example POST Request
+
+```json
+POST /activity2
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "activity2",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "count": "10",
+    "descending": "true"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+The `params` object is flattened into URL query string parameters.
+
+```
+GET /activity2?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&count=10&descending=true
+```
+
+---
+
+## Response
+
+The response format is a standard JSON-RPC object, regardless of whether the request was made via `GET` or `POST`. The `result` is an array of `ActivityObject` structures, sorted according to the request parameters.
+
+### Result: `ActivityObject` Structure
+
+| Name            | Type              | Description                                                                                                  |
+| :-------------- | :---------------- | :----------------------------------------------------------------------------------------------------------- |
+| `id`            | `string`          | A unique identifier for this activity entry. This value is used in the `fromId` parameter for pagination.      |
+| `seedHash`      | `string`          | The Base64-encoded seed hash of the associated wallet.                                                       |
+| `walletAddress` | `string`          | The base58-encoded address of the wallet this activity belongs to.                                           |
+| `addressList`   | `object`          | A map of related addresses to `IxiNumber` values involved in the activity.                                   |
+| `type`          | `integer`         | An enum value identifying the type of the activity. See the `ActivityType` table below.                        |
+| `data`          | `any \| null`     | Optional, type-specific data associated with the activity.                                                   |
+| `value`         | `IxiNumber`       | The primary value of the activity, represented as a string to preserve precision.                            |
+| `timestamp`     | `integer`         | The Unix Epoch timestamp (in seconds) when the event occurred.                                               |
+| `status`        | `integer`         | An enum value indicating the status of the activity. See the `ActivityStatus` table below.                     |
+| `blockHeight`   | `integer`         | The block number in which this activity was recorded.                                                        |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "id": "stk-1000-1005-82WvDFcNVvrF5PQHZxWWSK6W38DBbnDqScr3fWwaHng2W3pTcSwsmzmzXSc9",
+      "seedHash": "AIeMKxG8QDs3a8fE0zmSKw==",
+      "walletAddress": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "addressList": {
+        "1ixianinfinimine234234234234234234234234234242HP": "1000.00004400"
+      },
+      "type": 201,
+      "data": null,
+      "value": "947.39176322",
+      "timestamp": 1760956674,
+      "status": 2,
+      "blockHeight": 1006
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the node is not configured to provide the `ActivityStorage` service.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32603,
+        "message": "/activity2 can't be used, because ActivityStorage was not implemented."
+    }
+}
+```
+
+---
+
+## Enumerations
+
+### `ActivityType`
+
+| Value | Name                  | Description                                            |
+| :---- | :-------------------- | :----------------------------------------------------- |
+| `0`   | None                  | An uninitialized or unspecified activity type.         |
+| `100` | TransactionReceived   | A standard IXI transaction was received by the wallet. |
+| `101` | TransactionSent       | A standard IXI transaction was sent from the wallet.   |
+| `200` | MiningReward          | A reward for PoW mining was generated.                 |
+| `201` | SigningReward         | A reward for signing participation was received.       |
+| `300` | ContactRequest        | A contact request was received.                        |
+| `400` | IxiName               | An IXI Name registration or management transaction.    |
+
+### `ActivityStatus`
+
+| Value | Name    | Description                                                 |
+| :---- | :------ | :---------------------------------------------------------- |
+| `1`   | Pending | The activity is not yet confirmed in the blockchain.        |
+| `2`   | Final   | The activity is finalized and included in the blockchain.   |
+| `3`   | Error   | The activity resulted in an error or was rejected.          |
+
+---
+
+## Behavioral Notes
+
+*   **Pagination:** To fetch the next page of results, take the `id` of the last item from the current result set, Base64-encode it, and use it as the `fromId` parameter in the next request.
+*   **Wallet Scope:** The query is always scoped to a single wallet's `seedHash`. The node derives the `seedHash` from the provided `wallet` address. An error will occur if the `wallet` parameter is missing or invalid.
+*   **Node Configuration:** This endpoint is only available on DLT nodes that have the `ActivityStorage` module enabled and fully synchronized.

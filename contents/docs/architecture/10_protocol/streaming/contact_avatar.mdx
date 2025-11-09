@@ -1,0 +1,25 @@
+---
+title: avatar (24)
+description: Sends an avatar image.
+---
+
+The `avatar` message is used to send a user's profile picture to a contact. This message is typically sent in response to a `getAvatar` request or proactively after a handshake is completed.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The entire payload consists of a single field containing the raw image data.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `avatarImage` | `IxiBytes` | 1 | 500KB | The raw binary data of the user's avatar image. The format is typically JPEG or PNG. |
+
+## Behavioral Notes
+
+*   **Sending:** A client sends this message after the user sets or changes their avatar, or in response to a `getAvatar` message. The client may resize the image to a standard dimension and apply compression to respect the payload size limit before sending.
+*   **Receiving:** Upon receipt, the client application should store the image data and associate it with the sender's address for display in the user interface.
+*   **Verification:** The `StreamMessage` carrying this payload MUST be signed. The recipient must verify the signature against the sender's public key before accepting the avatar. This ensures the avatar genuinely originates from the claimed contact.
+*   **Bot Context:** When receiving an avatar within a bot-managed group, the client uses the `real_sender_address` from the `StreamMessage` to associate the avatar with the correct group participant.

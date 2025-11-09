@@ -1,0 +1,92 @@
+---
+title: getTotalBalance
+description: Retrieves the total spendable balance for a given wallet, accounting for pending outgoing transactions.
+status: Finalized
+---
+
+## Introduction
+
+The `getTotalBalance` method calculates and returns the total *spendable* balance for a specified wallet.
+
+Unlike a raw on-chain balance, this endpoint provides a real-time, user-centric value. It takes the wallet's confirmed balance and subtracts the total amount of all outgoing transactions that are currently in the pending transaction pool (mempool). This gives a clear picture of the funds that are actually available to be spent, preventing accidental double-spending.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                             |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded Ixian wallet address to query. If omitted, it defaults to the node's primary wallet. |
+
+### Example POST Request
+
+```json
+POST /getTotalBalance
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getTotalBalance",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getTotalBalance?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a single string representing the spendable balance as an `IxiNumber`.
+
+### Result Fields
+
+| Name     | Type        | Description                                                       |
+| :------- | :---------- | :---------------------------------------------------------------- |
+| `result` | `IxiNumber` | The calculated spendable wallet balance, returned as a string. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "10487.50000000",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error may be returned if, for example, the provided wallet address is in an invalid format.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid address format."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Spendable vs. Confirmed Balance:** This endpoint is crucial for user-facing applications. The value it returns represents the funds a user can safely spend. It is calculated as: `(Total Confirmed Balance) - (Value of all Pending Outgoing Transactions)`.
+*   **Precision:** The balance is returned as a string to maintain the full precision of the `IxiNumber` format. Client-side implementations should use a compatible big number library for any calculations involving this value.
+*   **Default Wallet:** If the `wallet` parameter is not provided, the query will execute on the default wallet loaded by the DLT node.

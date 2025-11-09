@@ -1,0 +1,23 @@
+---
+title: acceptFile (13)
+description: The recipient agrees to accept an incoming file transfer.
+---
+
+The `acceptFile` message is sent by the file recipient back to the sender in response to a `fileHeader`. It signals that the user has agreed to download the file and that the sender can begin transmitting file data when requested.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string.
+
+## Payload Structure
+
+The payload contains the unique ID of the file transfer being accepted.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `uid` | `string` | * | * | The unique identifier of the file transfer session, matching the `uid` from the corresponding `fileHeader`. |
+
+## Behavioral Notes
+
+*   **Trigger:** This message is sent only after the recipient user manually accepts an incoming file transfer prompt that was initiated by a `fileHeader`.
+*   **Sender Action:** Upon receiving `acceptFile`, the original sender's client marks the transfer as accepted. It does not proactively send file data; instead, it waits for the recipient to request specific chunks using `requestFileData` messages. This allows the receiver to control the flow of data.

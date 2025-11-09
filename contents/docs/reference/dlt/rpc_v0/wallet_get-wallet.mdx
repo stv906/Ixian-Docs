@@ -1,0 +1,104 @@
+---
+title: getWallet
+description: Retrieves the public state of a wallet, including its balance and properties, from the blockchain's wallet state.
+status: Finalized
+---
+
+## Introduction
+
+The `getWallet` method provides a way to query the Ixian DLT for the public information associated with a specific wallet address. This includes the wallet's current balance, its type, and any multisignature properties.
+
+This is a read-only endpoint that queries the node's local wallet state, which is a synchronized copy of the global state on the blockchain. It does not expose any private keys or sensitive information.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | Yes | The Base58-encoded wallet address to query. |
+
+### Example POST Request
+
+```json
+POST /getWallet
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getWallet",
+  "params": {
+    "id": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getWallet?id=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The `result` is a JSON object containing the public details of the queried wallet.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | The Base58-encoded wallet address. |
+| `balance` | `string` | The current balance of the wallet in IXI. |
+| `type` | `string` | The wallet type code (e.g., `0` for standard, `1` for multisig). |
+| `requiredSigs` | `string` | For multisig wallets, the number of signatures required to authorize a transaction. |
+| `allowedSigners` | `string` | For multisig wallets, a comma-separated list of all addresses that are permitted to sign. |
+| `extraData` | `string` | Any additional data associated with the wallet, encoded as a hexadecimal string. `null` if not present. |
+| `publicKey` | `string` | The full public key of the wallet, encoded as a hexadecimal string. `null` for certain wallet types. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "balance": "1507.50000000",
+    "type": "Normal",
+    "requiredSigs": "0",
+    "allowedSigners": "null",
+    "extraData": "null",
+    "publicKey": "020200..."
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Parameter 'id' is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Public Data Only:** This endpoint only returns publicly available information from the blockchain. It cannot be used to access private keys or other sensitive wallet data.
+*   **State Dependency:** The information returned reflects the wallet's state at the most recent block processed by the node. The data is only as current as the node's synchronization status.
+*   **Multisig Wallets:** For multisignature wallets, the `allowedSigners` field provides a complete, comma-separated list of all public keys (represented as addresses) that are part of the multisig setup. The `requiredSigs` field indicates how many of these signers must approve a transaction.

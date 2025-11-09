@@ -1,0 +1,141 @@
+---
+title: getBlock
+description: Retrieves a full block from the blockchain by its block number, either as a detailed JSON object or as raw bytes.
+status: Finalized
+---
+
+## Introduction
+
+The `getBlock` method is a fundamental blockchain exploration endpoint. It allows a client to retrieve a complete block, including its header, transactions, and consensus signatures, by specifying the block's height (number).
+
+The method offers two output formats: a comprehensive, human-readable JSON object for easy inspection, or the block's raw, serialized byte data as a hexadecimal string, which is useful for custom parsing or network-level analysis.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `num` | `string` | Yes | The block number (height) of the block to retrieve. |
+| `bytes` | `string` | No | If set to `"1"`, the response will be the raw block data as a hex string. Otherwise, a JSON object is returned. |
+
+### Example POST Request (JSON Response)
+
+```json
+POST /getBlock
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getBlock",
+  "params": {
+    "num": "5480000"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (Raw Bytes Response)
+
+```
+GET /getBlock?num=5480000&bytes=1
+```
+
+---
+
+## Response
+
+The structure of the `result` field depends on the `bytes` parameter.
+
+### Result: JSON Object (`bytes` is not "1")
+
+When not requesting raw bytes, the result is a detailed JSON object containing the full contents and metadata of the block.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Block Number` | `string` | The height of this block. |
+| `Version` | `string` | The block version number. |
+| `Block Checksum` | `string` | The unique checksum (hash) of this block. |
+| `Last Block Checksum`| `string` | The checksum of the preceding block. |
+| `Wallet State Checksum`| `string` | A checksum of the global wallet state after this block is applied. |
+| `RegName State Checksum`| `string` | A checksum of the IXI Name System state after this block is applied. |
+| `Sig freeze Checksum`| `string` | A checksum of the block's signature set when it was frozen. |
+| `Timestamp` | `string` | The Unix timestamp when the block was proposed. |
+| `Difficulty` | `string` | The difficulty target for this block's PoW field. |
+| `Hashrate` | `string` | An estimate of the network's mean hashrate at this block height. |
+| `Signature count` | `string` | The number of signatures received for this block. |
+| `Required Signature count`| `string` | The adaptive quorum; the minimum number of signatures required for acceptance. |
+| `Transaction count`| `string` | The number of transactions included in this block. |
+| `Transaction amount` | `string` | The total value of all IXI transferred in the block's transactions. |
+| `Total fees` | `string` | The sum of all fees from transactions in the block. |
+| `TX IDs` | `array<string>`| An array of all transaction IDs included in the block. |
+| `Signatures` | `array<object>`| An array of signature objects currently attached to the block. |
+| `Frozen Signatures` | `array<object>`| An array of signature objects that were present when the block was frozen. |
+
+#### Example Success Response (JSON)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "Block Number": "5480000",
+    "Version": "13",
+    "Block Checksum": "4a96210c76b29a661f28369eb6e47276f167091811d0c0dd2472619d1d98dc0270b28a43b74107ece0e0ffd337951c3aeffa1c84616dc99a4dd02b59a1f0ae0b",
+    "Last Block Checksum": "382b276a2eab3bb3f7ffdbad462314b42b26c1b5e5c2a21022bdc42f80cd2e7025438db8c1b52a5d7f355e4f73a2572c916273e691871d03ea160cd5f09b9eda",
+    "Wallet State Checksum": "00e88f812fc108ca0a666d138657c1b0c977c68ed55c534ce41c2df96a6353827572abb5a3a355a2e7d2d9bf7db7a98f1c7fde665479f8d3c9c3e050d3ee9db8",
+    "Timestamp": "1762822822",
+    "Difficulty": "18442776513098441299",
+    "Signature count": "86",
+    "Transaction count": "1",
+    "TX IDs": [
+      "stk-5479994-5479999-2QXnYoKdpUt5P2LXufE6mX3rAm27dV3ajswjUvYpDUuKQ3hn6fL4KPuE1VFKU"
+    ],
+    "Signatures": "[{...}]"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Result: Raw Hex String (`bytes` is "1")
+
+When `bytes` is set to `"1"`, the result is a single string containing the hexadecimal representation of the fully serialized block.
+
+#### Example Success Response (Raw Bytes)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "0d00808b1500000000004a96210c76b29a66...",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the requested block number is not found in the node's blockchain database.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Block not found."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Archive Node Requirement:** This endpoint's ability to retrieve arbitrary blocks by height depends on the node's configuration. A node running in full archival mode (`storeFullHistory=true`) can serve any block in the chain's history. A pruned node may only be able to serve recent blocks.
+*   **Default `num`:** If the `num` parameter is missing or invalid, the call will return null.
+*   **Live Signatures:** The `Signatures` array represents the signatures attached to the block at the time of the query. For recent blocks (less than 5 blocks deep), this list can change as more signatures are received by the network. The `Frozen Signatures` list is immutable once a block is sufficiently confirmed.

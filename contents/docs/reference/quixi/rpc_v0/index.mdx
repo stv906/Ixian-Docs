@@ -1,0 +1,36 @@
+---
+title: Quixi RPC v0
+description: An overview of the JSON-RPC v0 methods specific to the Quixi Bridge for application-level, peer-to-peer communication.
+---
+
+## Introduction
+
+The Quixi JSON-RPC API provides a high-level interface for building applications on top of the Ixian S2 streaming network. These endpoints handle the complexities of peer-to-peer communication, including contact management, end-to-end encrypted messaging, and custom application data exchange.
+
+This API is primarily used by decentralized applications that require a persistent, secure, and serverless communication layer. The methods documented here are specific to the Quixi Bridge and are typically exposed alongside the [Common RPC methods](../common/rpc_v0).
+
+---
+
+## Contact Management
+
+These methods are used to manage the node's local address book ("friend list"). They handle the entire lifecycle of a peer-to-peer connection, from the initial request to the final removal.
+
+| Method | Description |
+| :--- | :--- |
+| [`contacts`](./rpc_v0/contacts) | Retrieves the node's complete contact list with detailed status for each entry. |
+| [`addContact`](./rpc_v0/add-contact) | Adds a new contact and sends a connection request to them. |
+| [`acceptContact`](./rpc_v0/accept-contact) | Approves a pending contact request from another user. |
+| [`removeContact`](./rpc_v0/remove-contact) | Deletes a contact from the local address book. |
+
+---
+
+## Messaging and Application Data
+
+These endpoints are used for the actual exchange of information between two connected and approved peers. They support everything from simple text chat to complex, structured application data.
+
+| Method | Description |
+| :--- | :--- |
+| [`getLastMessages`](./rpc_v0/get-last-messages) | Retrieves the most recent messages from the local history for a specific contact. |
+| [`sendChatMessage`](./rpc_v0/send-chat-message) | Sends a standard, end-to-end encrypted text message to a contact. |
+| [`sendSpixiMessage`](./rpc_v0/send-spixi-message) | Sends a raw, structured application message with a specific type code. |
+| [`sendAppData`](./rpc_v0/send-app-data) | Sends arbitrary data to a specific application session or protocol handler. |

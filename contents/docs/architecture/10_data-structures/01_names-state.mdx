@@ -1,0 +1,417 @@
+---
+title: "Names State"
+description: "The global registry of Ixian Names and their associated data records"
+status: Draft
+---
+
+## Introduction
+
+The Names State (also called RegName State or Registered Names State) is the complete registry of all registered names in the Ixian network at a specific block height. Similar to how Wallets State tracks account balances, Names State tracks name registrations, their ownership, expiration, and associated data records.
+
+Ixian Names provide a human-readable naming system that can map to addresses, store arbitrary data, and enable hierarchical subname structures. The Names State checksum is included in blocks starting from **version 11** via the `regNameStateChecksum` field.
+
+---
+
+## Name Record Structure
+
+Each registered name contains the following core fields:
+
+| Field | Data Type | Description |
+|:------|:----------|:------------|
+| `version` | `IxiVarUInt` | Record format version (currently 1) |
+| `name` | `IxiBytes` | The registered name (1-64 bytes, UTF-8 encoded) |
+| `registrationBlockHeight` | `IxiVarUInt` | Block height when name was first registered |
+| `capacity` | `IxiVarUInt` | Storage capacity in kilobytes (KB) for data records |
+| `nextPkHash` | `IxiBytes` | Hash of the public key authorized to make next update |
+| `recoveryHash` | `IxiBytes` | Hash of the recovery key for name recovery |
+| `sequence` | `IxiVarUInt` | Monotonic counter incremented with each update (prevents replay) |
+| `allowSubnames` | `byte` | Boolean flag: 1 if subnames are permitted, 0 otherwise |
+| `subnamePrice` | `IxiNumber` | Price in IXI to register a subname under this name |
+| `subnameFeeRecipient` | `IxiBytes` | Address that receives subname registration fees (optional) |
+| `dataRecords` | `DataRecord[]` | Array of data records (key-value pairs with TTL) |
+| `dataMerkleRoot` | `IxiBytes` | Merkle root hash of all data records |
+| `signaturePk` | `IxiBytes` | Public key used for the last update signature |
+| `signature` | `IxiBytes` | Signature authorizing the last update |
+| `expirationBlockHeight` | `IxiVarUInt` | Block height when name registration expires |
+| `updatedBlockHeight` | `IxiVarUInt` | Block height of the most recent update |
+
+---
+
+## Data Record Structure
+
+Each name can contain multiple data records, which are key-value pairs:
+
+| Field | Data Type | Description |
+|:------|:----------|:------------|
+| `name` | `IxiBytes` | Record key/identifier (1-255 bytes) |
+| `ttl` | `IxiVarInt` | Time-to-live in seconds (0 = permanent until explicitly deleted) |
+| `data` | `IxiBytes` | Arbitrary data payload (size limited by name capacity) |
+| `checksum` | `IxiBytes` | SHA3-512² hash of the record (name + ttl + data) |
+
+### Record Checksum Calculation
+
+```
+checksum = sha3_512sq(name_length || name || ttl || data_length || data)
+```
+
+Where:
+- All lengths are encoded as `IxiVarInt`
+- Fields are concatenated in binary form (not hex strings)
+
+---
+
+## Hierarchical Names
+
+Ixian Names support a two-level hierarchy: top-level names and subnames.
+
+### Top-Level Names
+
+- Directly registered names (e.g., `"alice"`)
+- Can exist independently
+
+### Subnames
+
+- Registered under a top-level name (e.g., `"alice@bob"` where `"bob"` is the parent)
+- Parent name must have `allowSubnames = true`
+- Subname registration fee goes to `subnameFeeRecipient` address
+- Parent name's expiration is automatically extended if subname expires later
+
+### Name Format
+
+Names are separated by the `@` character:
+- Top-level: `"myname"`
+- Subname: `"myname@parentname"`
+- Maximum subname levels: **1** (no further nesting like `"a@b@c"`)
+
+When `allowSubnames` is enabled:
+- Only data records with key `@` are permitted (reserved for subname metadata)
+- Regular data records are cleared
+- Capacity is reset to minimum
+
+---
+
+## Names State Checksum Calculation
+
+The Names State checksum provides cryptographic proof of all registered names.
+
+### Full State Checksum (Superblocks)
+
+```
+1. For each registered name (in any order):
+   a. Serialize name record in "forMerkle" format
+   b. Calculate record_checksum = sha3_512sq(serialized_record)
+   c. Add record_checksum to list
+2. Calculate merkle_root = calculateMerkleRoot(list of checksums)
+3. If no names exist, return 64 zero bytes
+4. Return merkle_root
+```
+
+The "forMerkle" format includes:
+- All name fields except `signaturePk` and `signature`
+- Includes `expirationBlockHeight` and `updatedBlockHeight`
+
+### Delta Checksum (Non-Superblocks)
+
+For regular blocks, only modified names are included:
+
+```
+1. Collect all names modified since the specified block
+2. For each modified name:
+   a. Serialize name record in "forMerkle" format
+   b. Calculate record_checksum = sha3_512sq(serialized_record)
+   c. Add record_checksum to list
+3. Calculate merkle_root = calculateMerkleRoot(list of checksums)
+4. Return merkle_root
+```
+
+This delta approach avoids recalculating checksums for millions of unchanged names.
+
+---
+
+## Name Record Serialization Formats
+
+Three serialization formats exist for different purposes:
+
+### 1. Full Format (`RegNameRecordByteTypes.full`)
+
+Used for storage and network transmission. Includes:
+- All fields listed above
+- `signaturePk` and `signature`
+- `expirationBlockHeight` and `updatedBlockHeight`
+
+### 2. For Signature (`RegNameRecordByteTypes.forSignature`)
+
+Used to generate the data that is signed during updates. Includes:
+- All fields except `signaturePk`, `signature`
+- Excludes `expirationBlockHeight` and `updatedBlockHeight`
+
+This ensures signatures are based on the actual change content, not metadata.
+
+### 3. For Merkle (`RegNameRecordByteTypes.forMerkle`)
+
+Used for state checksum calculation. Includes:
+- All fields except `signaturePk` and `signature`
+- Includes `expirationBlockHeight` and `updatedBlockHeight`
+
+---
+
+## Name Operations
+
+### 1. Register Name
+
+**Transaction Type:** `RegNameRegister`
+
+**Parameters:**
+- `name`: Name to register (1-64 bytes)
+- `registrationTimeInBlocks`: Duration of registration
+- `capacity`: Storage capacity in KB (minimum defined by consensus)
+- `nextPkHash`: Hash of public key for future updates
+- `recoveryHash`: Hash of recovery key
+- `fee`: Amount sent to reward pool
+
+**Validation:**
+- Name must not already exist (for top-level names)
+- For subnames: parent must exist and have `allowSubnames = true`
+- Fee must equal `(registrationTimeInBlocks / blocksPerMonth) * capacity * pricePerUnit`
+- For subnames: fee goes to parent's `subnameFeeRecipient`
+
+**Effect:**
+- Creates new name record
+- Sets `expirationBlockHeight = registrationBlockHeight + registrationTimeInBlocks`
+- If subname expires after parent, extends parent's expiration
+
+### 2. Extend Name
+
+**Transaction Type:** `RegNameExtend`
+
+**Parameters:**
+- `name`: Name to extend
+- `extensionTimeInBlocks`: Duration to add (or subtract if negative)
+- `fee`: Amount sent to reward pool
+
+**Validation:**
+- Name must exist
+- If extending: fee must equal calculated amount
+- Cannot extend into the past (result must be > current height)
+
+**Effect:**
+- Updates `expirationBlockHeight += extensionTimeInBlocks`
+- Extends parent name if this name expires later
+
+### 3. Update Records
+
+**Transaction Type:** `RegNameUpdateRecord`
+
+**Parameters:**
+- `name`: Name to update
+- `records`: Array of data records (add/update/delete)
+- `sequence`: Must equal current sequence + 1
+- `nextPkHash`: New authorized key hash
+- `sigPk`: Current authorized public key
+- `signature`: Signature over the update
+
+**Record Operations:**
+- **Add**: Record with `checksum = null`, `data != null`
+- **Update**: Record with existing `checksum`, `data != null`
+- **Delete**: Record with existing `checksum`, `data = null`
+
+**Validation:**
+- `sigPk` must hash to current `nextPkHash`
+- Signature must verify over record checksum (forSignature format)
+- Total record size must not exceed `capacity * 1024` bytes
+- Sequence must increment exactly by 1
+- For subname-enabled names: only `@` record key allowed
+
+**Effect:**
+- Updates `dataRecords` list
+- Recalculates `dataMerkleRoot`
+- Increments `sequence`
+- Updates `nextPkHash`, `signaturePk`, `signature`
+- Updates `updatedBlockHeight`
+
+### 4. Change Capacity
+
+**Transaction Type:** `RegNameChangeCapacity`
+
+**Parameters:**
+- `name`: Name to modify
+- `newCapacity`: New capacity in KB
+- `sequence`: Must equal current sequence + 1
+- `nextPkHash`: New authorized key hash
+- `sigPk`: Current authorized public key
+- `signature`: Signature over the change
+- `fee`: Amount sent to reward pool
+
+**Validation:**
+- Cannot change capacity if `allowSubnames = true`
+- New capacity must be >= minimum (consensus parameter)
+- Existing records must fit in new capacity
+- Signature must verify
+
+**Effect:**
+- Updates `capacity`
+- Increments `sequence`
+- Sends fee to reward pool
+
+### 5. Recover Name
+
+**Transaction Type:** `RegNameRecover`
+
+**Parameters:**
+- `name`: Name to recover
+- `sequence`: Must equal current sequence + 1
+- `nextPkHash`: New authorized key hash
+- `nextRecoveryHash`: New recovery key hash
+- `recoveryPk`: Current recovery public key
+- `recoverySig`: Signature with recovery key
+
+**Validation:**
+- `recoveryPk` must hash to current `recoveryHash`
+- Signature must verify
+
+**Effect:**
+- Updates `nextPkHash` (ownership transfer)
+- Updates `recoveryHash`
+- Increments `sequence`
+
+This allows name recovery if the primary key is lost.
+
+### 6. Toggle Allow Subnames
+
+**Transaction Type:** `RegNameToggleAllowSubnames`
+
+**Parameters:**
+- `name`: Name to modify
+- `allowSubnames`: Enable (true) or disable (false)
+- `subnamePrice`: Price for registering subnames (if enabling)
+- `subnameFeeRecipient`: Address to receive subname fees
+- `sequence`: Must equal current sequence + 1
+- `nextPkHash`: New authorized key hash
+- `sigPk`: Current authorized public key
+- `signature`: Signature over the change
+
+**Validation:**
+- Signature must verify
+
+**Effect:**
+- Updates `allowSubnames` flag
+- If enabling: clears all data records, sets capacity to minimum
+- Updates `subnamePrice` and `subnameFeeRecipient`
+- Recalculates `dataMerkleRoot` (now empty if enabling)
+- Increments `sequence`
+
+---
+
+## Name Expiration
+
+Names automatically expire when `currentBlockHeight > expirationBlockHeight`.
+
+**Expired names:**
+- No longer appear in Names State
+- Are removed from storage during cleanup operations
+- Can be re-registered by anyone after expiration
+
+**Parent-Subname Relationship:**
+- If a subname expires after its parent, the parent's expiration is automatically extended
+- This prevents orphaned subnames
+
+---
+
+## Reward Pool
+
+All name registration and extension fees are accumulated in the **Names Reward Pool**, a separate balance tracked in Names State.
+
+**Purpose:**
+- Fees are gradually distributed to block signers over the registration period, creating sustained network incentives aligned with storage commitment duration
+- Transparent accounting of all naming fees
+
+**Operations:**
+- `increaseRewardPool(fee)`: Add fee from registration/extension
+- `decreaseRewardPool(fee)`: Revert fee (during block rollback)
+- `getRewardPool()`: Query current pool balance
+
+---
+
+## Storage and Synchronization
+
+### Storage Implementation
+
+Names State can be stored in:
+- **In-Memory Dictionary**: Sorted by name bytes for fast lookup
+- **Persistent Database**: For long-term storage and recovery
+- **Periodic Snapshots**: At superblock boundaries
+
+### Data Record Storage
+
+Data records can be stored:
+- **Inline**: Directly within the name record (for small datasets)
+- **Separate Table**: Referenced by name checksum (for large datasets)
+
+### Network Synchronization
+
+New nodes retrieve Names State:
+1. Request full state at superblock boundary
+2. Verify state checksum against block's `regNameStateChecksum`
+3. Apply subsequent blocks to reach current height
+
+---
+
+## Implementation Notes
+
+### Performance
+
+- **Checksum Caching**: Full state checksum is cached and invalidated only on changes
+- **Merkle Trees**: Enable efficient proof of name existence without transferring all names
+- **Sequence Numbers**: Prevent replay attacks without complex nonce management
+
+### Thread Safety
+
+All Names State operations must be thread-safe:
+- Block processing modifies state
+- RPC queries read state concurrently
+- Journal operations require atomicity
+
+### Consensus Parameters
+
+Key parameters (in `ConsensusConfig`):
+- `rnMaxNameLength`: Maximum name length (bytes)
+- `rnMaxRecordKeyLength`: Maximum data record key length
+- `rnMinCapacity`: Minimum capacity for name records
+- `rnPricePerUnit`: Base price per KB per month
+- `rnMonthInBlocks`: Number of blocks in one "month"
+- `rnMaxSubNameLevels`: Maximum hierarchy depth (currently 1)
+
+---
+
+## Example: Name Lifecycle
+
+**Block 1000: Register "alice"**
+```
+name: "alice"
+capacity: 10 KB
+expirationBlockHeight: 11000 (10000 blocks = ~1 year)
+nextPkHash: hash(AlicePubKey)
+fee: (10000 / blocksPerMonth) * 10 * pricePerUnit -> sent to reward pool
+```
+
+**Block 2000: Add data record**
+```
+Signed update:
+- Add record: key="website", data="https://alice.example"
+- sequence: 0 -> 1
+- nextPkHash: hash(AliceNewPubKey)
+```
+
+**Block 5000: Register subname "bob@alice"**
+```
+name: "bob@alice"
+Parent "alice" must have allowSubnames=true
+subnameFee -> sent to alice
+fee: (10000 / blocksPerMonth) * 10 * pricePerUnit -> sent to reward pool
+```
+
+**Block 11001: Name expires**
+```
+"alice" is removed from Names State
+Can be re-registered by anyone
+```

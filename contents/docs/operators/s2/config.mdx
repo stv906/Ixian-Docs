@@ -1,0 +1,43 @@
+---
+title: S2 Configuration Quick Reference
+description: A quick reference guide to the most common configuration settings for an Ixian S2 streaming node operator.
+---
+
+## Introduction
+
+This guide covers the most frequently used configuration settings for running an Ixian S2 streaming node. For a complete list of all possible parameters, please see the [full configuration reference](../../reference/s2/config).
+
+Settings can be placed in a configuration file (e.g., `ixian.cfg`) or passed as command-line arguments, which will override the file settings.
+
+## Configuration File (`ixian.cfg`)
+
+The file uses a `key = value` format.
+
+### Most Common Settings
+
+| Parameter | Example Value | Description |
+| :--- | :--- | :--- |
+| `networkType` | `mainnet` | The network to connect to (`mainnet`, `testnet`, or `regtest`). Must match the DLT network. |
+| `s2Port` | `10235` | The main TCP port for S2 peer-to-peer communication. |
+| `apiPort` | `8001` | The local port for the JSON-RPC API. |
+| `externalIp` | `203.0.113.42`| Your node's public IP address. Critical for other nodes to connect to you. |
+| `apiAllowIp` | `127.0.0.1` | **Security:** Whitelists an IP to access the API. Use multiple lines for multiple IPs. |
+| `apiBind` | `127.0.0.1` | **Security:** Binds the API to a specific local IP. `127.0.0.1` is recommended for security. |
+| `addPeer` | `192.168.1.10:10234`| The address of an initial node to connect to. Can be used multiple times. |
+| `logVerbosity`| `14` | Sets logging detail (Info=2, Warn=4, Error=8). `14` is a good default (2+4+8). |
+
+
+## Command-Line Arguments
+
+These are the most common flags used when launching an S2 node.
+
+| Flag | Example | Description |
+| :--- | :--- | :--- |
+| `-t`, `--testnet` | `IxianS2.exe -t` | Starts the node on the testnet. |
+| `--networkType` | `IxianS2.exe --networkType regtest` | Explicitly sets the network type: `mainnet`, `testnet`, or `regtest`. Must match the DLT network. |
+| `-p`, `--port` | `IxianS2.exe -p 10235` | Sets the S2 P2P network port. |
+| `-a`, `--apiport` | `IxianS2.exe -a 8001` | Sets the JSON-RPC API port. |
+| `-i`, `--ip` | `IxianS2.exe -i 203.0.113.42` | Sets the external IP address. |
+| `-w`, `--wallet` | `IxianS2.exe -w myS2wallet.wal` | Specifies the path to the wallet file. |
+| `-n`, `--node` | `IxianS2.exe -n 192.168.1.10:10234` | Connects to a specific DLT seed node. |
+| `-c`, `--clean` | `IxianS2.exe -c` | Deletes cache, log, and peer data files before starting. |

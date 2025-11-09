@@ -1,0 +1,47 @@
+---
+title: bye (2)
+description: Gracefully terminates the peer-to-peer connection.
+status: Finalized
+---
+
+The `bye` message is used to signal the graceful termination of a session. It can be sent by either peer at any time after the handshake is complete.
+
+Upon sending or receiving a `bye` message, a node should immediately close the underlying TCP connection. The message includes a reason code and an optional descriptive text to aid in debugging.
+
+### Core Data Types
+
+*   **`string`**: See **[Global Serialization Rules](..)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `reasonCode` | `int32` | | | A numeric code indicating the reason for the disconnection. See table below. |
+| `message` | `string` | | | A human-readable UTF-8 string explaining the reason for disconnection. |
+| `data` | `string` | | | Additional contextual data related to the reason. |
+
+## Reason Codes (`ProtocolByeCode`)
+
+The `reasonCode` field provides a specific, machine-readable reason for the disconnection.
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 100 | `blockInvalid` | The peer sent a block that failed validation. |
+| 200 | `bye` | Normal disconnection initiated by the peer. |
+| 400 | `expectingMaster` | The peer expected to connect to a Master Node but did not. |
+| 501 | `deprecated` | The peer is using an obsolete protocol version that is no longer supported. |
+| 502 | `incorrectNetworkType`| The peer is on a different network (e.g., TestNet vs. MainNet). |
+| 599 | `insufficientFunds`| The peer, acting as a Master Node, does not meet the minimum required token balance. |
+| 600 | `incorrectIp` | The peer's IP address in its `hello` message signature was incorrect. |
+| 601 | `notConnectable` | The peer's advertised public address and port were not reachable for a connection test. |
+| 602 | `tooFarBehind` | The peer's blockchain is too far behind the network's current block height to sync efficiently. |
+| 603 | `authFailed` | The `hello` message signature verification failed. |
+| 604 | `addressMismatch` | The peer's address did not match the expected address, possibly indicating a MitM attack. |
+| 605 | `rejected` | The connection was rejected for a non-specific reason (e.g., peer is blacklisted, server slots are full). |
+| 700 | `notReady` | The node is not yet synchronized or ready to accept connections. |
+
+## Behavioral Notes
+
+-   **Connection Teardown:** Both the sender and receiver should immediately and cleanly close the socket after this message is sent or received.
+-   **No Response Expected:** A `bye` message does not require a response.
+-   **Reconnect Logic:** A client receiving a `bye` with a code other than `200` (`bye`) may attempt to reconnect later. A code of `200` typically implies a deliberate shutdown, and the client should not attempt to immediately reconnect.

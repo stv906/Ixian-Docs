@@ -1,0 +1,67 @@
+---
+title: clearPeerBlacklist
+description: Clears the node's entire peer blacklist, removing all blocked hosts and wallet addresses.
+status: Finalized
+---
+
+## Introduction
+
+The `clearPeerBlacklist` method is a powerful administrative endpoint that completely purges the node's peer blacklist. A single call to this method will remove all previously blacklisted hosts and wallet addresses, immediately allowing them to connect to the node again.
+
+This is the counterpart to the [`blacklistPeer`](./node_blacklist-peer) method and is intended for node operators who need to reset their node's connection-blocking policies.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /clearPeerBlacklist
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "clearPeerBlacklist",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /clearPeerBlacklist
+```
+
+---
+
+## Response
+
+If the request is successful, the response `result` is a simple confirmation string.
+
+### Result Fields (on Success)
+
+| Name     | Type     | Description                                |
+| :------- | :------- | :----------------------------------------- |
+| `result` | `string` | The static string `"OK"` on success. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "OK",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Global Action:** This command is global and irreversible. It removes **all** entries from the blacklist. There is no API method for removing individual entries; this method clears the entire list.
+*   **Immediate Effect:** The change takes effect immediately. Any peers that were previously on the blacklist will be able to establish connections with the node as soon as the command completes.

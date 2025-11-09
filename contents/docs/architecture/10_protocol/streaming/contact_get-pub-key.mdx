@@ -1,0 +1,22 @@
+---
+title: getPubKey (26)
+description: Requests the public key of a contact.
+---
+
+The `getPubKey` message is used to request the public key of a specific user. It is primarily used by a client when adding a contact or when interacting with a bot to get the public key of another user within a group chat, which is necessary to verify their message signatures.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `targetAddress` | `IxiBytes` | * | * | The address of the user whose public key is being requested. |
+
+## Behavioral Notes
+
+*   **Standard Request:** A user's client sends a `getPubKey` message with an empty payload to a contact to ask for their public key.
+*   **Bot Request:** A bot may receive a request from a user to identify another user in a chat. The bot would then send a `getPubKey` message to the target user, including their address in the `targetAddress` field.
+*   **Response:** Upon receiving a `getPubKey` message, a node MUST respond with a `pubKey` message containing the public key.

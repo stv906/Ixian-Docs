@@ -1,0 +1,834 @@
+---
+title: "Spixi Mini Apps Quickstart"
+description: "Build decentralized HTML/CSS/JavaScript apps that run inside Spixi messenger with P2P communication"
+---
+
+Spixi Mini Apps are fully client-side applications built with HTML, CSS, and JavaScript that run inside the Spixi messenger. They enable decentralized, peer-to-peer interactions between users without requiring any servers or app stores.
+
+## What Are Spixi Mini Apps?
+
+Mini Apps are:
+- **Decentralized** - No servers, all P2P communication via Ixian network
+- **Client-side only** - Pure HTML/CSS/JavaScript running in WebView
+- **Distributed as archives** - Shared via `.zspixiapp` files
+- **Post-quantum secure** - Inherit Ixian's encryption (RSA + ECDH + ML-KEM + AES + CHACHA20)
+- **Multi-user capable** - Real-time collaborative apps between contacts
+
+### Use Cases
+- **Games** - Tic-tac-toe, chess, multiplayer games
+- **Collaboration Tools** - Whiteboards, document editors
+- **Utilities** - QR code generators, calculators, polls
+- **IoT Control** - Device controllers via QuIXI gateway
+- **Business Apps** - Inventory, time tracking, invoicing
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────┐
+│     Spixi Messenger (Host App)      │
+│  ┌───────────────────────────────┐  │
+│  │   WebView Container           │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  │  Your Mini App          │  │  │
+│  │  │  (HTML/CSS/JavaScript)  │  │  │
+│  │  │                         │  │  │
+│  │  │  Uses: spixi-app-sdk.js │  │  │
+│  │  └─────────────────────────┘  │  │
+│  └───────────────────────────────┘  │
+│              ↕ Bridge               │
+│     P2P Network Communication       │
+└─────────────────────────────────────┘
+```
+
+## Quick Start: Your First Mini App
+
+### Step 1: Create App Structure
+
+```bash
+mkdir myapp
+cd myapp
+
+# Create required files
+touch appinfo.spixi
+mkdir -p app/js app/css app/img
+touch app/index.html
+```
+
+Your structure should look like:
+```
+myapp/
+├── appinfo.spixi      # App metadata
+├── icon.png           # App icon (512x512 recommended)
+└── app/
+    ├── index.html     # Entry point
+    ├── js/
+    │   ├── spixi-app-sdk.js    # SDK (copy from Spixi-Mini-Apps repo)
+    │   ├── spixi-tools.js      # Utilities (copy from repo)
+    │   └── app.js              # Your app logic
+    ├── css/
+    │   └── styles.css
+    └── img/
+        └── (your images)
+```
+
+### Step 2: Create `appinfo.spixi`
+
+```ini
+caVersion = 0
+id = com.yourcompany.myapp
+publisher = Your Name
+name = My First Mini App
+version = 1.0.0
+capabilities = multiUser
+minUsers = 2
+maxUsers = 2
+```
+
+**Fields:**
+- `caVersion` - Always `0` (current version)
+- `id` - Reverse domain notation (e.g., `com.company.appname`)
+- `publisher` - Your name or company
+- `name` - Display name in Spixi
+- `version` - Semantic version (1.0.0)
+- `capabilities` - `singleUser` or `multiUser`
+- `maxUsers` - Maximum concurrent users (if multiUser)
+
+### Step 3: Create `app/index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My First Mini App</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hello Spixi Mini App!</h1>
+        <div id="session-info"></div>
+        <div id="messages"></div>
+        <input type="text" id="message-input" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="SpixiAppSdk.back()">Back to Chat</button>
+    </div>
+    
+    <!-- Load SDK first -->
+    <script src="js/spixi-tools.js"></script>
+    <script src="js/spixi-app-sdk.js"></script>
+    <!-- Then your app logic -->
+    <script src="js/app.js"></script>
+</body>
+</html>
+```
+
+### Step 4: Create `app/js/app.js`
+
+```javascript
+// Global state
+let sessionId = '';
+let userAddresses = [];
+
+// Override SDK callbacks
+SpixiAppSdk.onInit = function(sid, addresses) {
+    sessionId = sid;
+    userAddresses = addresses.split(',');
+    
+    document.getElementById('session-info').innerHTML = 
+        `<p>Session: ${sessionId}</p>
+         <p>Users: ${userAddresses.length}</p>`;
+    
+    console.log('App initialized!', sessionId, userAddresses);
+};
+
+SpixiAppSdk.onNetworkData = function(senderAddress, data) {
+    console.log('Received from', senderAddress, ':', data);
+    
+    const messagesDiv = document.getElementById('messages');
+    const msgElement = document.createElement('div');
+    msgElement.textContent = `${senderAddress.substring(0, 8)}...: ${data}`;
+    messagesDiv.appendChild(msgElement);
+};
+
+SpixiAppSdk.onRequestAccept = function(data) {
+    console.log('Another user accepted the session!');
+};
+
+SpixiAppSdk.onRequestReject = function(data) {
+    console.log('User rejected the session.');
+};
+
+SpixiAppSdk.onAppEndSession = function(data) {
+    console.log('Session ended.');
+};
+
+// Send a message to all users
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const message = input.value.trim();
+    
+    if (message) {
+        SpixiAppSdk.sendNetworkData(message);
+        input.value = '';
+        
+        // Display locally
+        const messagesDiv = document.getElementById('messages');
+        const msgElement = document.createElement('div');
+        msgElement.textContent = `You: ${message}`;
+        msgElement.style.fontWeight = 'bold';
+        messagesDiv.appendChild(msgElement);
+    }
+}
+
+// Initialize on page load
+window.addEventListener('load', function() {
+    SpixiAppSdk.fireOnLoad();
+});
+```
+
+### Step 5: Add Basic Styling `app/css/styles.css`
+
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+#session-info {
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+#messages {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background: #fafafa;
+}
+
+#messages div {
+    padding: 8px;
+    margin-bottom: 5px;
+    background: white;
+    border-radius: 4px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 12px 24px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+button:hover {
+    background: #5568d3;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+```
+
+### Step 6: Download SDK Files
+
+Get the SDK from the [Spixi-Mini-Apps repository](https://github.com/ixian-platform/Spixi-Mini-Apps):
+
+```bash
+# Download SDK files
+curl -o app/js/spixi-app-sdk.js \
+  https://raw.githubusercontent.com/ixian-platform/Spixi-Mini-Apps/master/mini-apps-sdk/spixi-app-sdk.js
+
+curl -o app/js/spixi-tools.js \
+  https://raw.githubusercontent.com/ixian-platform/Spixi-Mini-Apps/master/mini-apps-sdk/spixi-tools.js
+```
+
+### Step 7: Test in Browser
+
+Open `app/index.html` in your browser (Firefox recommended for local testing):
+
+```bash
+# Simple HTTP server
+python3 -m http.server 8000
+# Then open http://localhost:8000/app/index.html
+```
+
+The SDK functions won't work outside Spixi, but you can verify the UI and basic JavaScript logic.
+
+### Step 8: Package Your App
+
+Use the [Spixi App Packer](https://apps.spixi.io/packer) or open `app-packer/index.html` from the repo:
+
+1. Drag and drop your `myapp/` folder
+2. Click "Pack"
+3. Download the generated files:
+   - `myapp.zspixiapp` - App archive
+   - `myapp.spixi` - Metadata with checksum
+   - `myapp.png` - Icon
+
+### Step 9: Install in Spixi
+
+1. Share the `.spixi` file with a contact via Spixi
+2. Recipient taps to install
+3. Start a session by selecting the app in chat
+4. Both users see the app and can interact in real-time!
+
+## Spixi App SDK Reference
+
+### Core Functions
+
+#### `SpixiAppSdk.fireOnLoad()`
+Call when your app is ready. Triggers `onInit` callback with session information.
+
+```javascript
+window.addEventListener('load', function() {
+    SpixiAppSdk.fireOnLoad();
+});
+```
+
+#### `SpixiAppSdk.sendNetworkData(data)`
+Send string data to all users in the session.
+
+```javascript
+SpixiAppSdk.sendNetworkData("Hello everyone!");
+SpixiAppSdk.sendNetworkData(JSON.stringify({ action: "move", x: 5, y: 3 }));
+```
+
+#### `SpixiAppSdk.sendNetworkProtocolData(protocolId, data)`
+Send data via a specific app protocol (advanced feature).
+
+```javascript
+SpixiAppSdk.sendNetworkProtocolData("game.v1", JSON.stringify(gameState));
+```
+
+#### `SpixiAppSdk.getStorageData(key)`
+Request persistent storage value. Response comes via `onStorageData` callback.
+
+```javascript
+SpixiAppSdk.getStorageData("highScore");
+
+SpixiAppSdk.onStorageData = function(key, value) {
+    if (key === "highScore") {
+        console.log("High score:", value);
+    }
+};
+```
+
+#### `SpixiAppSdk.setStorageData(key, value)`
+Save persistent data (per-contact storage).
+
+```javascript
+SpixiAppSdk.setStorageData("highScore", "1500");
+SpixiAppSdk.setStorageData("lastPlayed", new Date().toISOString());
+```
+
+#### `SpixiAppSdk.back()`
+Close the Mini App and return to chat.
+
+```javascript
+<button onclick="SpixiAppSdk.back()">Exit</button>
+```
+
+#### `SpixiAppSdk.spixiAction(actionData)`
+Trigger special Spixi actions (e.g., send payments, remote authentication).
+
+```javascript
+SpixiAppSdk.spixiAction('{"instruction":"..."}');
+```
+
+### Lifecycle Callbacks
+
+Override these functions to handle events:
+
+#### `onInit(sessionId, userAddresses)`
+Called when the app starts. Provides session ID and comma-separated user addresses.
+
+```javascript
+SpixiAppSdk.onInit = function(sessionId, userAddresses) {
+    console.log("Session ID:", sessionId);
+    const users = userAddresses.split(',');
+    console.log("Users in session:", users.length);
+    
+    // Initialize your app state
+    initializeGame(sessionId, users);
+};
+```
+
+#### `onNetworkData(senderAddress, data)`
+Receives string data from other users.
+
+```javascript
+SpixiAppSdk.onNetworkData = function(senderAddress, data) {
+    console.log("Received from:", senderAddress);
+    
+    try {
+        const message = JSON.parse(data);
+        handleGameMessage(message);
+    } catch (e) {
+        console.log("Plain text:", data);
+    }
+};
+```
+
+#### `onNetworkProtocolData(senderAddress, protocolId, data)`
+Receives protocol-specific data.
+
+```javascript
+SpixiAppSdk.onNetworkProtocolData = function(senderAddress, protocolId, data) {
+    if (protocolId === "game.v1") {
+        handleGameProtocol(senderAddress, data);
+    }
+};
+```
+
+#### `onStorageData(key, value)`
+Response to `getStorageData()` request.
+
+```javascript
+SpixiAppSdk.onStorageData = function(key, value) {
+    if (key === "savedGame") {
+        const gameState = JSON.parse(atob(value)); // Decode base64
+        restoreGame(gameState);
+    }
+};
+```
+
+#### `onRequestAccept(data)`
+Another user accepted the app session invitation.
+
+```javascript
+SpixiAppSdk.onRequestAccept = function(data) {
+    console.log("User joined the session!");
+    showNotification("Player 2 has joined!");
+};
+```
+
+#### `onRequestReject(data)`
+User rejected the session invitation.
+
+```javascript
+SpixiAppSdk.onRequestReject = function(data) {
+    console.log("User declined to join");
+    showNotification("Invitation declined");
+};
+```
+
+#### `onAppEndSession(data)`
+Session has ended (user left or closed app).
+
+```javascript
+SpixiAppSdk.onAppEndSession = function(data) {
+    console.log("Session ended");
+    saveGameState();
+    showEndScreen();
+};
+```
+
+## Building a Tic-Tac-Toe Game
+
+For a complete working example of a multi-user game, see the [Tic-Tac-Toe source code](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/apps/com.ixilabs.spixi.tictactoe) in the Spixi-Mini-Apps repository.
+
+The example demonstrates:
+- **Two-player game state management** - Synchronizing board state between players
+- **Turn-based gameplay** - Determining who is X/O and enforcing turn order
+- **Network messaging** - Sending moves via `sendNetworkData()` 
+- **Win detection** - Checking for winning combinations and draws
+- **Persistent storage** - Saving/loading game state via `setStorageData()` and `getStorageData()`
+- **UI rendering** - Dynamically creating and updating the game board
+
+Key files to review:
+- [`app/js/tic-tac-toe.js`](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/apps/com.ixilabs.spixi.tictactoe/app/js/tic-tac-toe.js) - Game logic and networking
+- [`app/index.html`](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/apps/com.ixilabs.spixi.tictactoe/app/index.html) - Game UI structure
+- [`app/css/styles.css`](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/apps/com.ixilabs.spixi.tictactoe/app/css/styles.css) - Game styling
+- [`appinfo.spixi`](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/apps/com.ixilabs.spixi.tictactoe/appinfo.spixi) - App metadata
+
+## Utility Helpers (spixi-tools.js)
+
+The SDK includes helper utilities:
+
+### `SpixiTools.getTimestamp()`
+Get current Unix timestamp in seconds.
+
+```javascript
+const now = SpixiTools.getTimestamp();
+console.log("Current time:", now);
+```
+
+### `SpixiTools.escapeHtml(text)`
+Escape HTML special characters.
+
+```javascript
+const safe = SpixiTools.escapeHtml("<script>alert('xss')</script>");
+```
+
+### `SpixiTools.base64ToBytes(base64String)`
+Convert base64 string to byte array.
+
+```javascript
+const bytes = SpixiTools.base64ToBytes("SGVsbG8=");
+```
+
+## Best Practices
+
+### 1. State Synchronization
+
+Always synchronize game state between users:
+
+```javascript
+function syncState() {
+    const stateData = JSON.stringify({
+        action: "sync",
+        state: gameState,
+        timestamp: SpixiTools.getTimestamp()
+    });
+    SpixiAppSdk.sendNetworkData(stateData);
+}
+
+// Periodically sync to prevent desynchronization
+setInterval(syncState, 5000);
+```
+
+### 2. Conflict Resolution
+
+Handle simultaneous actions:
+
+```javascript
+let lastMoveTimestamp = 0;
+
+SpixiAppSdk.onNetworkData = function(senderAddress, data) {
+    const message = JSON.parse(data);
+    
+    if (message.timestamp > lastMoveTimestamp) {
+        lastMoveTimestamp = message.timestamp;
+        applyMove(message);
+    } else {
+        // Reject outdated move
+        console.log("Ignoring old move");
+    }
+};
+```
+
+### 3. Persistent Storage
+
+Save user preferences and game progress:
+
+```javascript
+function saveUserPreferences() {
+    const prefs = {
+        soundEnabled: true,
+        difficulty: "hard",
+        theme: "dark"
+    };
+    SpixiAppSdk.setStorageData("preferences", JSON.stringify(prefs));
+}
+
+function loadUserPreferences() {
+    SpixiAppSdk.getStorageData("preferences");
+}
+
+SpixiAppSdk.onStorageData = function(key, value) {
+    if (key === "preferences" && value) {
+        const prefs = JSON.parse(value);
+        applySoundSettings(prefs.soundEnabled);
+        setDifficulty(prefs.difficulty);
+        applyTheme(prefs.theme);
+    }
+};
+```
+
+### 4. Handle Session Lifecycle
+
+Gracefully handle users joining/leaving:
+
+```javascript
+let activePlayers = [];
+
+SpixiAppSdk.onInit = function(sessionId, userAddresses) {
+    activePlayers = userAddresses.split(',');
+    updatePlayerList();
+};
+
+SpixiAppSdk.onRequestAccept = function(data) {
+    // New player joined
+    updatePlayerList();
+    broadcastGameState(); // Sync new player
+};
+
+SpixiAppSdk.onAppEndSession = function(data) {
+    // Player left
+    activePlayers = activePlayers.filter(addr => addr !== data.address);
+    handlePlayerLeaving();
+};
+```
+
+### 5. Error Handling
+
+Always validate incoming data:
+
+```javascript
+SpixiAppSdk.onNetworkData = function(senderAddress, data) {
+    try {
+        const message = JSON.parse(data);
+        
+        // Validate message structure
+        if (!message.action || !message.data) {
+            console.error("Invalid message format");
+            return;
+        }
+        
+        // Validate sender
+        if (!activePlayers.includes(senderAddress)) {
+            console.error("Unknown sender");
+            return;
+        }
+        
+        handleMessage(message);
+    } catch (e) {
+        console.error("Error processing message:", e);
+    }
+};
+```
+
+## Example Apps
+
+Explore complete examples in the [Spixi-Mini-Apps repository](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/apps):
+
+### Spixi Mini Test (`com.ixilabs.spixi.minitest`)
+Comprehensive testing and demonstration app showcasing all SDK features and capabilities.
+
+### Tic-Tac-Toe (`com.ixilabs.spixi.tictactoe`)
+Classic two-player game with state synchronization and win detection.
+
+### Whiteboard (`com.ixilabs.spixi.whiteboard`)
+Collaborative drawing app with real-time stroke sharing.
+
+### Gate Control (`com.ixilabs.spixi.gate-control`)
+IoT device controller that integrates with QuIXI gateway.
+
+### Auth QR (`com.ixilabs.spixi.auth`)
+QR code authentication utility for secure logins.
+
+## Publishing Your App
+
+### 1. Host the Files (skip if installing directly)
+
+Upload your `.spixi`, `.zspixiapp`, and icon files to a web server:
+
+```
+https://yourserver.com/apps/
+├── myapp.spixi     # Metadata
+├── myapp.zspixiapp # App archive
+└── myapp.png       # Icon
+```
+
+### 2. Share the .spixi File
+
+Users can install by:
+- Opening the `.zspixiapp` file in Spixi
+- Scanning a QR code pointing to the `.spixi` file
+
+### 3. Distribution Options
+
+- **Direct sharing** - Send `.zspixiapp` file via Spixi messenger
+- **Website** - Provide download link on your site
+- **QR code** - Generate QR for easy mobile installation
+- **App directory** - Submit to community app directories
+
+## Debugging Tips
+
+### Console Logging
+
+Use browser console in WebView:
+
+```javascript
+console.log("Debug info:", gameState);
+console.error("Something went wrong:", error);
+```
+
+On Android, enable WebView debugging and use Chrome DevTools.
+
+### Test Without Spixi
+
+Create a mock SDK for browser testing:
+
+```javascript
+// mock-sdk.js
+if (typeof SpixiAppSdk === 'undefined') {
+    window.SpixiAppSdk = {
+        fireOnLoad: () => {
+            setTimeout(() => {
+                SpixiAppSdk.onInit("test-session-123", "addr1,addr2");
+            }, 100);
+        },
+        sendNetworkData: (data) => {
+            console.log("MOCK SEND:", data);
+            // Simulate receiving your own message
+            setTimeout(() => {
+                SpixiAppSdk.onNetworkData("addr2", data);
+            }, 500);
+        },
+        setStorageData: (key, value) => {
+            localStorage.setItem(key, value);
+        },
+        getStorageData: (key) => {
+            const value = localStorage.getItem(key);
+            setTimeout(() => {
+                SpixiAppSdk.onStorageData(key, value);
+            }, 100);
+        },
+        back: () => console.log("MOCK BACK"),
+        
+        // Callbacks (will be overridden by your app)
+        onInit: () => {},
+        onNetworkData: () => {},
+        onStorageData: () => {},
+        onRequestAccept: () => {},
+        onRequestReject: () => {},
+        onAppEndSession: () => {}
+    };
+}
+```
+
+Load before your app script:
+
+```html
+<script src="js/mock-sdk.js"></script>
+<script src="js/app.js"></script>
+```
+
+### Network Simulation
+
+Simulate latency and packet loss:
+
+```javascript
+function sendWithLatency(data, delay = 500) {
+    setTimeout(() => {
+        if (Math.random() > 0.1) { // 10% packet loss simulation
+            SpixiAppSdk.sendNetworkData(data);
+        } else {
+            console.warn("Simulated packet loss");
+        }
+    }, delay + Math.random() * 500); // Random jitter
+}
+```
+
+## Advanced Topics
+
+### App Protocols
+
+For complex apps, define custom protocols:
+
+```javascript
+// Register protocol handler
+SpixiAppSdk.onNetworkProtocolData = function(senderAddress, protocolId, data) {
+    if (protocolId === "chess.v1") {
+        handleChessMove(JSON.parse(data));
+    }
+};
+
+// Send via protocol
+function sendChessMove(move) {
+    SpixiAppSdk.sendNetworkProtocolData("chess.v1", JSON.stringify(move));
+}
+```
+
+### Resource Optimization
+
+Minimize network traffic:
+
+```javascript
+// Batch updates
+let pendingUpdates = [];
+
+function queueUpdate(update) {
+    pendingUpdates.push(update);
+}
+
+setInterval(() => {
+    if (pendingUpdates.length > 0) {
+        const batch = {
+            action: "batch",
+            updates: pendingUpdates
+        };
+        SpixiAppSdk.sendNetworkData(JSON.stringify(batch));
+        pendingUpdates = [];
+    }
+}, 1000); // Send every second
+```
+
+## Troubleshooting
+
+### App doesn't load
+- Verify `app/index.html` exists
+- Check `appinfo.spixi` formatting
+- Ensure all SDK files are present
+
+### SDK functions don't work
+- Call `SpixiAppSdk.fireOnLoad()` on page load
+- Override callbacks before calling `fireOnLoad()`
+- Check browser console for errors
+
+### Users not syncing
+- Verify both users accepted the session
+- Check network connectivity in Spixi
+- Add heartbeat/ping mechanism
+
+### Storage not persisting
+- Use base64 encoding for complex data: `btoa(JSON.stringify(data))`
+- Storage is per-contact, not global
+- Check storage quotas on mobile devices
+
+## Next Steps
+
+- [Streaming Protocol Details](../../architecture/10_protocol/streaming)
+- [Spixi-Mini-Apps GitHub Repository](https://github.com/ixian-platform/Spixi-Mini-Apps)
+- [App Packer Tool](https://apps.spixi.io/packer)
+- [Discord](https://discord.gg/pdJNVhv)
+- [Telegram](https://t.me/ixian_official_ENG)
+
+## Resources
+
+- **SDK Reference**: [spixi-app-sdk.js](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/mini-apps-sdk/spixi-app-sdk.js)
+- **Example Apps**: [apps/](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/apps)
+- **App Packer**: [app-packer/](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/app-packer)

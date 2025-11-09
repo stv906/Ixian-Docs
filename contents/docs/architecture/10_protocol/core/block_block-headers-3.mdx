@@ -1,0 +1,39 @@
+---
+title: blockHeaders3 (47)
+description: Responds to a `getBlockHeaders3` request with a chunk of full block headers.
+status: Planned Upgrade
+---
+
+The `blockHeaders3` message is the response to a `getBlockHeaders3` request. It contains a batch of full, serialized block headers.
+
+If the number of requested headers is large, the responding node will split them across multiple `blockHeaders3` messages to ensure no single message exceeds the maximum network message size.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload consists of a repeating series of `Block Header` entries. There is no explicit count field; the number of headers is determined by parsing the stream until it ends.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB` | The total size of the message payload must not exceed the global maximum. |
+| `headers` | `BlockHeader[]` | `1` | `5000`* | An array of one or more serialized block header entries. |
+
+\* The maximum number of headers per chunk is determined by the node configuration (`CoreConfig.maximumBlockHeadersPerChunk`), which defaults to `5000`.
+
+### Block Header Entry Structure
+
+Each entry in the `headers` array is a complete, serialized Block Header.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `headerData` | `IxiBytes` | The full binary representation of a single block header. The internal structure is a subset of the **[blockData2 message](./block_block-data-2)**, excluding the Block Body fields (signatures and transaction IDs). |
+
+## Behavioral Notes
+
+-   A node receiving this message should parse each block header, validate it, and connect it to its local chain.
+-   Validation includes checking the `lastBlockChecksum` to ensure it links to the previous header, verifying the block's internal consistency, and checking the Proof of Work if applicable.
+-   The recipient should be prepared to receive multiple `blockHeaders3` messages in response to a single large `getBlockHeaders3` request.

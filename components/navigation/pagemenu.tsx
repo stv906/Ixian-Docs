@@ -11,7 +11,7 @@ export default function PageMenu({ isSheet = false }) {
 
   return (
     <div className="flex flex-col gap-3.5 mt-5 pb-6">
-      {Routes.map((item, index) => {
+      {Routes.filter(item => pathname.startsWith(`/docs${item.href}`)).map((item, index) => {
         if ("spacer" in item) {
           return (
             <div key={`spacer-${index}`} className="my-2 mr-3">

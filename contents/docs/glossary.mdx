@@ -1,0 +1,304 @@
+---
+title: Glossary
+description: Definitions of key terms, concepts, and acronyms used throughout the Ixian Platform
+---
+
+A comprehensive reference of technical terms, concepts, and acronyms used in the Ixian ecosystem.
+
+---
+
+## A
+
+### Address
+A cryptographic identifier derived from a public key that serves as a unique account identifier on the Ixian blockchain. All current address versions (v0, v1, v2) are derived from RSA-4096 public keys and encoded in Base58.
+
+### AES-256-GCM
+Advanced Encryption Standard with 256-bit keys using Galois/Counter Mode. One of the symmetric encryption algorithms used in Ixian for encrypting data streams and messages.
+
+### API (Application Programming Interface)
+A set of protocols and tools for building software applications. Ixian provides JSON-RPC APIs for DLT nodes, S2 nodes, and QuIXI bridges.
+
+### App Protocol
+A custom communication protocol defined by Spixi Mini Apps that enables structured data exchange between peers over the S2 network. Used for IoT control, streaming, and custom application logic.
+
+### Argon2id
+A memory-hard key derivation function used for password hashing and proof-of-work calculations in Ixian. Provides resistance against GPU and ASIC attacks.
+
+---
+
+## B
+
+### Base58
+An encoding scheme similar to Base64 but designed to avoid ambiguous characters (0, O, I, l). Used throughout Ixian for encoding addresses, public keys, and transaction IDs.
+
+### Block
+A data structure containing a set of transactions, signatures from Master Nodes, and metadata. Blocks are linked cryptographically to form the blockchain.
+
+### Block Height
+The sequential number of a block in the blockchain, starting from 1 (genesis block). Used to identify specific points in blockchain history.
+
+### Block Signature
+A cryptographic signature from a Master Node attesting to the validity of a block. Multiple signatures from different Master Nodes are required to finalize a block under the PoCW consensus.
+
+### Blockchain
+A distributed ledger of transactions organized into blocks and cryptographically linked. Ixian's blockchain maintains wallet balances, IXI Names, and consensus state.
+
+---
+
+## C
+
+### ChaCha20-Poly1305
+A high-performance authenticated encryption algorithm used in Ixian for secure data transmission. Particularly efficient on mobile devices.
+
+### Client Node
+A lightweight node that connects to the Ixian network without maintaining the full blockchain. Can send transactions, query data, and communicate via S2 without consensus participation.
+
+### Consensus
+The process by which nodes in a distributed network agree on the state of the blockchain. Ixian uses Proof of Collaborative Work (PoCW).
+
+### Cryptographic Agility
+The ability to support multiple cryptographic algorithms and upgrade them without breaking backward compatibility. Ixian's address versioning system enables crypto-agility.
+
+---
+
+## D
+
+### DLT (Distributed Ledger Technology)
+The blockchain layer of Ixian responsible for maintaining transaction history, wallet balances, IXI Names registry, and consensus operations.
+
+### DLT Node
+A node that participates in the Ixian blockchain network by validating transactions, maintaining ledger state, and potentially signing blocks.
+
+---
+
+## E
+
+### ECDH (Elliptic Curve Diffie-Hellman)
+A key agreement protocol used in Ixian for establishing shared secrets between peers. Part of the hybrid key exchange scheme.
+
+### Encryption
+The process of converting plaintext into ciphertext to protect confidentiality. Ixian uses dual encryption combining AES and ChaCha20.
+
+---
+
+## F
+
+### FIPS 203
+Federal Information Processing Standard 203, which defines ML-KEM (Module-Lattice-Based Key-Encapsulation Mechanism). Ixian implements FIPS 203 for post-quantum security.
+
+### Fork
+A divergence in the blockchain where different nodes have different views of the chain. Ixian's consensus mechanism is designed to minimize and resolve forks quickly.
+
+---
+
+## G
+
+### Genesis Block
+The first block in the blockchain (block height 1). Contains initial network parameters and the foundation of the chain.
+
+---
+
+## H
+
+### Handshake
+The process of establishing a secure, authenticated connection between two Ixian addresses. Involves key exchange, verification, and session establishment.
+
+### Hash
+The output of a cryptographic hash function. Ixian uses SHA-3 (Keccak) for most hashing operations including block hashes and transaction IDs.
+
+### History Node
+A Master Node that maintains the complete blockchain history. Currently all Master Nodes are also full History Nodes (distinction planned for future).
+
+---
+
+## I
+
+### IXI
+The native cryptocurrency token of the Ixian Platform. Used for transaction fees, staking, and rewarding Master Nodes.
+
+### IXI Names
+A decentralized naming system that provides human-readable identities mapped to Ixian addresses. Similar to DNS but fully decentralized on the blockchain.
+
+### Ixiac
+The name of Ixian's consensus algorithm: Proof of Collaborative Work (PoCW). Combines proof-of-work eligibility with multi-signature validation.
+
+### Ixian-Core
+The foundational C# SDK library that implements all core protocol logic, cryptography, and networking for the Ixian Platform.
+
+### IxiNumber
+A variable-length binary integer encoding used in Ixian protocol messages to minimize bandwidth usage.
+
+### IxiVarInt
+A variable-length integer encoding that uses fewer bytes for smaller numbers. Similar to Bitcoin's VarInt but optimized for Ixian's use cases.
+
+---
+
+## J
+
+### JSON-RPC
+A remote procedure call protocol encoded in JSON. Used for all Ixian node APIs (DLT, S2, QuIXI).
+
+---
+
+## K
+
+### Keep-Alive
+A periodic message broadcast by clients to announce their continued online presence. Required to maintain visibility in the Starling presence system.
+
+### Keccak
+The SHA-3 cryptographic hash function used throughout Ixian for generating block hashes, transaction IDs, and address derivation.
+
+---
+
+## L
+
+### Ledger
+The complete record of all transactions and account balances on the Ixian blockchain.
+
+### LM Studio
+A desktop application for running large language models locally. Used in Ixian examples to demonstrate decentralized AI chatbots.
+
+---
+
+## M
+
+### Master Node
+A full node that participates in consensus by signing blocks and earning IXI rewards. Must maintain the complete blockchain and meet minimum stake requirements.
+
+### ML-KEM (Module-Lattice-Based Key-Encapsulation Mechanism)
+A post-quantum cryptographic algorithm standardized in FIPS 203. Ixian uses ML-KEM-768 for quantum-resistant key exchange.
+
+### MQTT (Message Queuing Telemetry Transport)
+A lightweight publish-subscribe messaging protocol. QuIXI supports MQTT bridges for IoT integration.
+
+### Multi-signature (Multisig)
+A wallet that requires multiple private keys to authorize transactions. Ixian supports arbitrary M-of-N multisig configurations.
+
+---
+
+## N
+
+### Nonce
+A number used once in cryptographic operations. In Ixian, used in proof-of-work calculations and transaction construction.
+
+### Node
+Any software instance that participates in the Ixian network. Types include Master Nodes, Client Nodes, S2 Nodes, and Relay Nodes.
+
+---
+
+## P
+
+### P2P (Peer-to-Peer)
+A network architecture where participants communicate directly without central servers. Ixian's S2 network enables true P2P messaging and streaming.
+
+### PoCW (Proof of Collaborative Work)
+Ixian's consensus algorithm. Combines proof-of-work eligibility (miners solve SHA-3 puzzles) with collaborative multi-signature validation by Master Nodes.
+
+### Presence
+Information about an address's online status, network endpoints, and Starling sector assignments. Maintained by the S2 network with TTL expiration.
+
+### Private Key
+The secret cryptographic key that authorizes transactions and signs messages. Must be kept secure and never shared.
+
+### Public Key
+The cryptographic key that can be shared publicly. Used to derive addresses and verify signatures. Ixian uses RSA-4096 public keys.
+
+---
+
+## Q
+
+### QuIXI
+A gateway/bridge application that exposes Ixian functionality via REST APIs, MQTT, and RabbitMQ. Enables integration without running a full node.
+
+### Quorum
+The minimum number of signatures required to finalize a block. Ixian uses an adaptive quorum that adjusts based on network conditions.
+
+---
+
+## R
+
+### Relay Node
+An S2 node that forwards messages between clients. Acts as a routing intermediary for peers that cannot connect directly.
+
+### RSA-4096
+An asymmetric encryption algorithm using 4096-bit keys. Used throughout Ixian for address generation, signatures, and hybrid key exchange.
+
+---
+
+## S
+
+### S2 (Secure Streaming and Signaling)
+The decentralized communication layer of Ixian that handles real-time messaging, presence management, and peer-to-peer streaming.
+
+### S2 Node
+A node that participates in the S2 network by relaying messages, maintaining presence information, and routing data between peers.
+
+### Sector (Starling)
+A region of the address space in the Starling routing system. Addresses are grouped into sectors for efficient peer discovery.
+
+### SHA-3
+The third generation Secure Hash Algorithm, also known as Keccak. Ixian's primary hash function for blocks, transactions, and addresses.
+
+### Signature
+A cryptographic proof that a message was created by the holder of a specific private key. Used for transaction authorization, block validation and handshakes.
+
+### Spixi
+The flagship mobile messenger application built on Ixian. Supports end-to-end encrypted messaging, payments, and Mini Apps.
+
+### Spixi Mini App
+A lightweight web application (HTML/CSS/JavaScript) that runs inside the Spixi messenger with P2P capabilities and no backend required.
+
+### Starling
+Ixian's trustless client discovery system. Uses sector-based routing to enable clients to find each other using only their addresses, without centralized directories.
+
+---
+
+## T
+
+### Testnet
+A separate blockchain network used for testing and development. Allows developers to experiment without risking real IXI tokens.
+
+### Transaction
+A signed message that transfers IXI tokens, registers names, or performs other blockchain operations. Must be included in a block to take effect.
+
+### Transaction Fee
+The amount of IXI paid to Master Nodes for processing a transaction. Fees are dynamic and based on transaction size and network congestion.
+
+### TTL (Time To Live)
+The duration for which presence information remains valid. Clients must send keep-alive messages before their TTL expires to remain visible.
+
+---
+
+## U
+
+### UTXO (Unspent Transaction Output)
+While Ixian doesn't currently use a UTXO model like Bitcoin, the term sometimes appears when discussing transaction inputs and change addresses.
+
+---
+
+## V
+
+### Validation
+The process of verifying that transactions and blocks follow consensus rules before accepting them into the blockchain.
+
+### VarInt
+See **IxiVarInt**.
+
+---
+
+## W
+
+### Wallet
+A collection of private keys and associated addresses. Can store IXI tokens and sign transactions. Ixian supports multi-address wallets.
+
+### Wallet State
+The snapshot of all addresses and their balances at a specific block height. Used for fast synchronization and balance queries.
+
+---
+
+## Additional Resources
+
+- **[Architecture Documentation](./architecture)** - Detailed technical specifications
+- **[Developer Guides](./developers)** - Build applications on Ixian
+- **[API Reference](./reference)** - Complete RPC documentation
+- **[Operator Guides](./operators)** - Run nodes and infrastructure

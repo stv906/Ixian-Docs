@@ -1,0 +1,105 @@
+---
+title: Core Protocol
+description: Message codes, names, and descriptions of Ixian Protocol.
+---
+
+Binary messages exchanged between Ixian Core peers.
+Each message has a numeric code and may have a request/response pairing.
+Detailed structure for each message is documented on its own subpage.
+
+## Envelope (v6)
+
+This section defines the **binary envelope** used by all core messages and links to each message specification. Every message lives in its own file.
+
+| Offset | Size | Type | Field | Description |
+| ---: | ---: | -------------- | ---------------- | ---------------------------------------------------------------------- |
+| 0 | 1 | `uint8` | `start` | Constant `0xEA` |
+| 1 | 2 | `uint16` | `code` | `ProtocolMessageCode` for the payload |
+| 3 | 4 | `uint32` | `length` | Payload length in bytes (must be `> 0`, `< 50MB`) |
+| 7 | 4 | `uint32` | `checksum` | CRC32C of the payload bytes |
+| 11 | 1 | `uint8` | `headerChecksum` | XOR checksum over the 11 header bytes above |
+| 12 | N | `byte[length]` | `payload` | Message payload, structure depends on `code` |
+
+**Header checksum:** computed by XOR'ing all header bytes **before** `headerChecksum`, starting with seed `0x7F`.
+
+**Payload checksum:** CRC32C (Castagnoli) over the `payload` bytes.
+
+## Global Serialization Rules
+
+The following rules apply to all message payloads unless specified otherwise.
+
+*   **Endianness:** All multi-byte integer types (`uint16`, `int32`, `uint64`, etc.) are serialized in **Little-Endian** byte order.
+*   **String Encoding:** All strings are encoded using the standard .NET `BinaryWriter` format, which prefixes the **UTF-8** bytes with the string's length encoded as a 7-bit integer.
+
+---
+
+## Handshake
+
+| Name | Code | Description |
+|------|------|--------------|
+| [hello](./core/a_hello) | `0` | Initiates handshake; includes node ID, network ID, and capabilities. |
+| [helloData](./core/a_hello-data) | `1` | Response to `hello`, confirming handshake and sharing peer data. |
+| [bye](./core/a_bye) | `2` | Graceful session termination with details disconnection. |
+
+---
+
+## Presence
+
+| Name | Code | Description |
+|------|------|--------------|
+| [getKeepAlives](./core/presence_get-keep-alives) | `6` | Requests active presence data from peer. |
+| [keepAlivesChunk](./core/presence_keep-alives-chunk) | `7` | Chunked response containing presence entries. |
+| [updatePresence](./core/presence_update-presence) | `24` | Announces local presence change. |
+| [keepAlivePresence](./core/presence_keep-alive) | `34` | Sends or updates a single presence entry. |
+| [getPresence2](./core/presence_get-presence-2) | `36` | Requests specific presence records. |
+| [getRandomPresences](./core/presence_get-random-presences) | `48` | Requests a random subset of active presences for seeding/discovery. |
+| [getSectorNodes](./core/presence_get-sector-nodes) | `18` | Requests nodes for a sector or region. |
+| [sectorNodes](./core/presence_sector-nodes) | `19` | Returns sector node list. |
+
+---
+
+## Blocks / Headers
+
+| Name | Code | Description |
+|------|------|--------------|
+| [getBlockHeaders3](./core/block_get-block-headers-3) | `46` | Requests block headers by height range or locator. |
+| [blockHeaders3](./core/block_block-headers-3) | `47` | Returns full block headers. |
+| [compactBlockHeaders1](./core/block_compact-block-headers-1) | `50` | Returns compact (reduced) block headers for fast sync. |
+| [getBlock3](./core/block_get-block-3) | `55` | Requests full block by hash or height. |
+| [blockData2](./core/block_block-data-2) | `9` | Full block data response (transactions, signatures, metadata). |
+| [blockSignature2](./core/block_block-signature-2) | `13` | Announces or relays a block signature. |
+| [getBlockSignatures2](./core/block_get-block-signatures-2) | `14` | Requests block signatures for a specific block. |
+| [getSignatures3](./core/block_get-signatures-3) | `15` | Requests signatures using the latest format. |
+| [signaturesChunk2](./core/block_signatures-chunk-2) | `17` | Chunked response containing one or more signatures. |
+| [getRelevantBlockTransactions](./core/block_get-relevant-block-transactions) | `49` | Requests only transactions relevant to a peer for a given block. |
+
+---
+
+## Transactions
+
+| Name | Code | Description |
+|------|------|--------------|
+| [getTransactions2](./core/tx_get-transactions-2) | `56` | Requests multiple transactions by hash list or range. |
+| [transactionsChunk3](./core/tx_transactions-chunk-3) | `60` | Chunked response containing transaction data. |
+| [getTransaction3](./core/tx_get-transaction-3) | `58` | Requests a single transaction by ID. |
+| [transactionData2](./core/tx_transaction-data-2) | `8` | Provides single transaction data. |
+
+---
+
+## Other
+
+| Name | Code | Description |
+|------|------|--------------|
+| [getBalance2](./core/b_get-balance-2) | `30` | Requests wallet balance by address. |
+| [balance2](./core/b_balance-2) | `31` | Returns wallet balance data. |
+| [inventory2](./core/b_inventory-2) | `59` | Announces available blocks or transactions by hash or height. |
+| [rejected](./core/b_rejected) | `3` | Message rejected with details about rejection. |
+| [s2data](./core/b_s2-data) | `26` | Transfers S2 data payloads across the overlay. |
+
+---
+
+## Notes
+
+- Messages with `Chunk` may repeat until the dataset is complete.  
+- Numeric codes are for wire-level interoperability; use symbolic names in code.  
+- Obsolete and deprecated codes are intentionally omitted here.

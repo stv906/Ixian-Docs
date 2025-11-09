@@ -1,0 +1,128 @@
+---
+title: createRawTransaction
+description: Creates a raw, unsigned or signed transaction without broadcasting it to the network.
+status: Finalized
+---
+
+## Introduction
+
+The `createRawTransaction` method leverages the same powerful transaction construction engine as `addTransaction` but provides an "offline" mode. It builds and returns a complete transaction without adding it to the node's transaction pool or broadcasting it to the network.
+
+This endpoint is designed for advanced use cases, such as:
+*   **Cold Storage:** Creating a transaction on an online machine, transferring the raw data to an air-gapped machine for signing, and then broadcasting it separately.
+*   **Manual Submission:** Allowing applications to control the exact moment a transaction is sent to the network.
+*   **Complex Scripting:** Building and inspecting transactions before they are finalized.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters. `POST` is recommended for clarity.
+
+### Parameters
+
+This method accepts all the same transaction-building parameters as [`addTransaction`](./tx_add-transaction). Two additional parameters control the output format and signing behavior.
+
+| Name               | Type     | Required | Description                                                                                                                                                             |
+| :----------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. See **Custom Formats** below.                                                                                        |
+| `from`             | `string` | No       | **Advanced.** A list of `address_amount` pairs to use as inputs. If omitted, the node automatically selects inputs.                                                     |
+| `wallet`           | `string` | No       | The base58-encoded address of the wallet to use. Required if the node manages multiple wallets.                                                                         |
+| `primaryAddress`   | `string` | No       | Specifies which address to use from the wallet. Defaults to the primary address.                                                                                        |
+| `fee`              | `string` | No       | A specific `IxiNumber` fee. If omitted, the fee is calculated automatically.                                                                                            |
+| `autofee`          | `string` | No       | If `"true"` and `from` is specified, the fee is automatically added to the first input.                                                                                 |
+| `relayNodeAddress` | `string` | No       | **Client-only.** The address of a specific S2 node for relaying.                                                                                                        |
+| `sign`             | `string` | No       | If present (e.g., `"true"`), the created transaction will be signed. **If omitted, the transaction is returned unsigned.**                                                |
+| `json`             | `string` | No       | If present (e.g., `"true"`), the response will be a JSON object. **If omitted, the response is a raw hex string.**                                                       |
+
+
+### Custom `to` and `from` Format
+
+The `to` and `from` parameters use a special string format:
+*   Each entry is an `address` and an `amount` separated by an underscore (`_`).
+*   Multiple entries are separated by a hyphen (`-`).
+
+**Example:** `16NBH...Bo_1000-1EXSq...Wm_50.25`
+
+### Example POST Request (Unsigned, Raw Hex)
+
+This is the default and most common use case for cold storage.
+
+```json
+POST /createRawTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "createRawTransaction",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "to": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo_100"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (Signed, JSON Output)
+
+This example creates a signed transaction and requests the response as a JSON object instead of a hex string.
+
+```
+GET
+/createRawTransaction?wallet=...&to=..._100&sign=true&json=true
+```
+
+---
+
+## Response
+
+The response format depends entirely on the `json` parameter.
+
+### Default Response (Raw Hex String)
+
+When the `json` parameter is **omitted**, the `result` is a single hex-encoded string. This string represents the complete, serialized transaction bytes, ready for storage, transport, or later submission.
+
+#### Example Success Response (Raw Hex)
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "0700fd200d010001010005402a864817000001210035c505602b85b6f9972ea7eda6459c0aff9cd9252aeeb6833a873db0dd468b350500e87648170000fc74a7fc0b0200020000cd59108df2aec3f49fa80ca98e590ece1f2031acdfecab0294f2a730bc6bbf27834aae73c9572577b3cdca2149299979d928683c0efe2fef75765286988664c1b6a50e848678ca53c259ddc7dca3731b6a33f57f954c0e8acde101d6e5116af760876dd7f018aecd13fc2a756d481f97ee0a9115329ba3576dfe1fa65eb84b7d1de42890596f6ea7eeed40be9c746acaa6a1de1776c20b17767f67db514151a79f784b19804700db99cf0087a3dabd4ab865a84da153288bed26f212f4c65b1c9263583f65660805407e5523ccf799c880a3e816c7af8c329bf49922025e5d06606a82ac00b8b645cdb0ec101fc5f1d539c34e408e848898c7769a89bd1131e936f92d33bbabe55817f3bac3d966ebf2f49b7cac8dcf87e409757a31e59e6952e5894f1861f1563373e366765dceb5fef09ca20466fa0bae62e4a8548fe1a9e69d313b3573090da29cea7cf4cedceae84e973651fdc311c3cf6c0f95c0a3818b9899cab8a4c5398041f9459d62b7e4481d866eae1c49cd0721a7a1776eeca7785bfc1a337d5d9cff9d73718d88565959b6bf0d67358ddc0f5f0252e6ad8b492a292e3c75368d17ed94148afab9c981ec922f9e887c8965a8512bf8a0956c9d44bfcceb9ecb605a217a464873326208d975239667710ab4c629ce174c2dd0de69ebed4efac8163cf29e6241f1c15dd6e8829d5ad5c194760e0526e1039f25edd030000000100010000",
+  "id": 1,
+  "error": null
+}
+```
+
+### JSON Response (`json=true`)
+
+When the `json=true` parameter is **included**, the `result` is the standard `Transaction` object, identical in structure to the response from `addTransaction`.
+
+#### Result: `Transaction` Object Structure
+The structure is identical to the one defined in the [`addTransaction`](./tx_add-transaction#result-transaction-object-structure) documentation.
+
+#### Example Success Response (JSON)
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "68874-prFPNo1GeQ8HzwPMnuFEGSXiq9qRyUL7gFxiaE5FaKPL8BTZodJBcZ5L81n9",
+    "version": 7,
+    "blockHeight": "68874",
+    "type": "0",
+    "fee": "0.01000000",
+    "to": {
+      "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo": "100.00000000"
+    },
+    "...": "..."
+  },
+  "id": 2,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **No Broadcast:** This endpoint **never** broadcasts the transaction or adds it to the local transaction pool. The caller is responsible for submitting the returned data to the network using another method (e.g., `sendRawTransaction`).
+*   **Default is Unsigned:** For security in cold storage workflows, the transaction is returned **unsigned** by default. You must explicitly include the `sign` parameter to have the node's wallet sign the transaction.
+*   **Shared Logic:** All complex behaviors from `addTransaction`, such as automatic input selection, dynamic fee calculation, and relay fee addition for clients, are also present in this method.

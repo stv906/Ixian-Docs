@@ -1,0 +1,147 @@
+---
+title: DLT Node Configuration
+description: A complete reference for the Ixian DLT node configuration file (ixian.cfg) and its command-line arguments.
+---
+
+## Introduction
+
+The Ixian DLT node's behavior is configured through a combination of a configuration file (`ixian.cfg` by default) and command-line arguments. Settings from the configuration file are loaded on startup, and any arguments provided on the command line will override the file's settings.
+
+This document serves as a comprehensive guide to all available configuration options for running and managing an Ixian DLT node.
+
+---
+
+## Configuration File (`ixian.cfg`)
+
+The configuration file uses a simple `key = value` format. Each directive must be on a new line. Lines starting with a semicolon (`;`) or hash (`#`) are treated as comments and are ignored.
+
+**Example `ixian.cfg`:**
+
+```ini
+; Set the P2P port for the mainnet
+dltPort = 10234
+
+; Set the JSON-RPC API port
+apiPort = 8081
+
+; Allow API access only from the local machine
+apiAllowIp = 127.0.0.1
+
+; Specify a custom data folder path
+dataFolderPath = /opt/ixian/data
+```
+
+### General Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `networkType` | `string` | Sets the network to operate on. Can be `mainnet`, `testnet`, or `regtest`. |
+| `externalIp` | `string` | The node's public IP address. Overrides automatic detection. |
+| `checksumLock`| `string` | A custom string for the seeding checksum, used only for private networks. |
+
+### Network & API Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `dltPort` | `integer` | The TCP port for peer-to-peer (P2P) network communication. |
+| `dltBind` | `string` | Binds the P2P server to a specific local IP address. |
+| `testnetDltPort` | `integer` | The P2P port to use when in testnet mode. |
+| `apiPort` | `integer` | The TCP port for the JSON-RPC API server. |
+| `testnetApiPort` | `integer` | The API port to use when in testnet mode. |
+| `apiAllowIp` | `string` | Whitelists an IP address for API access. Can be specified multiple times. |
+| `apiBind` | `string` | Binds the API server to a specific local IP address. Can be specified multiple times. |
+| `addApiUser` | `string` | Adds a required `user:password` credential for API access. Can be specified multiple times. |
+| `addPeer` | `string` | Adds a seed node for the mainnet. Can be used multiple times. |
+| `addTestnetPeer`| `string` | Adds a seed node for the testnet. Can be used multiple times. |
+
+### Logging & Storage Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `maxLogSize` | `integer` | The maximum size of a single log file in Megabytes (MB). |
+| `maxLogCount` | `integer` | The maximum number of rotated log files to keep. |
+| `logVerbosity` | `integer` | A bitmask for logging detail: Trace=1, Info=2, Warn=4, Error=8. Add numbers for combined verbosity (e.g., `14` for Info+Warn+Error). |
+| `dataFolderPath` | `filepath` | Specifies the directory to store blockchain data and the wallet state. |
+| `logFolderPath` | `filepath` | Specifies the directory to store log files. |
+| `activityFolderPath` | `filepath` | Specifies the directory to store activity data. |
+| `blockStorage` | `string` | The storage engine for blocks and transactions. Can be `SQLite` or `RocksDB`. |
+| `maxDatabaseCache`| `ulong` | The maximum RAM in bytes to allocate for the RocksDB cache. |
+
+### Node Behavior Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `disableWebStart`| `integer` | Set to `1` to prevent the node from opening the API URL in a browser on startup. |
+| `blockNotify` | `string` | A command to execute when a new block is accepted by the node. |
+
+---
+
+## Command-Line Arguments
+
+Command-line arguments are processed after the configuration file and will override its settings.
+
+### General Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | - | Displays the help screen and exits. |
+| `-v`, `--version` | - | Displays the node version and exits. |
+| `-t`, `--testnet` | - | Starts the node in testnet mode. |
+| `--networkType` | `string` | Explicitly sets the network type: `mainnet`, `testnet`, or `regtest`. |
+| `--config` | `filepath` | Specifies the path to the configuration file (default: `ixian.cfg`). |
+
+### Node Operation Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-c`, `--clean` | - | Prompts to clear all blockchain data, logs, and cache before starting. Use with `-f` to force clean without a prompt. |
+| `-x`, `--changepass`| - | Prompts to change the password of the wallet specified with `-w`. |
+| `-p`, `--port` | `port` | Sets the P2P network port. |
+| `-a`, `--apiport` | `port` | Sets the JSON-RPC API port. |
+| `-i`, `--ip` | `ip_address`| Sets the external IP address. |
+| `-w`, `--wallet` | `filepath` | Specifies the path to the wallet file (default: `ixian.wal`). |
+| `-n`, `--node` | `ip:port` | Connects to a specific seed node, ignoring the default list. |
+| `--worker` | - | Disables masternode capabilities, running as a non-signing node. |
+| `--threads` | `count` | Sets the number of threads to use for mining (default: 1). |
+| `--cpuThreads` | `count` | Force sets the number of CPU threads for general processing. |
+| `--lastGoodBlock`| `block_num` | Loads the blockchain from storage only up to the specified block height. |
+| `--disableWebStart`| - | Disables opening the API URL in a browser on startup. |
+| `--onlyShowAddresses`| - | Displays the addresses in the wallet and exits. |
+| `--maxTxPerBlock`| `count` | Sets the maximum number of transactions the node will include in a new block. |
+| `--disableSetTitle`| - | Prevents the node from setting the console window title. |
+| `--disableFastBlockLoading`| - | Disables the optimized block loading process during startup. |
+| `--forceSyncToBlock`| `block_num` | Forces the node to synchronize with the network up to the specified block height. |
+| `--maxOutgoingConnections`| `count` | Sets the maximum number of outbound peer connections. |
+| `--maxIncomingMasterNodes`| `count` | Sets the maximum number of inbound connections from other Master Nodes. |
+| `--maxIncomingClientNodes`| `count` | Sets the maximum number of inbound connections from clients. |
+| `--minActivityBlockHeight`| `block_num` | Prunes activity data older than the specified block height. `0` disables pruning. |
+
+### Logging & Storage Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--maxLogSize` | `megabytes` | Sets the maximum log file size in MB. |
+| `--maxLogCount` | `count` | Sets the maximum number of rotated log files. |
+| `--logVerbosity` | `integer` | Sets the logging verbosity using the bitmask (Trace=1, Info=2, Warn=4, Error=8). |
+| `--verboseOutput`| - | Enables verbose logging directly to the console. |
+| `--blockStorage` | `string` | Sets the storage engine (`SQLite` or `RocksDB`). |
+| `--dataFolderPath` | `filepath` | Specifies the directory for blockchain data. |
+| `--logFolderPath` | `filepath` | Specifies the directory for log files. |
+| `--activityFolderPath` | `filepath` | Specifies the directory for activity data. |
+| `--maxDatabaseCache` | `bytes` | Sets the maximum RAM in bytes to use for the RocksDB cache. |
+| `--verifyStorage`| - | Performs a full integrity check of the local blockchain storage on startup. |
+| `--optimizeDBStorage`| - | Manually triggers a compaction of all databases before the node starts. This can take a significant amount of time. |
+
+### Developer & Debug Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--walletPassword`| `password` | **(UNSAFE)** Provides the wallet password on the command line. Avoid using in production environments. |
+| `--genesis` | - | Starts the node in genesis mode to create a new private network. |
+| `--recover` | - | Recovers the network from a file (developer-only feature). |
+| `--generateWallet`| - | Generates a new wallet file and exits. **Testnet only.** |
+| `--offline` | - | Starts the node in offline mode, preventing all P2P network operations. |
+| `--disableChainReorg`| - | Disables the node's ability to perform a blockchain reorganization. |
+| `--chainReorgTest`| - | Enables a specific test for the chain reorganization logic. |
+| `--netdump` | `filepath` | Dumps network message details to the specified file for debugging. |
+| `--benchmark` | `type` | Runs a specific performance benchmark and exits. |

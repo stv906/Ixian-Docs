@@ -1,0 +1,27 @@
+---
+title: acceptCall (15)
+description: Accepts an incoming call request.
+---
+
+The `acceptCall` message is sent by the recipient of a `requestCall` message to signal that they have accepted the incoming call. This completes the call signaling handshake and allows media streaming to begin.
+
+This message is a specialized version of the `appRequestAccept` message, contextualized by the call's `sessionId`.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload follows the structure of an `AppDataMessage`. The `appInfo` field is not required in the response.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier of the call session being accepted. This MUST match the `sessionId` from the original `requestCall` message. |
+| `data` | `IxiBytes` | 0 | * | Optional. Contains the recipient's call parameters, such as the chosen codecs from the list offered in the `requestCall`. |
+
+## Behavioral Notes
+
+*   **Trigger:** A user's client sends this message after the user clicks "accept" on an incoming call notification.
+*   **Implementation:** The client constructs an `AppDataMessage` payload with the call's `sessionId` and sends it within a `SpixiMessage` of type `appRequestAccept`.
+*   **Sender Action:** Upon receiving `acceptCall`, the original caller's client knows the call is connected. Both clients can then proceed to exchange media via `callData` messages.

@@ -1,0 +1,262 @@
+---
+title: Network Topology & Node Architecture
+description: Detailed specification of Ixian's two-layer network architecture, node types, responsibilities, and communication patterns.
+---
+
+## Introduction
+
+The Ixian Platform operates on a **two-layer network architecture**:
+
+1. **DLT Layer** (Ixian DLT) - Consensus and global state
+2. **Streaming Layer** (Ixian S2) - Client communication and message routing
+
+These layers are **interdependent but distinct**: DLT nodes maintain blockchain consensus, while S2 nodes handle real-time messaging. Understanding their relationship is critical for protocol implementation.
+
+---
+
+## Layer 1: DLT Network
+
+### Architecture Overview
+
+The DLT layer is a **peer-to-peer network of Master Nodes** maintaining consensus on:
+- Blockchain state (blocks, transactions)
+- Wallet balances (`WalletState`)
+- Name registrations (`RegNameState`)
+- Base presence records (Master nodes and S2 relay nodes)
+
+**Network Characteristics**:
+- **Topology**: Mesh network (nodes connect to multiple peers)
+- **Consensus**: Proof of Collaborative Work (PoCW)
+- **State**: Full or recent blockchain data
+- **Protocol**: Custom binary protocol over TCP
+- **Default Port**: 10234 (configurable)
+
+### Node Types
+
+#### Master Node (Type: M)
+
+**Primary Responsibilities**:
+1. **Block Validation**: Verify incoming blocks for correctness
+2. **Transaction Validation**: Check signatures, balances, nonces
+3. **Block Signing**: Submit signatures for valid blocks (requires PoW eligibility)
+4. **Block Generation**: Produce new blocks when elected
+5. **State Maintenance**: Keep `WalletState` and `RegNameState` synchronized
+6. **Network Relay**: Forward blocks, transactions, signatures to peers
+7. **Base Presence Storage**: Maintain presence records for all node types (M, H, R)
+
+**Participation Lifecycle**:
+```
+1. Node starts -> Syncs blockchain from peers
+2. Registers presence in DLT -> Broadcasts public endpoint
+3. Mines PoW solution for recent block
+4. Submits PoW solution transaction -> Becomes eligible
+5. Validates incoming blocks -> Signs if valid
+6. If elected -> Generates new block
+7. Repeats PoW mining every 15 blocks to maintain eligibility
+```
+
+#### History Node (Type: H)
+
+**Primary Responsibilities**:
+1. **Full Blockchain Storage**: Maintain complete blockchain history
+2. **Block Validation**: Verify incoming blocks (same as Master nodes)
+3. **Block Signing**: Submit signatures for valid blocks (requires PoW eligibility)
+4. **Archival Services**: Provide historical block data to other nodes
+5. **State Maintenance**: Keep full `WalletState` and `RegNameState` history
+
+**Requirements**:
+- **Large Storage**: Must store entire blockchain history
+- **PoW Eligibility**: Same as Master nodes
+- **High Bandwidth**: Serve historical data to requesting nodes
+
+---
+
+## Layer 2: S2 Streaming Network
+
+### Architecture Overview
+
+The S2 layer is a **sector-based relay network** enabling:
+- **Client Discovery**: Finding other clients by cryptographic address
+- **Message Routing**: Encrypted end-to-end message delivery
+- **Presence Management**: Real-time availability tracking
+- **Offline Storage**: Queuing messages for unavailable clients
+
+**Network Characteristics**:
+- **Topology**: Sector-based partitioning (Starling model)
+- **Routing**: Deterministic sector assignment via address hashing
+- **Encryption**: End-to-end (relay nodes cannot decrypt)
+- **Protocol**: Custom binary protocol over TCP
+- **Default Port**: 10235 (configurable)
+
+### Node Types
+
+#### S2 Relay Node (Type: R)
+
+**Primary Responsibilities**:
+1. **Presence Registration**: Register with DLT as type='R', automatically added to prefix tree
+2. **Presence Storage**: Maintain client presences that connect to this relay
+3. **Message Routing**: Forward encrypted messages between clients
+4. **Offline Queuing**: Store messages for unavailable clients
+
+**Requirements**:
+- **Public Endpoint**: Must be reachable by clients
+- **Storage**: Queue capacity for offline messages
+- **Bandwidth**: Sufficient for relay traffic
+- **DLT Connection**: Must connect to Master/History nodes for blockchain state
+
+**Future Enhancement**: PoW requirements similar to Master nodes will be added to S2/Relay nodes to prevent Sybil attacks and ensure network quality. This will require relay operators to submit periodic PoW solutions to maintain eligibility.
+
+
+**Registration & Discovery**:
+```
+1. S2 node starts -> Registers presence with type='R' via KeepAlive messages
+2. Presence includes: endpoint (IP:port), signature, timestamp
+3. DLT nodes receive presence -> Add relay to RelaySectors prefix tree
+4. Clients query any node: getSectorNodes(targetSectorPrefix, maxCount)
+5. Queried node returns relays from prefix tree for that sector
+6. Client connects to discovered relays -> Sends GetPresence requests
+```
+
+#### Client Node (Type: C)
+
+**Primary Responsibilities**:
+1. **Presence Registration**: Publish presence to sector-appropriate relays
+2. **Peer Discovery**: Query relays for target client presences
+3. **Direct Communication**: Establish P2P connections when possible
+4. **Relay Fallback**: Route through relay if direct connection fails
+
+**Requirements**:
+- **No Public IP**: Can operate behind NAT/firewall
+- **No PoW**: No mining required
+- **Minimal Resources**: Lightweight operation
+
+**Presence Lifecycle**:
+```
+1. Client A starts -> Connects to any available relay node
+2. Optionally queries: getSectorNodes(own_sector) to find sector-specific relays
+3. Sends KeepAlive message (type='C') to connected relays
+4. Relays store presence (TTL: 300 seconds for clients, renewable)
+5. Client sends KeepAlive every 2-3 minutes -> Renews presence
+6. If TTL expires -> Presence removed (client appears offline)
+```
+
+### Sector-Based Routing (Starling)
+
+#### Sector Calculation
+
+**Deterministic Hashing**:
+```
+addressBytes = address.addressNoChecksum  // Version + payload (no checksum)
+fullHash = SHA3-512(addressBytes)         // 64-byte hash
+sectorPrefix = fullHash[0:10]             // First 10 bytes = sector ID
+```
+
+**Properties**:
+- **10-byte prefix**: 2^80 possible sectors (~1.2 septillion)
+- **Uniform distribution**: SHA-3 ensures even spread
+- **Collision resistance**: Cryptographically infeasible to find collisions
+- **Deterministic**: Same address always maps to same sector
+
+#### Discovery Process
+
+Client A wants to contact Client B:
+
+```
+1. Calculate target sector:
+   sectorB = SHA3-512(addressB_noChecksum)[0:10]
+
+2. Query connected node for relays serving sectorB:
+   Send: getSectorNodes(sectorB, maxRelayCount)
+   Node queries its RelaySectors.getSectorNodes(sectorB, maxRelayCount)
+   Returns: List of closest relay addresses from prefix tree
+   
+3. Send GetPresence(addressB) to discovered relays:
+   Relay checks local presence storage
+   If found -> Returns presence packet
+   If not found -> Returns "not available"
+   
+4. Verify presence signature:
+   Extract publicKeyB from addressB
+   Verify presence.signature using publicKeyB
+   Check timestamp freshness (<5 minutes for clients)
+```
+
+#### Relay Load Balancing
+
+**Prefix Tree Dynamics**:
+- All relays inserted into shared `RelaySectors` prefix-indexed tree
+- Insertion position randomized by `setRandomizer(hash)`
+- Queries use prefix matching to find closest relays to any sector
+- Randomizer changes periodically (block-hash-based), redistributing relay coverage
+- No manual sector selection by relays - automatic tree-based distribution
+
+**Client Strategy**:
+- Query multiple relays for redundancy
+- Cache relay assignments locally (TTL-based)
+- Fall back to DLT query if cached relays unavailable
+
+---
+
+## Scaling Properties
+
+### Horizontal Scaling
+
+**Adding Clients**:
+- More clients -> Register with existing relays in their sectors
+- No per-client state in DLT (only client wallets)
+- S2 relays handle increased presence storage
+- If relay overloaded -> New relays join and serve same sectors (automatic load balancing)
+
+**Adding Relays**:
+- New relay starts, registers presence with type='R'
+- Automatically inserted into RelaySectors prefix tree upon presence receipt
+- Clients discover via getSectorNodes queries to any connected node
+- Load distributes via prefix tree closest-match algorithm
+
+### Vertical Limits
+
+**DLT Bottlenecks**:
+- Block size limit (max transactions per block)
+- Signature verification (CPU-bound)
+- State checksum calculation (I/O-bound)
+
+**S2 Bottlenecks**:
+- Relay bandwidth (message throughput)
+- Presence storage (memory per client)
+- Relay discovery (DLT query frequency)
+
+**Mitigation**:
+- DLT: Increase block size, optimize validation, horizontal scaling of the node
+- S2: Add more relays (horizontal scaling of the relay network)
+
+---
+
+## Security Model
+
+### DLT Security
+
+**Consensus Security**:
+- PoCW requires 75% of average signature count AND 50%+1 signature continuity from previous block
+- Adaptive quorum prevents minority attacks
+- PoW eligibility prevents Sybil attacks (cost per signature)
+
+**State Security**:
+- Block checksums provide tamper evidence
+- Signature freeze at depth 5 prevents history rewriting
+- State checksums enable rapid verification
+
+### S2 Security
+
+**Presence Authenticity**:
+- All presences cryptographically signed
+- Clients verify signatures without trusting endpoints
+- Prevents impersonation attacks
+
+**Message Privacy**:
+- End-to-end encryption (relay cannot decrypt)
+- Relay only sees encrypted payload + routing metadata
+- No content inspection possible
+
+**Relay Trust**:
+- Clients don't trust individual relays
+- Query multiple relays for redundancy

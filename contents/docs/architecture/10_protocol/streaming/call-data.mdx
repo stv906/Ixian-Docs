@@ -1,0 +1,27 @@
+---
+title: callData (17)
+description: A chunk of real-time audio or video data.
+---
+
+The `callData` message is used to transport the actual media stream for an active call. Each message contains a small chunk of encrypted audio or video data.
+
+This message is a specialized version of the generic `appData` message, sent repeatedly during an active call.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload follows the structure of an `AppDataMessage`.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier of the active call session to which this media chunk belongs. |
+| `data` | `IxiBytes` | 1 | * | The raw, typically compressed, chunk of audio or video data. |
+
+## Behavioral Notes
+
+*   **Continuous Stream:** Once a call is established (via `acceptCall`), both clients continuously send and receive a stream of `callData` messages.
+*   **Implementation:** Media chunks are placed in the `data` field of an `AppDataMessage` payload and sent using a `SpixiMessage` of type `appData`.
+*   **Unreliable Transport:** The `StreamMessage` envelope for `callData` MUST have its `requireRcvConfirmation` flag set to `false`. Real-time media protocols are designed to handle packet loss, and waiting for acknowledgments would introduce unacceptable latency. Lost packets are simply skipped.

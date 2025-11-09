@@ -1,0 +1,117 @@
+---
+title: acceptContact
+description: Approves a pending contact request, completing the handshake to establish a secure communication channel.
+status: Finalized
+---
+
+## Introduction
+
+The `acceptContact` method is used to approve an incoming friend request from another user on the Ixian S2 network. It serves as the second and final step in the two-way handshake process initiated by the `addContact` method.
+
+Calling this endpoint performs two key actions:
+1.  It updates the local status of the contact from "pending" to "approved."
+2.  It sends an "Accept Add" message over the network to the original requester, notifying them that their request has been accepted and that a secure communication channel can now be established.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the user whose pending contact request you wish to accept. |
+
+### Example POST Request
+
+```json
+POST /acceptContact
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "acceptContact",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /acceptContact?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+If successful, the `result` is the updated `Contact` object, reflecting its new "approved" state.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation. The most significant change will be the `approved` field, which will now be `true`.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "nickname": "Viper",
+    "approved": true,
+    "handshakeStatus": 3,
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If the contact does not exist in the friend list:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}
+```
+
+If the `address` parameter is missing:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "address parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Prerequisite:** This command is intended to be used on a contact who has already sent you a request. The contact must exist in your local friend list with a pending status.
+*   **State Change:** The primary local action is to set the `approved` flag for the contact to `true`.
+*   **Network Action:** This command triggers an outbound `acceptAdd` message on the S2 streaming network, sent to the contact who initiated the request.
+*   **Completes Handshake:** When the original requester receives the `acceptAdd` message, the handshake is complete from both sides, and secure, end-to-end encrypted communication can begin.
+*   **Error Handling:** Attempting to accept a contact that is not in your friend list will result in an error.

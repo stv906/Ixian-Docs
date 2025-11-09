@@ -1,0 +1,509 @@
+---
+title: "Local Development with Docker Sandbox"
+description: "Master development workflows using the Ixian Docker Sandbox - automated testing, transaction debugging, multi-node scenarios, and CI/CD integration"
+---
+
+## Overview
+
+You've got the [Docker Sandbox running](../quickstart/docker-sandbox). Now let's use it like a pro.
+
+This guide covers **real development workflows**:
+- Automated integration testing
+- Transaction debugging and inspection
+- Multi-node consensus scenarios
+- Performance profiling
+- CI/CD pipeline integration
+
+**Prerequisites:**
+- [Docker Sandbox installed and running](../quickstart/docker-sandbox)
+- Basic understanding of Ixian transactions
+- Familiarity with REST APIs or command-line tools
+
+---
+
+## Development Workflow Patterns
+
+### Pattern 1: Transaction Testing
+
+#### Example: Testing a Payment Flow
+
+```bash
+# Start fresh sandbox
+./sandbox down
+./sandbox up
+
+# Wait for nodes to sync (~300 seconds)
+sleep 300
+
+# Check node status (JSON)
+curl http://localhost:8081/status | jq '.result."Block Height"'
+
+# Get primary wallet address (JSON)
+WALLET=$(curl -s "http://localhost:8081/mywallet" | jq -r '.result."Primary Address"')
+
+# Create a test transaction
+curl -X POST http://localhost:8081/addtransaction \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"params\": {
+      \"to\": \"${TEST_ADDRESS}_1000000\"
+    }
+  }"
+
+# Check confirmation by monitoring block height and activity
+curl http://localhost:8081/blockheight
+curl "http://localhost:8081/activity2?wallet=$WALLET&type=-1&count=10&descending=true"
+```
+
+---
+
+### Pattern 2: Multi-Node Consensus Testing
+
+**Problem:** How do you test that your app handles network splits, consensus failures, or competing blocks?
+
+**Solution:** The sandbox runs multiple DLT nodes. You can stop/start them to simulate network conditions.
+
+#### Example: Testing Network Partition
+
+```bash
+# Stop DLT Node 2 to simulate network split
+docker stop ixian-ixian-dlt-2-1
+
+# Send transactions to Node 1
+curl -X POST http://localhost:8081/addtransaction -H "Content-Type: application/json" -d "{...}"
+
+# Check that blocks still generate on Node 1
+curl http://localhost:8081/status | jq '.result."Block Height"'
+
+# Restart Node 2 and watch it resync
+docker start ixian-ixian-dlt-2-1
+
+# Monitor Node 2 catching up
+watch "curl -s http://localhost:8082/status | jq '.result.\"Block Height\"'"
+```
+
+**What to test:**
+- ✅ Does your app handle temporary disconnections?
+- ✅ Does it reconnect to available nodes?
+- ✅ Does it queue transactions during downtime?
+- ✅ Does it handle reorgs when nodes resync?
+
+---
+
+### Pattern 3: S2 Streaming Node Testing
+
+**Problem:** Your lightweight client needs to connect via S2 nodes. How do you test discovery, failover, and streaming subscriptions?
+
+**Solution:** The sandbox runs 10 S2 nodes. Test connection pooling and failover logic.
+
+#### Example: S2 Failover Testing
+
+```bash
+# List running S2 nodes
+docker ps | grep ixian-s2
+
+# Kill a specific S2 node
+docker stop ixian-ixian-s2-3
+
+# Your client should automatically failover
+# Check client logs for reconnection attempts
+
+# Restart the node
+docker start ixian-ixian-s2-3
+```
+
+**What to test:**
+- ✅ Does your client try multiple S2 nodes?
+- ✅ Does it handle S2 node restarts gracefully?
+- ✅ Do streaming subscriptions resume correctly?
+- ✅ Does presence lookup (Starling) work after reconnection?
+
+---
+
+### Pattern 4: Transaction Debugging
+
+**Problem:** Your transaction isn't being accepted. Why? Insufficient fees? Invalid signature? Wrong nonce?
+
+**Solution:** Use the sandbox APIs to inspect every detail.
+
+#### Debugging a Failed Transaction
+
+```bash
+# Send a transaction and capture the ID
+TX_ID=$(curl -X POST http://localhost:8081/addtransaction \
+  -H "Content-Type: application/json" \
+  -d '{"params": {"to": "address_amount"}}' \
+  | jq -r '.result.txid // .txid // .result')
+
+# Check latest wallet activity for the transaction
+curl "http://localhost:8081/activity2?wallet=$WALLET&type=-1&count=50&descending=true" | jq ".result[] | select(.txid == \"$TX_ID\")"
+
+# If not in mempool, check node logs for rejection reason
+docker logs ixian-ixian-dlt-1-1 2>&1 | grep -i "transaction.*$TX_ID"
+
+# Common rejection reasons:
+# - "insufficient fee"
+# - "invalid signature"
+# - "address not found"
+# - "insufficient balance"
+```
+
+#### Inspecting Block Contents
+
+```bash
+# Get the latest block
+BLOCK_NUM=$(curl -s http://localhost:8081/blockheight)
+
+# Get the last 10 blocks
+curl -s http://localhost:8081/getlastblocks
+
+# Get the genesis block
+curl -s http://localhost:8081/getblock?num=1
+
+# Use activity2 and status endpoints to verify confirmations.
+
+# Check recent activity entries instead of raw block listing
+curl "http://localhost:8081/activity2?wallet=$WALLET&type=-1&count=50&descending=true" | jq '.'
+
+# Verify your transaction appears in recent activity
+curl "http://localhost:8081/activity2?wallet=$WALLET&type=-1&count=50&descending=true" | jq ".result[] | select(.txid == \"$TX_ID\")"
+```
+
+---
+
+### Pattern 5: Performance Profiling
+
+**Problem:** How many transactions per second can your app handle? What's the latency distribution?
+
+**Solution:** Use the sandbox for load testing without spending real IXI tokens.
+
+#### Load Testing Script
+
+```bash
+#!/bin/bash
+# load_test.sh - Send 100 transactions and measure latency
+
+ENDPOINT="http://localhost:8081"
+TO_ADDRESS="your_test_address_here"
+NUM_TXS=100
+
+echo "Sending $NUM_TXS transactions..."
+
+for i in $(seq 1 $NUM_TXS); do
+  START=$(date +%s%N)
+  
+  TX_ID=$(curl -s -X POST $ENDPOINT/addtransaction \
+    -H "Content-Type: application/json" \
+    -d "{\"params\": {\"to\": \"${TO_ADDRESS}_1000\"}}" \
+    | jq -r '.result.txid // .txid // .result')
+  
+  END=$(date +%s%N)
+  LATENCY=$(( (END - START) / 1000000 )) # Convert to milliseconds
+  
+  echo "TX $i: $TX_ID - ${LATENCY}ms"
+  
+  # Small delay to avoid overwhelming the node
+  sleep 0.1
+done
+
+echo "Load test complete. Check mempool size:"
+curl -s $ENDPOINT/status | jq '.result."Applied TX Count"'
+curl -s $ENDPOINT/status | jq '.result."Unapplied TX Count"'
+```
+
+**Run it:**
+```bash
+chmod +x load_test.sh
+./load_test.sh
+```
+
+**Analyze results:**
+- Average latency for transaction submission
+- Mempool growth rate
+- Block generation frequency
+- Transaction confirmation times
+
+---
+
+### Pattern 6: CI/CD Integration
+
+**Problem:** You want automated tests that run on every commit, but you can't rely on public testnet availability.
+
+**Solution:** Spin up the sandbox in your CI pipeline.
+
+#### GitHub Actions Example
+
+```yaml
+# .github/workflows/integration-tests.yml
+name: Integration Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Clone Ixian Sandbox
+      run: |
+        git clone https://github.com/ixian-platform/Ixian-Sandbox.git
+        cd Ixian-Sandbox
+    
+    - name: Start Ixian Sandbox
+      run: |
+        cd Ixian-Sandbox
+        ./sandbox up -d
+    
+    - name: Wait for network to stabilize
+      run: |
+        timeout 120 bash -c 'until curl -sf http://localhost:8081/status; do sleep 5; done'
+    
+    - name: Run integration tests
+      run: |
+        # Your test suite here
+        npm test
+        # or: dotnet test
+        # or: python -m pytest
+    
+    - name: Collect logs on failure
+      if: failure()
+      run: |
+        docker logs ixian-ixian-dlt-1-1
+        docker logs ixian-ixian-s2-1
+    
+    - name: Shutdown sandbox
+      if: always()
+      run: |
+        cd Ixian-Sandbox
+        ./sandbox down
+```
+
+#### GitLab CI Example
+
+```yaml
+# .gitlab-ci.yml
+integration-tests:
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache git bash curl jq
+    - git clone https://github.com/ixian-platform/Ixian-Sandbox.git
+    - cd Ixian-Sandbox && ./sandbox up -d && cd ..
+    - timeout 120 bash -c 'until curl -sf http://localhost:8081/status; do sleep 5; done'
+  
+  script:
+    - npm test  # or your test command
+  
+  after_script:
+    - cd Ixian-Sandbox && ./sandbox down
+```
+
+---
+
+## Advanced Techniques
+
+### Testing PL (Presence List) and Starling
+
+**Use case:** You're building a chat app and need to test presence discovery.
+
+#### Scenario: Multi-Client Presence
+
+```bash
+# Connect 3 test clients to different S2 nodes
+# Client 1 -> localhost:10600
+# Client 2 -> localhost:10601
+# Client 3 -> localhost:10602
+
+# Have each client announce presence
+# Then query for online users from each client
+
+# Verify that:
+# - All clients see each other
+# - Presence updates propagate within 30 seconds
+# - Starling sectors correctly distribute presence info
+```
+
+See [Client App Guide](../quickstart/client-app) for presence implementation details.
+
+### Simulating Network Latency
+
+**Use case:** Your app will run on mobile networks with high latency. Test it locally.
+
+#### Add Artificial Latency with tc (Linux)
+
+```bash
+# Identify the Docker network
+docker network ls | grep ixian
+
+# Add 200ms latency to all traffic on that network
+sudo tc qdisc add dev docker0 root netem delay 200ms
+
+# Test transaction latency with added delay
+time curl http://localhost:8081/status
+
+# Remove latency
+sudo tc qdisc del dev docker0 root
+```
+
+**What to test:**
+- ✅ Does your app show loading states during delays?
+- ✅ Does it timeout gracefully?
+- ✅ Do retries work correctly?
+
+---
+
+## Monitoring and Observability
+
+### Real-Time Log Streaming
+
+```bash
+# Stream logs from all services
+docker compose logs -f
+
+# Stream logs from specific service
+docker logs -f ixian-ixian-dlt-1-1
+
+# Filter logs for specific events
+docker logs ixian-ixian-dlt-1-1 2>&1 | grep -i "transaction\|block"
+```
+
+### Metrics Collection
+
+#### Basic Metrics Script
+
+```bash
+#!/bin/bash
+# metrics.sh - Collect node metrics every 5 seconds
+
+while true; do
+  TIMESTAMP=$(date +%s)
+  HEIGHT=$(curl -s http://localhost:8081/status | jq '.result."Block Height"')
+  MEMPOOL=$(curl -s http://localhost:8081/status?vv=true | jq '.result."Unapplied TX Count"')
+  PEERS=$(curl -s http://localhost:8081/status | jq '.result."Network Servers"')
+  
+  echo "$TIMESTAMP,$HEIGHT,$MEMPOOL,$PEERS" | tee -a metrics.csv
+  
+  sleep 5
+done
+```
+
+**Run it:**
+```bash
+chmod +x metrics.sh
+./metrics.sh
+```
+
+**Analyze with any tool:**
+- Excel/LibreOffice for quick charts
+- Python pandas for deeper analysis
+- Grafana for real-time dashboards
+
+---
+
+## Best Practices
+
+### ✅ DO:
+
+1. **Reset between test runs** - `./sandbox down && ./sandbox up` ensures clean state
+2. **Wait for stabilization** - Give nodes 30 seconds to sync after starting
+3. **Check logs first** - Most issues are visible in Docker logs
+4. **Version control your docker-compose.yml** - Track custom configurations
+5. **Use environment variables** - Keep credentials and addresses configurable
+
+### ❌ DON'T:
+
+1. **Don't use mainnet wallets** - Never put real private keys in the sandbox
+2. **Don't skip error handling** - The sandbox simulates real network conditions
+3. **Don't assume instant confirmation** - Even regtest has propagation delays
+4. **Don't test in production** - Sandbox first, testnet second, mainnet last
+5. **Don't ignore resource limits** - 10 S2 nodes + 2 DLT nodes can stress a laptop
+
+---
+
+## Troubleshooting Development Issues
+
+### Issue: "Transaction not appearing in mempool"
+
+**Possible causes:**
+- Invalid signature
+- Insufficient balance or fee
+- Nonce mismatch
+
+**Debug:**
+```bash
+docker logs ixian-ixian-dlt-1-1 2>&1 | tail -50 | grep -i "reject\|invalid"
+```
+
+### Issue: "Blocks not generating"
+
+**Possible causes:**
+- Not enough nodes online (need at least 2 for regtest)
+- Network partition
+
+**Debug:**
+```bash
+# Check peer connections
+curl http://localhost:8081/status | jq '.result."Network Clients"'
+curl http://localhost:8081/status | jq '.result."Network Servers"'
+
+# Should show at least 1 peer (the other DLT node)
+```
+
+### Issue: "S2 nodes not connecting"
+
+**Possible causes:**
+- DLT nodes not ready yet
+- Network configuration issue
+
+**Debug:**
+```bash
+# Check if DLT nodes are accessible from S2 nodes
+./sandbox exec ixian-s2-1 ping ixian-dlt-1
+
+# Check S2 logs
+docker logs ixian-ixian-s2-1 2>&1 | grep -i "connect\|seed"
+```
+
+---
+
+## Performance Benchmarks
+
+Here's what you can expect from the sandbox on typical hardware:
+
+| Metric | Value | Hardware |
+|--------|-------|----------|
+| Block generation | 30 seconds | Standard laptop |
+| Transaction confirmation | 30-60 seconds | 2 blocks |
+| Mempool capacity | 1000+ txs | Before congestion |
+| P2P message latency | < 100ms | Local Docker network |
+| API response time | < 50ms | Simple queries |
+
+**Your mileage may vary** based on:
+- Number of running containers
+- Available RAM (4GB minimum, 8GB recommended)
+- CPU cores (4+ recommended)
+- Disk I/O speed (SSD highly recommended)
+
+---
+
+## Next Steps
+
+Now that you're proficient with the sandbox:
+
+1. **[Deploy to Public Network](../../operators/dlt)** - Test with real network conditions
+3. **[Advanced Client Development](../quickstart/client-app)** - Build sophisticated apps
+4. **[Contribute to Ixian](https://github.com/ixian-platform)** - Help improve the platform
+
+---
+
+## Additional Resources
+
+- **[Docker Sandbox Quickstart](../quickstart/docker-sandbox)** - Initial setup guide
+- **[Ixian-Sandbox Repository](https://github.com/ixian-platform/Ixian-Sandbox)** - Source code and issues
+- **[Client App Development](../quickstart/client-app)** - Building on Ixian
+- **[Operator Documentation](../../operators)** - Running production nodes

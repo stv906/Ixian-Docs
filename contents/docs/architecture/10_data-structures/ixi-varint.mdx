@@ -1,0 +1,44 @@
+---
+title: IxiVarInt Encoding
+description: Technical specification for the IxiVarInt and IxiVarUInt variable-length integer data types.
+status: Finalized
+---
+
+`IxiVarInt` is a custom variable-length integer encoding used throughout the Ixian protocol to serialize numeric data in a space-efficient manner. It is **not** compatible with other common schemes like Protobuf `varint` or LEB128.
+
+### Encoding Principle
+
+The encoding scheme is based on a single-byte prefix which determines the size and type of the integer that follows.
+
+-   Unsigned integers from 0 to 247 (`0xF7`) are encoded as a single byte.
+-   Larger or negative numbers are encoded using a 1-byte prefix, followed by the integer value in a fixed-size, **little-endian** format.
+
+### Type Prefixes
+
+| Prefix | Data Type Represented | Payload Size | Total Bytes | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `0x00` - `0xF7`| `uint8` | 0 bytes | 1 | The byte itself is the value. |
+| `0xF8` | `short` (negative) | 2 bytes | 3 | Used for `IxiVarInt`. |
+| `0xF9` | `int` (negative) | 4 bytes | 5 | Used for `IxiVarInt`. |
+| `0xFA` | `long` (negative) | 8 bytes | 9 | Used for `IxiVarInt`. |
+| `0xFB` | reserved (negative) | ? bytes | ? | Reserved for potential future use in `IxiVarInt`. |
+| `0xFC` | `ushort` (positive) | 2 bytes | 3 | Used for both `IxiVarInt` and `IxiVarUInt`. |
+| `0xFD` | `uint` (positive) | 4 bytes | 5 | Used for both `IxiVarInt` and `IxiVarUInt`. |
+| `0xFE` | `ulong` (positive) | 8 bytes | 9 | Used for both `IxiVarInt` and `IxiVarUInt`. |
+| `0xFF` | reserved (positive) | ? bytes | ? | Reserved for potential future use in `IxiVarUInt`. |
+
+### `IxiVarInt` vs. `IxiVarUInt`
+
+The protocol uses two variations depending on whether the integer needs to be signed.
+
+*   **`IxiVarInt` (Signed):** Can represent both positive and negative integers. It uses the full range of prefixes.
+*   **`IxiVarUInt` (Unsigned):** Can only represent positive integers. Decoders must reject any `IxiVarInt` that uses the negative-specific prefixes (`0xF8`, `0xF9`, `0xFA`).
+
+### Examples
+
+*   **Value: `100`**
+    *   As `IxiVarUInt`: `64` (1 byte, since 100 < 248)
+*   **Value: `1000`**
+    *   As `IxiVarUInt`: `FC E8 03` (3 bytes: prefix `0xFC` + little-endian `ushort` for 1000)
+*   **Value: `-1000`**
+    *   As `IxiVarInt`: `F8 E8 03` (3 bytes: prefix `0xF8` + little-endian `ushort` for 1000)

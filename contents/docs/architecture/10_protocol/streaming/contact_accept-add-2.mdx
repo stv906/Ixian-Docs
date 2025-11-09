@@ -1,0 +1,49 @@
+---
+title: acceptAdd2 (41)
+description: Accepts a contact request.
+---
+
+The `acceptAdd2` message is the response to a `requestAdd2` message, confirming that the user has accepted the contact request. It initiates the secure, quantum-resistant key exchange process.
+
+The sender generates new key pairs for ECDH and ML-KEM, sending the public parts to the original requester. This allows both parties to derive a shared secret for end-to-end encryption.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `version` | `IxiVarUInt` | 1 | | The S2 protocol version the sender has chosen for this session. |
+| `rsaPubKey` | `IxiBytes` | * | * | The sender's primary public key, used for identity verification. |
+| `ecdhPubKey` | `IxiBytes` | * | * | The public key part of a newly generated ephemeral ECDH key pair. |
+| `mlkemPubKey`| `IxiBytes` | * | * | The public key part of a newly generated ephemeral ML-KEM (Kyber) key pair. |
+| `aesSalt` | `IxiBytes` | 32 | 32 | A 32-byte random salt used for deriving the AES symmetric key. |
+| `capabilities` | `IxiVarUInt` | * | * | A bitfield of `StreamCapabilities` supported by the sender (e.g., Apps, IPN). See below for details. |
+
+## StreamCapabilities Flags
+
+The `capabilities` field is a bitfield indicating which features the sender supports. Multiple capabilities can be combined using bitwise OR.
+
+| Flag Value | Name | Description |
+| :--- | :--- | :--- |
+| `1` | `Incoming` | Supports incoming connections. If absent, contacts should not attempt to look for this peer's presence. |
+| `2` | `Outgoing` | Supports outgoing connections. If absent, contacts should periodically query this peer instead of waiting for it to connect. |
+| `4` | `IPN` | Supports Ixian Push Notifications. If absent, contacts should not send offline/pending messages via IPN. |
+| `8` | `Apps` | Supports Mini-Apps. Required for app-related messages (`appRequest`, `appData`, etc.). |
+| `16` | `AppProtocols` | Supports App Protocols for advanced Mini-App features. |
+
+### Example Capability Values
+
+*   **`15` (0x0F)**: Full client supporting Incoming (1) + Outgoing (2) + IPN (4) + Apps (8)
+*   **`31` (0x1F)**: Full client with App Protocols (adds 16 to above)
+*   **`6` (0x06)**: Gateway/bot supporting Outgoing (2) + IPN (4) but not accepting incoming connections
+*   **`10` (0x0A)**: Bot with Outgoing (2) + Apps (8) capabilities
+
+## Behavioral Notes
+
+*   **Key Generation:** Before sending this message, the client generates new, single-use key pairs for both ECDH and ML-KEM to ensure forward secrecy.
+*   **Recipient Action:** The recipient (the original requester) uses the public keys in this message along with its own private keys to derive a shared secret. It then uses this secret and the provided salts to generate the final AES and ChaCha symmetric keys for the session.
+*   **State Transition:** Upon sending `acceptAdd2`, the sender's client marks the contact as "Approved" and transitions its handshake status to `2`. It then waits for a `keys2` message to complete the key exchange.

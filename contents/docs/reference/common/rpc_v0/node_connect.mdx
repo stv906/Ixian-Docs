@@ -1,0 +1,96 @@
+---
+title: connect
+description: Manually instructs the node to establish a connection to a specific peer.
+status: Finalized
+---
+
+## Introduction
+
+The `connect` method is a network administration endpoint that provides a way to manually initiate a connection to a specific peer on the Ixian network. This bypasses the node's automatic peer discovery mechanism for a single, direct connection attempt.
+
+It is primarily used for network diagnostics, for bootstrapping a new node by connecting it to a known healthy peer, or for establishing links within a private network.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `to` | `string` | Yes | The network address of the peer to connect to. This is typically in `ip:port` format. |
+
+### Example POST Request
+
+```json
+POST /connect
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "connect",
+  "params": {
+    "to": "123.45.67.89:10234"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /connect?to=123.45.67.89:10234
+```
+
+---
+
+## Response
+
+The response is a confirmation message indicating that the connection attempt has been initiated.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, e.g., "Connecting to node 123.45.67.89:10234". |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "Connecting to node 123.45.67.89:10234",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the required `to` parameter is missing from the request.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "to parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Asynchronous Operation:** This command is asynchronous. A successful response only indicates that the node has *started* the connection attempt. It does not guarantee that the connection will be successfully established.
+*   **No Persistence:** The connection is not permanent. If the connection is dropped for any reason (e.g., network issues, remote peer disconnects), the node will not automatically try to reconnect to this specific peer unless it is also discovered through the standard peer discovery mechanism.
+*   **Use Cases:**
+    *   **Bootstrapping:** A new node can be pointed to a known, stable peer to join the network for the first time.
+    *   **Private Networks:** Forcing connections between nodes in an isolated or firewalled environment.
+    *   **Diagnostics:** Testing reachability to a specific peer.
+*   **Security:** Access to this RPC endpoint should be restricted to trusted administrators, as it directly influences the node's network peering.

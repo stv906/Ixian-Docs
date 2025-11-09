@@ -1,0 +1,147 @@
+---
+title: addTransaction
+description: Creates, signs, and broadcasts a standard IXI transaction to the network.
+status: Finalized
+---
+
+## Introduction
+
+The `addTransaction` method is the primary endpoint for creating and broadcasting a standard IXI payment transaction. It provides two modes of operation: a simple mode where the node automatically selects the necessary inputs from a wallet, and an advanced "coin control" mode where the user can specify the exact inputs to use.
+
+Upon successful creation and validation, the transaction is added to the local pending pool and broadcast to the network for inclusion in an upcoming block.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body (recommended for complex requests) or `HTTP GET` with URL query parameters (useful for simple queries and browser-based access).
+
+### Parameters
+
+| Name               | Type     | Required | Description                                                                                                                                                             |
+| :----------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. See **Custom Formats** below for details.                                                                            |
+| `from`             | `string` | No       | **Advanced.** A hyphen-separated list of `address_amount` pairs to use as inputs. If omitted, the node will automatically select inputs from the specified wallet.      |
+| `wallet`           | `string` | No       | The base58-encoded address of the wallet to use for signing and sourcing funds. Required if the node manages multiple wallets.                                          |
+| `primaryAddress`   | `string` | No       | If the wallet has multiple keys, this specifies which address to use. Defaults to the wallet's primary address.                                                          |
+| `fee`              | `string` | No       | A specific `IxiNumber` fee for the transaction. If omitted, the fee is calculated automatically based on the final transaction size.                                  |
+| `autofee`          | `string` | No       | If `"true"` and `from` is specified, the final transaction fee is automatically added to the amount of the *first* input in the `from` list. See **Behavioral Notes**. |
+| `relayNodeAddress` | `string` | No       | **Client-only.** The address of a specific S2 node to use for relaying the transaction. If omitted, the client selects a random connected node.                       |
+
+### Custom `to` and `from` Format
+
+The `to` and `from` parameters use a special string format to encode multiple recipients or inputs:
+*   Each entry is composed of an `address` and an `amount` separated by an underscore (`_`).
+*   Multiple entries are separated by a hyphen (`-`).
+
+**Example:** `16NBH...Bo_1000-1EXSq...Wm_50.25` sends 1000 IXI to the first address and 50.25 IXI to the second.
+
+### Example POST Request
+
+This example sends 12.5 IXI, letting the node automatically select inputs and calculate the fee.
+
+```json
+POST /addTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "addTransaction",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "to": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo_12.5"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+The `params` object is flattened into URL query string parameters. Special characters in parameter values must be URL-encoded.
+
+```
+GET /addTransaction?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&to=16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo_12.5
+```
+
+---
+
+## Response
+
+The response format is a standard JSON-RPC object, regardless of whether the request was made via `GET` or `POST`. The `result` is a JSON object containing the details of the created transaction.
+
+### Result: `Transaction` Object Structure
+
+| Name          | Type        | Description                                                                          |
+| :------------ | :---------- | :----------------------------------------------------------------------------------- |
+| `id`          | `string`    | The unique identifier and checksum of the transaction.                               |
+| `version`     | `integer`   | The version of the transaction data structure.                                       |
+| `blockHeight` | `IxiNumber` | The block height at which the transaction was created.                               |
+| `nonce`       | `integer`   | The transaction nonce, used for replay protection.                                   |
+| `signature`   | `string`    | The cryptographic signature proving the sender's authenticity.                       |
+| `pubKey`      | `string`    | The public key of the signing address.                                               |
+| `timestamp`   | `integer`   | The Unix Epoch timestamp (in seconds) of the transaction's creation.                 |
+| `type`        | `integer`   | The transaction type. `0` corresponds to a `Normal` transaction.                     |
+| `from`        | `object`    | A map where keys are wallet nonces and values are the `IxiNumber` amounts used as inputs. |
+| `to`          | `object`    | A map where keys are recipient addresses and values are the `IxiNumber` amounts sent. |
+| `fee`         | `IxiNumber` | The final fee paid for this transaction, represented as a string.                    |
+| `totalAmount` | `IxiNumber` | The total value of all inputs (`from` amounts).                                      |
+| `amount`      | `IxiNumber` | The total value of all outputs (`to` amounts), excluding the fee.                    |
+| `applied`     | `integer`   | A status field indicating if the transaction has been applied to the wallet state.   |
+| `checksum`    | `string`    | The checksum of the transaction payload.                                             |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "68874-prFPNo1GeQ8HzwPMnuFEGSXiq9qRyUL7gFxiaE5FaKPL8BTZodJBcZ5L81n9",
+    "version": 7,
+    "blockHeight": "68874",
+    "nonce": "334231",
+    "signature": "6b26d...f7",
+    "pubKey": "1GjPT...hMA",
+    "timestamp": "1763041074",
+    "type": "0",
+    "amount": "1000.00000000",
+    "applied": "0",
+    "checksum": "932a7...8b82",
+    "from": {
+      "1": "1000.01000000"
+    },
+    "to": {
+      "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo": "1000.00000000"
+    },
+    "fee": "0.01000000",
+    "totalAmount": "1000.01000000"
+  },
+  "id": 1
+}```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32001,
+        "message": "Balance is too low"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Automatic Input Selection (Simple Mode):** If the `from` parameter is omitted, the node will automatically find and select the necessary inputs from the specified `wallet` to cover the sum of all `to` amounts plus the dynamically calculated transaction fee. This is the recommended mode for most users.
+
+*   **Manual Input Selection (Advanced Mode):** If the `from` parameter is provided, you take full control of the transaction's inputs.
+    *   **Without `autofee`:** You are responsible for ensuring the math is correct. The sum of all `from` amounts must exactly equal the sum of all `to` amounts plus the final, size-dependent transaction fee. The API will return an error if the values do not match.
+    *   **With `autofee=true`:** The node will calculate the required transaction fee and automatically add it to the first input specified in your `from` list. The remaining `from` and `to` amounts are then balanced. This is the recommended way to use manual input selection.
+
+*   **Dynamic Fee Calculation:** The final transaction `fee` is dependent on the transaction's byte size. The node may perform several internal iterations, adjusting the fee and re-selecting inputs (in automatic mode) to find the correct balance. The `fee` in the response object is the final, correct fee.
+
+*   **Relay Fees for Clients:** If this call is made from a client-type node, it will automatically add small outputs to the transaction to pay S2 relay nodes. These relay fees are added to the total amount that must be covered by the transaction inputs.

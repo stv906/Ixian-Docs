@@ -1,0 +1,22 @@
+---
+title: getBalance2 (30)
+description: Requests the current balance for a specific wallet address.
+status: Planned Upgrade
+---
+
+The `getBalance2` message is a simple request sent to a peer to query the current balance of a specific wallet address according to that peer's view of the ledger.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `walletAddress` | `IxiBytes` | | | The wallet address (without checksum) for which the balance is being requested. |
+
+## Behavioral Notes
+
+-   This is a direct query for information. A node receiving this message should look up the current balance for the given `walletAddress` in its `WalletState`.
+-   The node should then construct and send a `balance2` message back to the requester.

@@ -1,0 +1,23 @@
+---
+title: getAppProtocols (43)
+description: Requests the list of app protocols supported by the peer.
+---
+
+The `getAppProtocols` message is sent to a contact to query which custom, named application protocols they support. This is used for service discovery before attempting to send protocol-specific data.
+
+### Core Data Types
+
+This message has no payload.
+
+## Payload Structure
+
+The `getAppProtocols` message is defined by its type code and carries no data in its payload.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| *N/A* | *N/A* | 0 | 0 | The payload is always empty. |
+
+## Behavioral Notes
+
+*   **Discovery:** A client sends this message to a contact to discover what application protocols it can interact with.
+*   **Response:** A node that receives this message SHOULD respond with an `appProtocols` message, listing the protocol IDs it supports.

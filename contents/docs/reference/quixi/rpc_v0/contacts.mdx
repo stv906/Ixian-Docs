@@ -1,0 +1,123 @@
+---
+title: contacts
+description: Retrieves the node's complete contact list with detailed status and metadata for each contact.
+status: Finalized
+---
+
+## Introduction
+
+The `contacts` method provides access to the node's local address book or "friend list," which is typically used by high-level applications. This is a read-only endpoint that returns a comprehensive list of all stored contacts.
+
+The response for each contact is rich, containing not only their address and public key but also dynamic state information such as their online status, handshake state, and recent message metadata.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /contacts
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "contacts",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /contacts
+```
+
+---
+
+## Response
+
+The `result` is a JSON array where each element is a `Contact` object representing a single entry in the friend list.
+
+### Result: `Contact` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `walletAddress` | `Address` | The unique Ixian wallet address of the contact. |
+| `publicKey` | `string` | The full public key of the contact. |
+| `nickname` | `string` | The user-defined display name for the contact. |
+| `online` | `boolean` | `true` if the contact is currently detected as being online. |
+| `addedTimestamp` | `long` | The Unix timestamp of when the contact was added. |
+| `handshakeStatus`| `int` | A numeric code indicating the status of the secure communication channel handshake. A status of `3` typically means the connection is fully established. |
+| `approved` | `boolean` | `true` if the contact request has been approved. |
+| `metaData` | `object` | An object containing communication metadata. |
+| `metaData.unreadMessageCount` | `int` | The number of unread messages from this contact. |
+| `metaData.lastMessage` | `object` | An object containing details of the most recent message exchanged. |
+| `relayNode` | `object` | Details of the S2 streaming node currently used for relaying communication with this contact, if applicable. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "walletAddress": {
+        "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+        ...
+      },
+      "publicKey": "AQAAAAAAAgAAu5h4A...",
+      "nickname": "Yaggis",
+      "online": false,
+      "addedTimestamp": 1757676519,
+      "handshakeStatus": 3,
+      "approved": true,
+      "metaData": {
+        "unreadMessageCount": 5,
+        "lastMessage": {
+          "message": "Off",
+          "timestamp": 1757676727,
+          "senderNick": "Yaggis",
+          ...
+        }
+      },
+      ...
+    },
+    {
+      "walletAddress": {
+        "base58Address": "1Dnk4t5PAM2u9qCdP2xLDzJGDtuqAdgCSG9NiJeFBxpSGJ1kK",
+        ...
+      },
+      "publicKey": "AQAAAAAAAgAA2g9nC...",
+      "nickname": "Viper",
+      "online": false,
+      "addedTimestamp": 1757099968,
+      "handshakeStatus": 3,
+      "approved": true,
+      "metaData": {
+        "unreadMessageCount": 1804,
+        "lastMessage": {
+          "message": "On",
+          "timestamp": 1763051188,
+          "senderNick": "Viper",
+          ...
+        }
+      },
+      ...
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Data:** This endpoint retrieves data stored locally on the node. It is not a query of the DLT's global state but rather the node's specific, application-level data.
+*   **Application-Specific:** The concept of a "contact" or "friend list" is part of the Ixian S2 streaming and application layer. This data will only be populated if you are using an application, such as a messenger, that utilizes this feature.
+*   **Dynamic State:** Information like `online` status, `relayNode`, and `metaData` is dynamic and reflects the most recent state known to the node at the time of the query.

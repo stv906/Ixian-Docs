@@ -1,0 +1,109 @@
+---
+title: minerStats
+description: Retrieves real-time statistics about the node's block mining activity.
+status: Finalized
+---
+
+## Introduction
+
+The `minerStats` method provides a real-time view into the node's Proof-of-Work mining module. It returns key performance indicators such as hashrate, the current work's difficulty, and a history of blocks solved by this specific miner.
+
+This endpoint is intended for DLT nodes that are actively participating in mining. It is an essential tool for operators to monitor their miner's performance, verify its operation, and track its contribution to the network. Note that these statistics relate to the PoW for block production, not the PoW for gaining signer eligibility.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /minerStats
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "minerStats",
+  "params": {},
+  "id": 1
+}```
+
+### Example GET Request
+
+```
+GET /minerStats
+```
+
+---
+
+## Response
+
+The `result` is a JSON object containing key-value pairs that describe the node's mining status.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Hashrate` | `double` | The miner's current hashrate in hashes per second. This is typically a moving average. |
+| `Search Mode` | `string` | The strategy the miner is using to find a valid block hash (e.g., "randomLowestDifficulty"). |
+| `Current Block` | `long` | The block number the miner is currently attempting to solve. |
+| `Current Difficulty` | `long` | The difficulty target for the block currently being mined. |
+| `Solved Blocks (Local)`| `integer` | The total number of blocks that this specific miner instance has successfully solved. |
+| `Solved Blocks (Network)`| `integer` | The total number of blocks with transactions on the blockchain. |
+| `Empty Blocks` | `integer` | The total number of blocks without transactions on the blockchain. |
+| `Last Solved Block` | `long` | The block number of the last block that was successfully solved by this miner. |
+| `Last Solved Block Time` | `string` | A human-readable string indicating how long ago this miner last solved a block (e.g., "5 minutes ago", "Never"). |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0,
+  "result": {
+    "Hashrate": 125432.7,
+    "Search Mode": "randomLowestDifficulty",
+    "Current Block": 69480,
+    "Current Difficulty": 25000000,
+    "Solved Blocks (Local)": 15,
+    "Solved Blocks (Network)": 59470,
+    "Empty Blocks": 10010,
+    "Last Solved Block": 69451,
+    "Last Solved Block Time": "29 minutes ago"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Response (Non-Mining Node)
+
+If the node is not configured to mine, the stats will reflect an inactive state.
+
+```json
+{
+  "jsonrpc": "2.0,
+  "result": {
+    "Hashrate": 0,
+    "Search Mode": "randomLowestDifficulty",
+    "Current Block": 0,
+    "Current Difficulty": 0,
+    "Solved Blocks (Local)": 0,
+    "Solved Blocks (Network)": 59470,
+    "Empty Blocks": 10010,
+    "Last Solved Block": 0,
+    "Last Solved Block Time": "Never"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **DLT Nodes Only:** This RPC call is specific to DLT nodes that have the mining module enabled. It will not be available or will return zero-value data on other node types (e.g., S2 nodes).
+*   **Local Statistics:** The `Solved Blocks (Local)` and `Last Solved Block` fields are specific to this node instance. They are reset if the node is restarted or its local mining history is cleared.
+*   **Hashrate Fluctuation:** The `Hashrate` is an estimate calculated over a recent time window and is expected to fluctuate.
+*   **Network Statistics:** The `Solved Blocks (Network)` and `Empty Blocks` fields are derived from the node's view of the blockchain and reflect the overall network history, not just the local miner's activity.

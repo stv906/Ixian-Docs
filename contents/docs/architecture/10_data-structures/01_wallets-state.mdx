@@ -1,0 +1,170 @@
+---
+title: "Wallets State"
+description: "The global state of all wallet balances and properties in the Ixian network"
+status: Draft
+---
+
+## Introduction
+
+The Wallets State is the complete set of all wallet accounts in the Ixian network at a specific block height. It represents the current balance and properties of every wallet that has a non-zero balance. The Wallets State is modified by transactions in each block, and its integrity is verified through the `walletStateChecksum` field in block headers.
+
+---
+
+## Wallet Structure
+
+Each wallet in the Wallets State contains the following fields:
+
+| Field | Data Type | Description |
+|:------|:----------|:------------|
+| `id` | `Address` | The wallet's unique address identifier (with checksum for serialization) |
+| `balance` | `IxiNumber` | Current balance of IXI tokens held by the wallet |
+| `type` | `WalletType` | 0 - Normal |
+| `requiredSigs` | `byte` | Number of signatures required (always 1 for normal wallets) |
+| `allowedSigners` | `Address[]` | Reserved field (null for normal wallets) |
+| `data` | `byte[]` | Optional arbitrary data attached to the wallet (max size network-dependent) |
+| `publicKey` | `byte[]` | The public key associated with the wallet (set upon first transaction) |
+
+### Wallet Types
+
+**Normal Wallet (0):**
+- Single-signature wallet controlled by one private key
+- `requiredSigs` is always 1
+- `allowedSigners` is null
+- The only wallet type used on mainnet
+
+> **Note**: Multisig wallet type (1) was defined but deprecated and never deployed on mainnet. All production wallets are Normal type.
+
+---
+
+## Wallet State Checksum Calculation
+
+The Wallets State checksum provides cryptographic proof of the exact state of all wallets at a given block height. It is calculated as follows:
+
+### Algorithm
+
+**Block Version \<= 2:**
+```
+1. Initialize: checksum = sha512quTrunc("IXIAN-DLT0")
+2. Sort all wallet addresses lexicographically
+3. For each wallet in sorted order:
+   a. Calculate wallet_checksum = wallet.calculateChecksum(block_version)
+   b. Concatenate: checksum_str + wallet_checksum_str (as hex strings)
+   c. Update: checksum = sha512quTrunc(UTF8(concatenated_string)), truncated to 32 bytes
+4. Return final checksum
+```
+
+**Block Version >= 3:**
+```
+1. Initialize: checksum = sha512sq("IXIAN-DLT0")
+2. Sort all wallet addresses lexicographically
+3. For each wallet in sorted order:
+   a. Calculate wallet_checksum = wallet.calculateChecksum(block_version)
+   b. Concatenate: checksum_bytes || wallet_checksum_bytes (binary concatenation)
+   c. Update: checksum = sha512sq(concatenated_bytes)
+4. Return final checksum
+```
+
+### Individual Wallet Checksum
+
+Each wallet's checksum is calculated by hashing the following fields in order:
+
+```
+1. id.addressWithChecksum (bytes)
+2. balance.toString() (UTF-8 encoded string)
+3. data (bytes, if present)
+4. publicKey (bytes, if present)
+5. type (int32, little-endian)
+6. requiredSigs (int16, little-endian)
+7. For each allowedSigner (if any):
+   - allowedSigner.addressWithChecksum (bytes)
+```
+
+**Hash Function:**
+- Block Version \<= 2: `sha512quTrunc` (truncated quad-pass SHA-512 to 32 bytes)
+- Block Version >= 3: `sha512sq` (double-pass SHA-512)
+
+---
+
+## Wallet State Transitions
+
+### Creating a Wallet
+
+A wallet is implicitly created when:
+1. It receives tokens from another wallet
+2. A transaction explicitly creates it with metadata
+
+Empty wallets (zero balance, normal type, no metadata) are automatically removed from state in block version 5+ (outside transactions) and version 8+ (during transaction processing).
+
+### Modifying Wallets
+
+Wallets can be modified through transactions that:
+
+1. **Change Balance**: Transfer transactions modify sender and receiver balances
+2. **Set Public Key**: First transaction from a wallet sets its public key (immutable afterward)
+3. **Set User Data**: Attach or modify arbitrary data on the wallet
+
+### Removing Wallets
+
+A wallet is removed from state when it becomes "empty":
+- Balance is exactly 0
+- Type is Normal
+- No special metadata or public keys that must be preserved
+
+Removal behavior:
+- **Block Version 5-7**: Removed immediately when balance reaches 0 (outside WSJ transactions)
+- **Block Version 8+**: Removed when balance reaches 0 (both inside and outside WSJ transactions)
+
+---
+
+## Wallet State Delta Checksum
+
+For non-superblock heights, a **delta checksum** is used instead of recalculating the full state checksum. This delta represents only the wallets modified since a specific wallet state journal (WSJ) transaction.
+
+### Algorithm
+
+```
+1. Initialize buffer with: UTF8("IXIAN-DLT0")
+2. For each wallet modified since WSJ transaction ID:
+   a. Serialize the complete wallet using wallet.writeBytes()
+   b. Append to buffer
+3. Return sha512sq(buffer)
+```
+
+This approach dramatically improves performance by avoiding iteration over millions of unchanged wallets.
+
+---
+
+## Implementation Notes
+
+### Performance Considerations
+
+- **Checksum Caching**: The full state checksum is expensive to compute (~O(n) where n = wallet count). It is cached and invalidated only when state changes.
+- **Total Supply Caching**: The sum of all wallet balances is cached separately for quick access.
+- **Sorted Iteration**: Checksums require deterministic ordering, achieved through sorted dictionaries.
+
+### Storage
+
+Wallets State is typically stored in:
+- In-memory dictionaries for active nodes (fast access)
+- Persistent database for long-term storage
+- Periodic snapshots at superblock boundaries
+
+---
+
+## Example: Simple Wallet State Evolution
+
+**Genesis Block (Block 1):**
+```
+Wallet A: 1000 IXI
+Wallet B: 500 IXI
+Checksum: sha512sq(sha512sq("IXIAN-DLT0") || A_checksum || B_checksum)
+```
+
+**Block 1: Transaction (A -> B: 100 IXI)**
+```
+Wallet A: 900 IXI
+Wallet B: 600 IXI
+Checksum: sha512sq(sha512sq("IXIAN-DLT0") || A_checksum || B_checksum)
+```
+
+Only modified wallets (A and B) are included in the delta checksum for block 1.

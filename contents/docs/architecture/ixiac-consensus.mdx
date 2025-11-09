@@ -1,0 +1,452 @@
+---
+title: Ixiac Consensus
+description: The specification for the Proof of Collaborative Work (PoCW) consensus algorithm, which combines Proof of Work-based eligibility with collaborative block signing.
+---
+
+## Introduction
+
+**Ixiac** (Ixian Consensus) is the novel consensus algorithm securing the Ixian DLT. It implements **Proof of Collaborative Work (PoCW)**, a hybrid model that fundamentally reimagines the role of Proof-of-Work in blockchain consensus.
+
+Unlike traditional PoW systems where miners compete in a winner-take-all race to produce blocks, PoCW uses PoW to establish **signing eligibility** rather than block production rights. Multiple eligible nodes collaboratively validate and sign each block, with rewards distributed proportionally based on their PoW contribution.
+
+This design achieves:
+- **Predictable Block Times**: Targets 30-second intervals with significantly reduced variance compared to traditional PoW
+- **Energy Efficiency**: PoW secures eligibility, not block production, reducing wasted computation
+- **Decentralization**: Multiple signers validate each block, preventing single-point-of-failure
+- **Fork Resistance**: Collaborative signing with adaptive quorum minimizes chain splits
+- **Fair Rewards**: Proportional distribution based on PoW difficulty, not winner-take-all
+
+---
+
+## The Consensus Lifecycle
+
+### Stage 1: Gaining Signing Eligibility
+
+Master Nodes cannot sign blocks arbitrarily. They must first prove commitment to the network by solving a PoW challenge.
+
+#### PoW Solution Calculation
+
+**Hash Formula**:
+```
+challengeData = blockNum || blockHash || recipientAddress || signingPubKeyHash || solution
+hash = SHA3-512(SHA3-512(challengeData))
+```
+
+Where:
+- **blockNum**: Target block height (IxiVarInt encoded)
+- **blockHash**: 64-byte hash of target block
+- **recipientAddress**: Node's wallet address (addressNoChecksum, variable length)
+- **signingPubKeyHash**: 
+  - If pubKey > 64 bytes: `SHA3-512(SHA3-512(pubKey))`
+  - Otherwise: raw pubKey bytes
+- **solution**: 1-64 byte nonce value
+
+**Difficulty Calculation**:
+```
+maxTargetHash = 0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000FFFFFFFFFFFFFF00
+difficulty = maxTargetHash / hash(solution)
+bits = compact 8-byte representation of difficulty
+```
+
+The `maxTargetHash` is a 64-byte (512-bit) constant that defines the maximum possible target hash. It consists of 51 zero bytes followed by the pattern `FFFFFFFFFFFFFF00`, creating an extremely high difficulty ceiling.
+
+#### Validity Window
+
+A PoW solution's validity depends on block version:
+
+| Block Version | Validity Window | Duration |
+|--------------|-----------------|----------|
+| v10-v11 | 120 blocks | ~60 minutes |
+| v12+ | 30 blocks | ~15 minutes |
+
+**Minimum Calculation Block Time**:
+
+| Block Version | Min Calculation Blocks | Duration |
+|--------------|----------------------|----------|
+| v10-v11 | 20 blocks | ~10 minutes |
+| v12+ | 10 blocks | ~5 minutes |
+
+**Calculation Interval** (all versions): 15 blocks (~7.5 minutes)
+
+This means nodes recalculate PoW difficulty every 15 blocks since their last solution.
+
+**Critical Rules**:
+- Solution MUST be from a PAST block (not current or future)
+- Solution MUST be within validity window (not too old)
+- Solution's block number must satisfy: `currentBlockNum - validityWindow \< solutionBlockNum \< currentBlockNum`
+- Solution MUST meet minimum difficulty threshold
+
+**Example**: When signing block 1000 (v12+, validity = 30 blocks):
+- Valid solution blocks: 971 through 999 (inclusive)
+- Invalid: block 970 or earlier (too old, outside 30-block window), block 1000+ (current/future)
+
+**Verification Code**:
+```
+if (solution.blockNum >= currentBlockNum) reject; // can't use current/future
+if (solution.blockNum + validityWindow \< currentBlockNum) reject; // too old
+if (solution.difficulty \< minDifficulty) reject;
+```
+
+#### Proportional Reward Shares
+
+Nodes can continue mining after finding a valid solution to improve their difficulty and earn a larger reward share. Higher difficulty = larger proportion of block reward.
+
+### Stage 2: Block Generation Election
+
+Not all nodes can generate blocks freely. The network uses an **election system** to designate block producers.
+
+#### Election Mechanism
+
+**Signature-Based Election** (Primary):
+1. Extract signatures from block N-6
+2. Use first 4 bytes of current block checksum as seed: `sigNr = BitConverter.ToUInt32(blockChecksum, 0)`
+3. Calculate time-based offset: `offset = timeSinceLastBlock / 60 seconds`
+4. Select signers using modulo: `(sigNr + offset) % signatureCount`
+5. If block has \<100 signatures: select 1 node
+6. If block has >=100 signatures: select 3 nodes (offset ignored, selects positions 0-2)
+
+**Election Window**:
+- Elected nodes change every 60 seconds (2× block interval)
+- After 0-60s: offset=0 nodes can generate
+- After 60-120s: offset=1 nodes can generate  
+- After 120s (4× interval): fallback mode activates
+
+**Time-Based Fallback**:
+- If no block produced after 120 seconds
+- **Any** node with valid PoW solution can generate
+
+**Genesis Special Case**:
+- First 7 blocks: Only genesis node can generate
+- After block 7: Normal election rules apply
+
+#### Block Generation Timing
+
+**Target Interval**: 30 seconds between blocks
+
+**Timestamp Smoothing** (block generator enforcement):
+- When generating a block, if timestamp difference from previous block is between 30-40 seconds (30s ± 10s margin)
+- Block generator forces timestamp to exactly `previousBlockTimestamp + 30 seconds`
+- Prevents clock drift from gradually shifting block times
+
+**Validation Rules**:
+- Minimum timestamp: `previousBlockTimestamp + 30 seconds` (`minBlockTimeDifference`)
+- Blocks with earlier timestamps are rejected
+
+### Stage 3: Block Proposal and Validation
+
+Once elected, a node assembles a block candidate.
+
+#### Block Structure Components
+
+1. **Header**:
+   - Block number, version, timestamp
+   - Previous block hash
+   - State checksums (WalletState, RegNameState)
+   - Signature freeze checksum (from block N-5)
+
+2. **Transactions**:
+   - User transactions from mempool
+   - Signing reward transaction (from block N-960 for v10+, or N-6 pre-v10)
+
+3. **Signatures**:
+   - Initially only block proposer's signature
+   - Filled as eligible nodes sign
+
+#### Validation Process
+
+Every node receiving a block candidate performs full validation:
+
+1. **Basic Checks**:
+   - Block number = lastBlock + 1
+   - Timestamp within acceptable range
+   - Version matches network expectations
+
+2. **Transaction Validation**:
+   - All transactions have valid signatures
+   - Sufficient balances for all inputs
+   - Correct fee calculations
+   - No double-spends
+
+3. **State Consistency**:
+   - WalletState checksum matches after applying transactions
+   - RegNameState checksum matches if names modified
+   - Previous block hash correct
+
+4. **Signature Requirements** (see Stage 4)
+
+### Stage 4: Collaborative Signing and Acceptance
+
+This is the core of PoCW, where consensus forms collaboratively.
+
+#### Adaptive Signature Quorum
+
+A block requires **two thresholds** to be accepted:
+
+**1. Signature Count Consensus**:
+```
+Sample up to 10 blocks from (blockNum - 7) to (blockNum - 16)
+totalSignatures = sum(frozenSignatureCounts)
+blockCount = number of blocks sampled
+averageSignatures = totalSignatures / blockCount
+
+if (averageSignatures > 1000):
+    // Capped scenario
+    requiredSignatures = floor(1000 * 0.75) = 750
+else:
+    // Normal scenario  
+    requiredSignatures = floor(totalSignatures / blockCount * 0.75)
+
+if (requiredSignatures \< 2): requiredSignatures = 2
+```
+
+**1a. Signature Continuity Requirement (50% + 1)**:
+```
+// For blocks after block 13, verify over 50% of signatures are from previous block signers
+Extract required signatures from block N-6 (election block)
+requiredConsensusCountAdjusted = (requiredSignatures / 2) + 1
+
+if (extractedRequiredSignatures \< requiredConsensusCountAdjusted):
+    reject block // Less than 50% + 1 signers from previous block
+```
+
+This ensures the majority of current block signers also signed the previous block, preventing sudden signer set replacement attacks.
+
+**2. Difficulty Consensus**:
+```
+requiredDifficulty = getRequiredSignerDifficulty(blockNum, adjustToRatio=false)
+adjustedRequiredDifficulty = requiredDifficulty * 0.234  // Apply 23.4% ratio
+totalSignerDifficulty = sum of all signer PoW difficulties
+
+Must meet: totalSignerDifficulty >= adjustedRequiredDifficulty
+
+// Equivalently: totalSignerDifficulty / requiredDifficulty >= 0.234
+```
+
+**Acceptance Conditions**:
+- Both thresholds met -> Block accepted
+- Nodes begin building next block on top
+- Signature collection continues (see Stage 5)
+
+#### Adaptive Difficulty Adjustment
+
+The required total difficulty adjusts based on network participation. Two algorithms exist:
+
+**Block-Based DAA (v11)**:
+```
+Sample last 40,320 blocks (or superblock interval)
+totalDifficulty = sum of block total signer difficulties
+newDifficulty = totalDifficulty / blockCount
+adjustedDifficulty = newDifficulty * 0.234 (ratio adjustment)
+```
+
+**Time-Based DAA (v12+)**:
+```
+Find last difficulty-changed superblock
+If currentTime - lastChangeTime \< 14 days: use previous difficulty
+
+Otherwise:
+  Sample blocks since last difficulty change
+  Apply spike smoothing (max 4* previous per block)
+  newDifficulty = totalDifficulty / expectedBlockCount
+  
+  Limit changes:
+    v12-v13: max 2* per adjustment
+    v14+: max 4* per adjustment
+```
+
+**Minimum Individual Signer Difficulty**:
+```
+minDifficulty = requiredDifficulty / (1000 * 7)
+But never below: 10,000,000 (minBlockSignerPowDifficulty)
+```
+
+**Constants**:
+- `networkSignerConsensusRatio`: 75%
+- `networkSignerDifficultyConsensusRatio`: 23.4%
+- `maximumBlockSigners`: 1000
+- `blocksToUseForDifficultyCalculation`: 40,320 (v11+)
+- `difficultyAdjustmentTimeInterval`: 14 days
+- `difficultyAdjustmentExpectedBlockCount`: 40,000
+
+### Stage 5: Signature Freezing
+
+After acceptance, signatures continue to be collected for a limited period.
+
+#### Extended Signing Window
+
+- Eligible nodes can sign until block reaches **depth 5**
+- Depth 5 means 5 new blocks built on top
+- This allows slower nodes to participate
+- Maximizes decentralization and security
+
+#### Signature Freeze Mechanism
+
+**At Block N+5**:
+
+1. Calculate signature checksum for block N:
+```
+sortedSignatures = all signatures on block N (in order received)
+mergedData = blockNum || sig1Bytes || sig2Bytes || ... || sigNBytes
+signatureFreezeChecksum = SHA3-512(SHA3-512(mergedData))
+```
+
+2. Store checksum in block N+5's header field: `signatureFreezeChecksum`
+
+3. Signature set for block N is now **frozen** (immutable)
+
+**Verification**:
+
+When validating block N+5, verify:
+```
+calculatedChecksum = block_N.calculateSignatureChecksum()
+if (calculatedChecksum != block_N+5.signatureFreezeChecksum):
+    reject block N+5 as invalid
+```
+
+This creates a **tamper-proof record** of exactly which nodes signed block N, preventing retroactive manipulation of the signer set.
+
+---
+
+## Reward Distribution
+
+Rewards are distributed proportionally to all participating signers.
+
+### Reward Calculation
+
+**Block Reward Schedule**:
+```
+Block 1-86,400:           currentSupply * 0.1 / 100,000,000
+Block 86,401-1,802,000:   currentSupply * 5 / 100,000,000
+Block 1,802,001-6,307,200:  576 IXI
+Block 6,307,201-9,460,800:  288 IXI
+Block 9,460,801-12,614,400: 144 IXI
+Block 12,614,401-15,768,000: 72 IXI
+Block 15,768,001+:           36 IXI
+```
+
+### Distribution Formula (v10+)
+
+```
+For each signer in frozen signature set:
+  signerShare = (totalBlockReward * signerDifficulty) / totalSignerDifficulty
+  
+Remainder distributed to highest fractional remainders
+```
+
+**Example**:
+- Block reward: 100 IXI
+- Signer A difficulty: 1,000,000 (50% of total)
+- Signer B difficulty: 500,000 (25% of total)
+- Signer C difficulty: 500,000 (25% of total)
+- Result: A gets 50 IXI, B gets 25 IXI, C gets 25 IXI
+
+### Maturity Period
+
+**Payment Delay**: 960 blocks (~8 hours)
+
+Rewards for signing block N are paid via a **Signing Transaction** included in block N+960.
+
+**Signing Transaction Structure**:
+- Type: `SigningReward` (Type 2)
+- From: `1ixianinfinimine234234234234234234234234234242HP` (minting address)
+- To: Multiple recipients (all frozen signers)
+- Amount: Difficulty-weighted shares
+- Data: Contains source block number
+
+This delayed payout:
+- Prevents gaming rewards (signatures frozen before payout)
+- Ensures fair distribution (proportional to actual difficulty)
+- Stabilizes consensus (no immediate reward competition)
+
+---
+
+## Security Analysis
+
+### Sybil Resistance
+
+**Attack Cost**: Creating fake Master nodes requires:
+1. Computing valid PoW solutions (computational cost)
+2. Maintaining solutions within validity window (ongoing cost)
+3. Proportional reward means no winner-take-all advantage
+
+**Economic Deterrent**: Cost of attack ≈ cost of legitimate participation, with no financial benefit for creating multiple identities.
+
+### 51% Attack Resistance
+
+Traditional 51% attacks require majority hashrate. PoCW requires:
+- **>=75% of signature count** (signature consensus)
+- **>=23.4% of total difficulty** (difficulty consensus)
+- **Maintained over validity window** (30-120 blocks)
+
+**Practical Impossibility**: Attacker must:
+1. Control majority of eligible signers
+2. Continuously mine PoW solutions
+3. Coordinate signatures across multiple blocks
+4. Overcome adaptive adjustments
+
+Cost is prohibitive and economically irrational (destroying network value).
+
+### Fork Resistance
+
+**Adaptive Quorum** ensures rapid convergence:
+- Network adjusts requirements based on current participation
+- First valid block to reach quorum becomes canonical
+- Competing forks lack sufficient signatures
+- Orphan rate minimized
+
+**Signature Freeze** prevents retroactive attacks:
+- Cannot change historical signer sets
+- Cryptographic commitment at depth 5
+- Tampering detected immediately
+
+### Eclipse Attack Mitigation
+
+Clients should:
+- Connect to multiple relay nodes
+- Cross-verify presence data
+- Implement peer rotation
+
+---
+
+## Protocol Evolution
+
+### Block Version Timeline
+
+| Version | Activation | Key Changes |
+|---------|-----------|-------------|
+| v10 | Omega Lock-in | PoW eligibility activation, 960-block reward maturity |
+| v11 | Omega Full | Block-based DAA (40,320 blocks), 120-block PoW validity |
+| v12 | Omega Tuning | Time-based DAA (14-day windows), 30-block PoW validity |
+| v13 | Current | Refinements to difficulty adjustment |
+| v14 | Upcoming | 4* maximum difficulty change factor |
+
+### Upgrade Process
+
+**Soft Fork**:
+- New rules more restrictive than old
+- Old nodes accept new blocks (may not create them)
+- Gradual network transition
+
+**Hard Fork**:
+- New rules incompatible with old
+- Requires coordinated upgrade
+- Block version change triggers activation
+
+---
+
+## Related Documentation
+
+- **[System Architecture](./system-architecture)**: Platform overview and component interaction
+- **[Network Parameters](./network-parameters)**: All consensus constants and configuration values
+- **[Block Structure](./10_data-structures/blocks)**: Detailed block format specification
+- **[Transactions](./10_data-structures/transactions)**: Transaction types and validation
+- **[Cryptographic Primitives](./cryptographic-primitives)**: Hash functions and algorithms used
+
+---
+
+This consensus design creates a secure, decentralized, and energy-efficient blockchain where:
+- PoW provides Sybil resistance without wasteful competition
+- Collaborative signing ensures distributed validation
+- Adaptive mechanisms maintain stability under varying participation
+- Proportional rewards incentivize long-term network support
+- Cryptographic commitments prevent historical manipulation

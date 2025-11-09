@@ -1,0 +1,121 @@
+---
+title: updateNameCapacity
+description: Creates and broadcasts a transaction to change the data capacity and/or owner of a name in the Ixian Naming System (IXI-NS).
+status: Proposed
+---
+
+## Introduction
+
+The `updateNameCapacity` method provides a way for a name's owner to modify its associated data storage `capacity`. This is a sophisticated operation that can also be used to transfer ownership of the name to a new address in the same transaction.
+
+The process requires authorization from the current owner in the form of a cryptographic signature. The method can automatically generate this signature if the node's wallet controls the name; otherwise, the signature must be provided externally. This action incurs a cost based on the new capacity and the remaining duration of the name's registration.
+
+---
+
+## Request
+
+Requests must be made using `HTTP POST` with a JSON body due to the potential complexity of the parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | The existing name to update. |
+| `newCapacity` | `string` | Yes | The new data storage capacity in kilobytes (kB). |
+| `nextPkHash` | `string` | No | The Ixian address that will become the *new* owner of the name. Defaults to the node's primary wallet address. |
+| `sigPk` | `string` | No | The public key (as an Address) corresponding to the private key that created the `sig`. Required if `sig` is provided. |
+| `sig` | `string` | No | A Base64-encoded signature authorizing the change, signed by the *current* owner. If omitted, the node will attempt to sign automatically. |
+
+### Example POST Request (Automatic Signing)
+
+In this scenario, the node's primary wallet is assumed to be the current owner of "my-cool-name".
+
+```json
+POST /updateNameCapacity
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "updateNameCapacity",
+  "params": {
+    "name": "my-cool-name",
+    "newCapacity": "20",
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d"
+  },
+  "id": 1
+}
+```
+
+### Example POST Request (External Signing)
+
+This is used when an external wallet (e.g., a hardware wallet) owns the name. The `sig` is a signature over the calculated checksum of the proposed name update.
+
+```json
+POST /updateNameCapacity
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "updateNameCapacity",
+  "params": {
+    "name": "my-cool-name",
+    "newCapacity": "20",
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d",
+    "sigPk": "1GjP...currentOwnerPubKey...hMA",
+    "sig": "cd59108df2ae...signatureData...a756d481f97ee0a9115329ba3576dfe1fa65eb84b7d1de42890596f6e"
+  },
+  "id": 1
+}```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object for the capacity update.
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "id": "12-YgoasugxF3umGU4592jJisYRX2iU4xguC5QWa44UvCg4jZt1PT6MAeTQCVgL",
+    "version": 7,
+    "blockHeight": "12",
+    "nonce": "890022",
+    "signature": "a36e4270f8f48020e5b7add97f852...88a750a4ab9238d1528a610658da",
+    "pubKey": "JHgSS7hbUNnYWsXgTbs2qz8mDm...U2U2j3NFmiMazymoYwi5i2EPPWjtyTRYRN",
+    "data": "0441409be670f26e...5a7b27e5cb8c69d376b9190c8d9b56dbfea1614",
+    "timestamp": "1711934655",
+    "type": "4",
+    "amount": "1000000.00000000",
+    "applied": "0",
+    "checksum": "61747aba78eb1febfeb542789f35f66733d8ef5bc692a84d56fec4264f0723f708b5dca8d9c40b1672f6ab01",
+    "from": {
+      "1": "1000000.01500000"
+    },
+    "to": {
+      "125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25": "1000000.00000000"
+    },
+    "fee": "0.01500000",
+    "totalAmount": "1000000.01500000"
+  },
+  "error": null,
+  "id": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **State Lookup:** This call first queries the DLT for the current state of the name record. It requires this data to verify ownership and calculate costs. The call will fail if the name does not exist.
+*   **Cost Calculation:** Increasing capacity requires payment. The transaction `amount` represents the cost for the new capacity for the *entire remaining duration* of the registration. The formula is:
+    `Cost = PricePerUnit * RemainingMonths * NewCapacity (in kB)`
+    Note that this is **not** based on the difference in capacity; it is a recalculation of the total cost. The node will fund this amount from its primary wallet.
+*   **Authorization:** All updates must be authorized by the name's **current owner**.
+    *   The transaction includes a `sequence` number which must be `current_sequence + 1` to prevent replay attacks.
+    *   A signature from the current owner covering the proposed changes is required.
+    *   **Automatic Signing:** If `sig` and `sigPk` are omitted, the node will attempt to generate the signature using the private key associated with the name's current owner address. This will only succeed if that wallet is loaded on the node.
+    *   **External Signing:** If the name is controlled by an external wallet, the `sig` and `sigPk` parameters are mandatory.
+*   **Ownership Transfer:** By providing a `nextPkHash` that is different from the current owner's address, you can transfer control of the name. The new owner will be required to sign any subsequent updates.
+*   **Transaction Broadcast:** A successful response means the transaction has been funded and broadcast. Use the returned `id` to monitor for final confirmation.

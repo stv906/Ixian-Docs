@@ -1,0 +1,32 @@
+---
+title: rejected (3)
+description: Notifies a peer that a submitted data item, such as a transaction, has been rejected as invalid.
+status: Planned Upgrade
+---
+
+The `rejected` message serves as a specific negative-acknowledgement (NACK) for a piece of data previously sent by a peer. Unlike the `bye` message, receiving a `rejected` message does **not** terminate the connection.
+
+Its primary use is to inform a node that a transaction it broadcasted has failed validation and will not be included in the transaction pool or propagated further across the network.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `128` bytes| The total size of the `rejected` message payload is limited. |
+| `rejectionCode` | `uint8` | | | A numeric code indicating the reason for the rejection. See table below. |
+| `data` | `IxiBytes` | | | The identifier (e.g., transaction id) of the data item that was rejected. |
+
+## Rejection Codes (`RejectedCode`)
+
+The `rejectionCode` provides a specific, machine-readable reason for the rejection. Currently, all defined codes relate to transaction validation.
+
+| Code (Hex) | Name | Description |
+| :--- | :--- | :--- |
+| `0x20` | `TransactionInvalid` | The transaction is malformed, has an invalid signature, incorrect amounts, or is otherwise structurally invalid. |
+| `0x21` | `TransactionDust` | The transaction output amount is below the minimum "dust" threshold required by the network. |
+| `0x22` | `TransactionInsufficientFee` | The fee included in the transaction is too low for it to be processed or relayed. |
+| `0x23` | `TransactionDuplicate` | The transaction is a duplicate; a transaction with the same ID has already been seen and processed by the node. |

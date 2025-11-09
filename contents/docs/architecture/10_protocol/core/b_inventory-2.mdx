@@ -1,0 +1,125 @@
+---
+title: inventory2 (59)
+description: Announces the availability of new data items (transactions, blocks, signatures, etc.) to a peer.
+status: Planned Upgrade
+---
+
+The `inventory2` message is the core of the gossip protocol used to announce new information to peers. Instead of sending full data objects, a node sends an `inventory2` message containing a list of identifiers for data it possesses. The receiving peer can then decide if it needs any of these items and request them using more specific messages (e.g., `getTransactions2`, `getBlock3`).
+
+This "announce-and-request" mechanism saves significant bandwidth by preventing the redundant transfer of data that peers already have.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB`| The total size of the message payload must not exceed the global maximum. |
+| `itemCount` | `IxiVarUInt` | `0` | `500`* | The number of `Inventory Item` entries that follow in this message. |
+| `items` | `InventoryItem[]` | | | An array of `itemCount` inventory item entries. |
+
+\* The maximum value for `itemCount` is determined by the node configuration (`CoreConfig.maxInventoryItems`), which defaults to `500`.
+
+### Inventory Item Entry Structure
+
+Each entry in the `items` array is a complete, serialized `InventoryItem` object.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `inventoryItemData` | `IxiBytes` | The full binary representation of a single `InventoryItem`. |
+
+An `InventoryItem` is a polymorphic structure. It always begins with a `type` field, and the rest of the structure depends on that type.
+
+## InventoryItem Types
+
+The Ixian protocol defines five inventory item types:
+
+| Type Value | Type Name | Description |
+| :--- | :--- | :--- |
+| `0` | `transaction` | Announces the availability of a transaction |
+| `1` | `block` | Announces the availability of a block |
+| `2` | `blockSignature` | *(Deprecated)* Legacy block signature format |
+| `3` | `keepAlive` | Announces the availability of a presence keep-alive |
+| `4` | `blockSignature2` | Current block signature format with PoW solution |
+
+## InventoryItem Structures
+
+### Base InventoryItem (Type 0: Transaction)
+
+The simplest inventory item format used for transactions.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `type` | `IxiVarInt` | Inventory item type identifier (always `0` for transactions) |
+| `transactionId` | `IxiBytes` | The transaction ID (hash of the transaction) |
+
+**Usage**: Announces that the node has a transaction with the specified ID. Peers can request the full transaction using the `getTransactions2` message.
+
+---
+
+### InventoryItemBlock (Type 1: Block)
+
+Extended inventory item that includes block number for efficient synchronization.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `type` | `IxiVarInt` | Inventory item type identifier (always `1` for blocks) |
+| `blockHash` | `IxiBytes` | The block checksum (hash of the block) |
+| `blockNum` | `IxiVarUInt` | The block height/number |
+
+**Usage**: Announces a new block. The `blockNum` field allows peers to quickly determine if they need this block and update their view of the blockchain tip. Peers can request the full block using the `getBlock3` message.
+
+---
+
+### InventoryItemSignature (Type 4: BlockSignature2)
+
+Announces the availability of a block signature with the associated PoW solution.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `type` | `IxiVarInt` | Inventory item type identifier (always `4` for blockSignature2) |
+| `solution` | `IxiBytes` | The SignerPowSolution data (proves eligibility to sign) |
+| `blockNum` | `IxiVarUInt` | The block height being signed |
+| `blockHash` | `IxiBytes` | The checksum of the block being signed |
+
+**Hash Calculation**: The `hash` field for this inventory item is derived as:
+```
+hash = SHA3-512sqTrunc(solution || blockHash)
+```
+
+This unique identifier allows peers to track which signer submitted which signature for a given block.
+
+**Usage**: Announces that a node has submitted a signature for the specified block. This is a critical part of Ixian's Proof of Collaborative Work (PoCW) consensus where multiple signers collaborate to finalize blocks. Peers can request the full signature using the `getSignatures3` message.
+
+**Note**: Type `2` (blockSignature) is deprecated and uses the wallet address instead of the PoW solution. Nodes should use type `4` (blockSignature2) for all new signatures.
+
+---
+
+### InventoryItemKeepAlive (Type 3: KeepAlive)
+
+Announces the availability of a presence keep-alive message, used in the Starling discovery protocol.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `type` | `IxiVarInt` | Inventory item type identifier (always `3` for keepAlive) |
+| `hash` | `IxiBytes` | The keep-alive message hash (unique identifier) |
+| `lastSeen` | `IxiVarInt` | Unix timestamp (in seconds) when the presence was last seen |
+| `address` | `IxiBytes` | The wallet address (without checksum) of the client |
+| `deviceId` | `IxiBytes` | The device identifier for this presence instance |
+
+**Usage**: Announces a presence keep-alive for client discovery. This enables the Starling sector-based routing system where clients can find each other using cryptographic addresses rather than IP addresses. Streaming (S2) nodes propagate these keep-alives to maintain the distributed presence registry.
+
+**Subscription Model**: Keep-alive inventory items are typically sent only to peers that have subscribed to presence updates for the relevant wallet address sectors. This prevents flooding the network with keep-alive announcements.
+
+## Behavioral Notes
+
+-   **Batching:** Nodes should batch inventory items together. An `inventory2` message is typically sent either when the number of items reaches a threshold (`maxInventoryItems`) or after a certain time interval (`inventoryInterval`) has passed.
+-   **Processing Logic:** Upon receiving an `inventory2` message, a node must:
+    1.  Parse each `InventoryItem`.
+    2.  Check if it has already seen and processed this item.
+    3.  If the item is new, the node should add it to a list of items to be fetched.
+    4.  After processing all items in the inventory, the node should issue the appropriate "get" messages (`getTransactions2`, `getSignatures3`, `getBlock3`, `getKeepAlives`, etc.) to download the full data for the items it needs.
+-   **Block Height Updates:** Inventory items related to blocks and signatures also serve to inform the peer about the sender's current block height, helping nodes to discover the tip of the blockchain.

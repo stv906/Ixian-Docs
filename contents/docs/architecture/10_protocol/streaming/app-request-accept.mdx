@@ -1,0 +1,22 @@
+---
+title: appRequestAccept (28)
+description: Accepts an appRequest.
+---
+
+The `appRequestAccept` message is the positive response to an `appRequest`. It confirms that the user has accepted the invitation to start a Mini-App session.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier from the original `appRequest` message, confirming which session is being accepted. |
+| `data` | `IxiBytes` | 0 | * | Optional. Application-specific data sent upon accepting the session. |
+
+## Behavioral Notes
+
+*   **Trigger:** This message is sent when a user accepts an incoming Mini-App request.
+*   **Session Activation:** Upon receiving `appRequestAccept`, the original requester considers the session active. Both parties can now begin exchanging `appData` messages.

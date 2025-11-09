@@ -1,0 +1,166 @@
+---
+title: Cryptographic Primitives
+description: A technical specification of the hashing algorithms, ciphers, and signature schemes used in the Ixian Platform.
+---
+
+The Ixian Platform is built on a robust and modern cryptographic foundation, primarily leveraging the Bouncy Castle library. The design incorporates standard, well-vetted algorithms for immediate security and includes post-quantum primitives for forward-compatibility.
+
+### Overview
+
+| Category | Algorithm | Key Parameters / Notes |
+| :--- | :--- | :--- |
+| **Hashing** | **SHA-3** | Primary hashing algorithm for new features. |
+| | SHA-2 | Used in legacy components (v0/v1 addresses). |
+| **Asymmetric** | **RSA** | **4096-bit** keys for wallet identity and transaction signatures. |
+| **Symmetric** | **AES-GCM** | **256-bit** keys. Primary AEAD for data encryption. |
+| | **ChaCha20-Poly1305** | **256-bit** keys. Modern AEAD stream cipher, often used with AES. |
+| **Key Exchange**| **ECDH** | `secp521r1` curve for establishing shared secrets. |
+| | **ML-KEM (Kyber)**| Post-quantum KEM (`ml-kem-1024`) for forward-security. |
+| **Key Derivation**| **HKDF-SHA3**| Derives symmetric keys from a shared secret. |
+| | **PBKDF2** | Derives keys from user passwords. |
+
+---
+
+## Hashing Algorithms
+
+Hashing is used for a variety of purposes, including address generation, transaction integrity, and as a component in other cryptographic schemes.
+
+### SHA-3
+
+SHA-3 is the primary and most modern hashing algorithm used in the platform, particularly for new features like v2 addresses.
+
+*   **`sha3_512(data)`**: Computes the full 64-byte SHA3-512 hash of the input data.
+*   **`sha3_256(data)`**: Computes the full 32-byte SHA3-256 hash of the input data.
+
+> **Custom Hash Compositions**
+> The Ixian protocol frequently uses two custom hash compositions:
+> *   **`sq` (Squared):** A "squared" hash means the hashing algorithm is applied twice. For example, `sha3_512sq(data)` is equivalent to `sha3_512(sha3_512(data))`.
+> *   **`Trunc(N, hash)`:** A "truncated" hash means only the first `N` bytes of the full hash output are used.
+
+*   **`sha3_512sq(data)`**: Computes the squared SHA3-512 hash.
+*   **`sha3_512Trunc(data, N)`**: Computes a SHA3-512 hash and returns the first `N` bytes.
+*   **`sha3_512sqTrunc(data, N)`**: Computes a squared SHA3-512 hash and returns the first `N` bytes.
+
+### SHA-2 (Legacy)
+
+SHA-2 functions, specifically SHA-512, are used in legacy components like v0/v1 addresses and older signature schemes.
+
+*   **`sha512sq(data)`**: Computes a squared SHA-512 hash.
+*   **`sha512qu(data)`**: Computes a "quad" SHA-512 hash, applying the hash function four times: `sha512(sha512(sha512(sha512(data))))`.
+*   **`sha512sqTrunc(data, N)`**: Computes a squared SHA-512 hash and returns the first `N` bytes.
+*   **`sha512quTrunc(data, N)`**: Computes a quad SHA-512 hash and returns the first `N` bytes.
+
+---
+
+## Asymmetric Cryptography
+
+Asymmetric schemes are used for digital identities (wallets), signatures, and asymmetric encryption.
+
+### RSA
+
+RSA is the primary algorithm for wallet key pairs and transaction signatures in the current address versions.
+
+| Parameter | Value |
+| :--- | :--- |
+| **Key Size** | 4096 bits |
+| **Signature Scheme** | RSASSA-PKCS1-v1_5 with **SHA-512** |
+| **Encryption Scheme**| RSAES-OAEP with **SHA-1** |
+
+---
+
+## Symmetric Ciphers
+
+Symmetric ciphers are used for efficient and secure peer-to-peer data encryption.
+
+### AES (Advanced Encryption Standard)
+
+*   **Mode:** `AES/GCM/NoPadding` (Authenticated Encryption with Associated Data)
+*   **Key Size:** 256 bits (32 bytes)
+*   **Nonce/IV Size:** 12 bytes
+
+A legacy `AES/CBC/PKCS7Padding` mode is also supported for backward compatibility.
+
+### ChaCha20-Poly1305
+
+This is a modern, high-performance stream cipher used as an Authenticated Encryption with Associated Data (AEAD) scheme. It is often used in conjunction with AES in composite encryption schemes.
+
+*   **Key Size:** 256 bits (32 bytes)
+*   **Nonce/IV Size:** 12 bytes
+*   **Tag Size:** 128 bits (16 bytes)
+
+---
+
+## Key Exchange & Derivation
+
+These primitives are used to establish shared secrets and derive strong cryptographic keys from them.
+
+### ECDH (Elliptic Curve Diffie-Hellman)
+
+Used to establish a shared secret between two parties without transmitting the secret itself.
+
+*   **Curve:** `secp521r1`
+
+### HKDF (HMAC-based Key Derivation Function)
+
+Used to derive one or more strong symmetric keys from a shared secret (e.g., from an ECDH exchange).
+
+*   **Underlying Hash:** `SHA3-512`
+
+### PBKDF2 (Password-Based Key Derivation Function 2)
+
+Used to derive a symmetric key from a user-provided password, protecting against brute-force attacks.
+
+*   **Underlying PRF:** HMAC-SHA1
+*   **Iterations:** `10,000`
+
+---
+
+## Post-Quantum Primitives
+
+To ensure long-term security against the threat of quantum computers, the platform incorporates a post-quantum key exchange mechanism.
+
+### ML-KEM (CRYSTALS-Kyber)
+
+A Key Encapsulation Mechanism (KEM) selected by NIST for standardization (FIPS 203). It is used to securely establish a shared secret that is resistant to attacks from both classical and quantum computers.
+
+*   **Parameter Set:** `ml-kem-1024` (also known as Kyber1024)
+*   **Security Level:** NIST Level 5 (highest standardized level)
+
+### Hybrid Key Exchange
+
+The platform uses a **hybrid approach** combining classical and post-quantum key exchange:
+
+```
+sharedSecret = RSA(ECDH(secp521r1) || ML-KEM-1024)
+```
+
+Where RSA-4096 is used for key exchange wrapping, ECDH provides ephemeral key exchange, and ML-KEM adds post-quantum protection. The combination ensures:
+- **Current security**: RSA and ECDH provide immediate security against classical attacks
+- **Future security**: ML-KEM protects against future quantum attacks
+- **Defense in depth**: Compromise requires breaking all three schemes simultaneously
+
+---
+
+## Composite Encryption Schemes
+
+The protocol defines several high-level encryption schemes that combine the primitives above for specific use cases, such as peer-to-peer messaging.
+
+### `spixi2` (Current)
+
+A robust AEAD scheme that derives per-message keys to prevent nonce reuse and improve security.
+
+1.  A unique `message_nonce` (64 bytes) is generated.
+2.  **AES Key Derivation:** A per-message AES key and IV are derived from the `message_nonce` and the base AES key using `sha3_512sq`.
+3.  **ChaCha Key Derivation:** A per-message ChaCha key and IV are derived from the `message_nonce` and the base ChaCha key using `sha3_512sq`.
+4.  The plaintext is encrypted using **AES-GCM** with the derived key/IV.
+5.  The AES ciphertext is then encrypted using **ChaCha20-Poly1305** with the derived key/IV and any associated data (AAD).
+6.  The final payload is the length-prefixed `message_nonce` followed by the length-prefixed ChaCha ciphertext.
+
+### `rsa2`
+
+An integrated encryption scheme similar to ECIES, used for sending an encrypted message to a recipient using only their public RSA key.
+
+1.  Generate ephemeral (one-time) AES and ChaCha keys.
+2.  Encrypt the plaintext using the `spixi2` scheme with the ephemeral keys.
+3.  Encrypt the ephemeral AES and ChaCha keys together using the recipient's public **RSA-4096** key.
+4.  The final payload is the length-prefixed encrypted keys followed by the `spixi2` ciphertext.

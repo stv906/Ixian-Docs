@@ -1,0 +1,39 @@
+---
+title: signaturesChunk2 (17)
+description: Responds to a signature request with a chunk of full block signature objects.
+status: Finalized
+---
+
+The `signaturesChunk2` message is the response to a `getBlockSignatures2` or `getSignatures3` request. It contains a batch of complete signature objects for a single, specified block.
+
+If the total number of signatures to be sent is large, they will be split across multiple `signaturesChunk2` messages to respect the network's maximum message size.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | `1` | | The block number that all signatures in this chunk belong to. |
+| `blockChecksum` | `IxiBytes` | | | The checksum (hash) of the block that all signatures belong to. |
+| `signatureCount`| `IxiVarUInt` | `0` | `2000`*| The number of `Block Signature` entries that follow in this message. |
+| `signatures` | `BlockSignature[]`| | | An array of `signatureCount` full signature entries. |
+
+\* The maximum value for on-wire `signatureCount` is determined by the node configuration (`ConsensusConfig.maximumBlockSigners`), which defaults to `2000`.
+
+### Block Signature Entry Structure
+
+Each entry in the `signatures` array is a complete, serialized `BlockSignature` object.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `signatureData` | `IxiBytes` | The full binary representation of a single `BlockSignature` object. The internal structure of this object will be defined in a separate data structure document. |
+
+## Behavioral Notes
+
+-   A node receiving this message should parse each `BlockSignature` entry and add it to the corresponding block in its local database, after validating each signature.
+-   The `blockNum` and `blockChecksum` fields provide the context for where the received signatures should be applied.
+-   A recipient should be prepared to receive multiple `signaturesChunk2` messages for the same block, especially after a `getBlockSignatures2` request during block synchronization.

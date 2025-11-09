@@ -1,0 +1,41 @@
+---
+title: getKeepAlives (6)
+description: Requests specific, known presence records from a peer.
+status: Finalized
+---
+
+The `getKeepAlives` message is used to query a peer for a specific list of presence records. This allows a node to refresh or verify the status of presences it already knows about.
+
+If the list of requested presences is large, the sender will split the request into multiple `getKeepAlives` messages (chunks) to respect the maximum message size limit. The peer is expected to respond with one or more `keepAlivesChunk` messages containing the data for the requested presences it has.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload consists of a count followed by a repeating series of request entries.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB` | The total size of the message payload must not exceed the global maximum. |
+| `count` | `IxiVarUInt` | `1` | `5000`* | The number of `Presence Request` entries that follow in this message. |
+| `requests` | `PresenceRequest[]`| | | An array of `count` presence request entries. |
+
+\* The maximum value for `count` is determined by the node configuration (`CoreConfig.maximumKeepAlivesPerChunk`), which defaults to `5000`.
+
+### Presence Request Entry Structure
+
+Each entry in the `requests` array has the following structure:
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `address` | `IxiBytes` | The wallet address (without checksum) of the presence record being requested. |
+| `deviceId` | `IxiBytes` | The unique device ID of the presence record being requested. |
+
+## Behavioral Notes
+
+-   A node receiving this message should iterate through the requested `(address, deviceId)` pairs and look them up in its local presence list.
+-   For each presence record found, the node should include it in a `keepAlivesChunk` response message.
+-   It is not an error if some or all of the requested presences are not found; the responding node simply omits them from the response.

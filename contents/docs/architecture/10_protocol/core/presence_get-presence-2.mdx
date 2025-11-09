@@ -1,0 +1,27 @@
+---
+title: getPresence2 (36)
+description: Requests the full presence object for a specific wallet address.
+status: Finalized
+---
+
+The `getPresence2` message is a request sent to a peer to obtain the complete `Presence` object associated with a specific wallet address.
+
+This is typically used when a node receives a lightweight `keepAlivePresence` message and needs more information about the node, such as its public key or its full list of associated IP addresses (`PresenceAddress` entries).
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `walletAddress` | `IxiBytes` | | | The wallet address (without checksum) for which the full presence information is being requested. |
+
+## Behavioral Notes
+
+-   A node sends this message to "hydrate" a partial presence entry into a full one.
+-   Upon receiving this message, a peer should look up the `walletAddress` in its local `PresenceList`.
+-   If a `Presence` object is found for the given address, the peer should respond by sending an `updatePresence` message containing the full, serialized `Presence` object.
+-   If no presence is found, no response is required.

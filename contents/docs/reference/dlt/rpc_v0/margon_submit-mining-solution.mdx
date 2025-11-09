@@ -1,0 +1,111 @@
+---
+title: submitMiningSolution
+description: Submits a Proof-of-Work solution from an external miner, verifies it, and broadcasts it to the network if valid.
+status: Finalized
+---
+
+## Introduction
+
+The `submitMiningSolution` method is the primary endpoint for external miners or mining pools to submit their successful Proof-of-Work (PoW) solutions to a DLT node.
+
+The endpoint performs two key actions:
+1.  It first **verifies** that the provided `nonce` is a valid solution for the specified `blocknum` at that block's required difficulty.
+2.  If the solution is valid, it **submits** the work to the network by constructing and broadcasting the appropriate message, typically a newly solved block candidate.
+
+This method serves as the bridge between external hashing power and the Ixian network, allowing anyone to contribute to block creation.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `nonce` | `string` | Yes | The Proof-of-Work solution to submit, encoded as a hexadecimal string. |
+| `blocknum` | `integer` | Yes | The block number (height) for which the nonce was calculated. |
+
+### Example POST Request
+
+```json
+POST /submitMiningSolution
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "submitMiningSolution",
+  "params": {
+    "nonce": "0000000000000000000000000000000000000000000000001a2b3c4d5e6f7g8h",
+    "blocknum": 69501
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /submitMiningSolution?nonce=...&blocknum=69501
+```
+
+---
+
+## Response
+
+The `result` is a boolean value indicating whether the solution was valid and successfully submitted to the network by the node.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `boolean` | `true` if the solution was valid and broadcast; `false` if it was invalid or the broadcast failed. |
+
+### Example Success Response (Accepted)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": true,
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Success Response (Rejected)
+
+This response is returned if the nonce is mathematically incorrect for the given block.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": false,
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Parameter 'nonce' is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **DLT Nodes Only:** This RPC call is specific to DLT nodes and requires an active connection to the blockchain.
+*   **Verification and Submission:** This is a two-step process. A `true` response confirms both that the solution was mathematically correct and that the node has attempted to broadcast it to its peers.
+*   **Implicit Solver Address:** This is a critical point for external miners. The PoW solution is verified **in the context of the RPC node's primary wallet address**. This means an external miner **must** use the public address of the node they are submitting to as the `solver_address` when constructing the hash for mining. If they mine using a different address, their solutions will be rejected.
+*   **Block Version Dependency:** The PoW hashing algorithm is version-dependent. This endpoint automatically uses the correct verification logic based on the version of the specified `blocknum`. External miners must ensure their hashing implementation also respects this difference (using `addressWithChecksum` for blocks `< v10` and `addressNoChecksum` for blocks `>= v10`).
+*   **Network Acceptance Not Guaranteed:** A `true` response means the solution was accepted *by this node* and broadcast. It does not guarantee that the solution will result in a block that is accepted by the wider network. Another miner may have broadcast a solution for the same block height first.

@@ -1,0 +1,73 @@
+---
+title: isolate
+description: Immediately disconnects the node from all peers, taking it offline from the P2P network.
+status: Finalized
+---
+
+## Introduction
+
+The `isolate` method is a network administration endpoint that provides a "network kill-switch" for the node. When called, it immediately drops all active peer-to-peer connections and prevents the node from automatically forming new ones.
+
+This is a powerful tool for instantly taking a node offline from the rest of the network without shutting down the node process itself. It can be useful for security procedures, maintenance, or advanced network diagnostics.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /isolate
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "isolate",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /isolate
+```
+
+---
+
+## Response
+
+The response is a simple confirmation that the network isolation process has been initiated.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Isolating from network now.". |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "Isolating from network now.",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Immediate Disconnection:** The command takes effect immediately, terminating all active client and server connections to other Ixian nodes.
+*   **Process Remains Active:** This command **only** affects the P2P networking layer. The node's process continues to run. Wallets remain loaded, and the RPC server remains active, allowing for further administrative actions.
+*   **Reversing Isolation:** An isolated node will not attempt to reconnect to the network on its own. To restore connectivity, you must subsequently call the [`reconnect`](./node_reconnect) method.
+*   **Use Cases:**
+    *   **Emergency Stop:** Quickly disconnect a potentially compromised or misbehaving node from the network.
+    *   **Controlled Maintenance:** Perform updates or changes that require the node to be offline without a full restart.
+    *   **Network Testing:** Observe the behavior of other nodes when a specific peer suddenly drops from the network.
+*   **Security:** This is a potent administrative command that can completely halt a node's participation in the network. Access to this RPC endpoint should be strictly limited to trusted administrators.

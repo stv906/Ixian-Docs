@@ -1,0 +1,156 @@
+---
+title: updateNameRecord
+description: Creates and broadcasts a transaction to add, update, or remove data records associated with a registered Ixian name.
+status: Proposed
+---
+
+## Introduction
+
+The `updateNameRecord` method allows the owner of a registered Ixian name to manage its associated data records. These records can store arbitrary information, such as IP addresses, public keys, or service endpoints, effectively turning the Ixian Name into a decentralized identity or lookup service.
+
+This operation requires a cryptographic signature from the name's current owner to authorize the changes. It is a zero-cost operation, apart from the standard network transaction fee. This method also supports transferring ownership of the name to a new address as part of the same transaction.
+
+---
+
+## Request
+
+Requests must be made using `HTTP POST` with a JSON body due to the array nature of the `records[]` parameter.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | The plain-text Ixian name whose records are to be updated. |
+| `records[]` | `array<string>` | Yes | An array of strings, where each string represents a record in the format `key,type,value`. Use `null` as `value` to remove a record. |
+| `nextPkHash` | `string` | No | The Ixian address that will become the *new* owner of the name. Defaults to the node's primary wallet address. |
+| `sigPk` | `string` | No | The public key (as an Address) corresponding to the private key that created the `sig`. Required if `sig` is provided. |
+| `sig` | `string` | No | A Base64-encoded signature authorizing the change, signed by the *current* owner. If omitted, the node will attempt to sign automatically. |
+
+#### `records[]` Format
+
+Each string in the `records[]` array must follow the format: `"key,type,value"`.
+
+*   **`key`**: A plain-text string representing the record key (e.g., "ip", "email", "avatar_hash").
+*   **`type`**: An integer representing the record type. This can be used to categorize records or define how they should be interpreted.
+*   **`value`**: The plain-text data for the record. If the `value` is `null`, the record associated with that `key` will be removed.
+
+### Example POST Request (Automatic Signing)
+
+In this example, the node's primary wallet is assumed to be the current owner of "my-cool-name". A record is updated, another is added, and ownership is transferred.
+
+```json
+POST /updateNameRecord
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "updateNameRecord",
+  "params": {
+    "name": "my-cool-name",
+    "records[]": [
+      "ip,1,192.168.1.1",
+      "email,2,user@example.com"
+    ],
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d"
+  },
+  "id": 1
+}
+```
+
+### Example POST Request (External Signing)
+
+This is used when an external wallet (e.g., a hardware wallet) owns the name. The `sig` is a signature over the calculated checksum of the proposed name record update.
+
+```json
+POST /updateNameRecord
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "updateNameRecord",
+  "params": {
+    "name": "my-cool-name",
+    "records[]": [
+      "ip,1,192.168.1.1"
+    ],
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d",
+    "sigPk": "1GjP...currentOwnerPubKey...hMA",
+    "sig": "7455f0a610f9...signatureData...6e626eeed9625491fc39b993"
+  },
+  "id": 1
+}
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object for the name record update.
+
+### Result: `Transaction` Object Structure
+
+A successful call returns a full `Transaction` object. Key fields for a name record update transaction are:
+
+*   **`type`**: Will be `4`.
+*   **`to`**: The recipient address will be the network's special address for name operations.
+*   **`amount`**: Will be `0.00000000`.
+*   **`data`**: A hex-encoded string containing the serialized record update details, including the hashed name, the list of new/updated records, the new owner hash (if changed), and the authorizing signature.
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "id": "12-uFz12W98ebdbtMg9egjP5p9f1zWgF3tkQ9YAbCB13LNE6WJmPUM59rDctZ1r",
+    "version": 7,
+    "blockHeight": "12",
+    "nonce": "953806",
+    "signature": "3b3faa9a726f0818fa1795be...865d7ff8701b28b059b39c4112cd2",
+    "pubKey": "JHgSS7hbUNnYWsXgTbs2qz8mD...FmiMazymoYwi5i2EPPWjtyTRYRN",
+    "data": "0241409be670f26e3a9d0fa3e...f34df22cd7fbb324",
+    "timestamp": "1711936613",
+    "type": "4",
+    "amount": "0.00000000",
+    "applied": "0",
+    "checksum": "a0ba16873ebe68f2f1f319d9f199dbb453a53275aae5f4aad2fcbe0ae533e524cc1c2507498df1448af53599",
+    "from": {
+      "1": "0.01500000"
+    },
+    "to": {
+      "125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25": "0.00000000"
+    },
+    "fee": "0.01500000",
+    "totalAmount": "0.01500000"
+  },
+  "error": null,
+  "id": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Missing parameter 'records[]'"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Authorization by Owner Key:** This operation **must** be authorized by a signature from the private key corresponding to the name's **current owner address**. An incorrect or missing signature (when not automatically generated) will cause the transaction to be rejected.
+*   **State Lookup:** The node first retrieves the current name record from the DLT to obtain the current `sequence` number, which is incremented to prevent replay attacks.
+*   **Zero Cost:** Updating name records is free, apart from the standard network transaction `fee`, which is automatically funded from the node's primary wallet.
+*   **Record Hashing and Encryption:**
+    *   Record keys (`key` in `key,type,value`) are hashed when stored on-chain for privacy and efficiency.
+    *   Record `value`s are encrypted using a combination of the name (plain-text) and the record key (plain-text) as part of the encryption key derivation. This ensures that only someone knowing the name and record key can decrypt the data.
+*   **Removing Records:** To remove an existing record, specify its `key` and `type` with a `value` of `null`.
+    *   Example: `"old_record,1,null"`
+*   **Ownership Transfer:** By providing a `nextPkHash` that differs from the current owner's address, you can transfer ownership of the name concurrently with updating its records. The new owner will be required to sign any subsequent updates or operations.
+*   **Transaction Broadcast:** A successful response means the transaction has been funded and broadcast to the network. Use the returned `id` to monitor its status, as confirmation is not immediate.

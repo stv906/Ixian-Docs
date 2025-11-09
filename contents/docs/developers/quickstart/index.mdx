@@ -1,0 +1,188 @@
+---
+title: "Quick Start Guide"
+description: "Choose your path to start building on the Ixian Platform - from full nodes to client apps, gateways, and decentralized mini apps"
+---
+
+The Ixian Platform offers multiple development paths depending on your use case. Choose the guide that best fits your project:
+
+## Development Paths
+
+### [Docker Sandbox - Local Test Network](./quickstart/docker-sandbox)
+
+**Best for:** First-time users, testing, development, CI/CD
+
+Get a complete local Ixian network running in 5 minutes with Docker. Perfect for:
+- **Learning Ixian** without needing testnet tokens
+- **Integration testing** in CI/CD pipelines
+- **Development workflows** with full network control
+
+**Tech Stack:** Docker, Docker Compose, Bash/PowerShell
+
+**What you'll get:**
+- 2 DLT nodes (blockchain consensus)
+- 10 S2 nodes (streaming/presence)
+- Ixian Explorer (blockchain browser)
+- All running in regtest mode locally
+
+[Get started with Docker ->](./quickstart/docker-sandbox)
+
+---
+
+### [Building Ixian Client Apps](./quickstart/client-app)
+
+**Best for:** Wallets, bots, IoT devices, custom applications
+
+Build lightweight clients that connect to the Ixian network without maintaining the full blockchain. Client apps can:
+- Send and receive IXI transactions
+- Query balances and blockchain state
+- Discover online addresses via Starling presence
+- Connect through S2 streaming nodes
+
+**Tech Stack:** C# / .NET 8.0, Ixian-Core library
+
+**What you'll learn:**
+- Implementing the `IxianNode` interface
+- Connecting to S2 nodes via `StreamClientManager`
+- Transaction creation and broadcasting
+- Starling sector-based presence queries
+
+[Start building a client app ->](./quickstart/client-app)
+
+---
+
+### [QuIXI Bridge Integration](./quickstart/quixi-bridge)
+
+**Best for:** Traditional tech integration, IoT systems, AI agents, legacy applications
+
+Use QuIXI as a gateway to connect REST APIs, MQTT, and RabbitMQ to the Ixian P2P network. Perfect for:
+- IoT device fleets communicating via Ixian
+- REST API integration without blockchain knowledge
+- MQTT/RabbitMQ message bridges
+- AI agents interacting with Ixian
+
+**Tech Stack:** Python, Node.js, any language with HTTP/MQTT clients
+
+**What you'll learn:**
+- REST API endpoints for transactions and contacts
+- MQTT topic subscriptions for real-time events
+- RabbitMQ integration patterns
+- Building chatbots and payment gateways
+
+[Integrate with QuIXI ->](./quickstart/quixi-bridge)
+
+---
+
+### [Spixi Mini Apps](./quickstart/spixi-mini-app)
+
+**Best for:** Decentralized web apps, P2P games, social dApps
+
+Create HTML/CSS/JavaScript apps that run inside the Spixi messenger with direct P2P communication:
+- **No servers needed** - pure P2P between users
+- **Multi-user sessions** - chat, games, collaborative tools
+- **Cryptographic sessions** - end-to-end encrypted channels
+- **Distributed via .spixi files** - no app store required
+
+**Tech Stack:** HTML, CSS, JavaScript, Spixi App SDK
+
+**What you'll learn:**
+- Spixi JavaScript SDK (storage, messaging, sessions)
+- Multi-user P2P app architecture
+- Packaging and distributing .spixi apps
+- Real-time session management
+
+[Create a Mini App ->](./quickstart/spixi-mini-app)
+
+---
+
+## Not Sure Where to Start?
+
+### Brand new to Ixian?
+
+**Start here:** [Docker Sandbox](./quickstart/docker-sandbox)
+
+Get a local test network running in 5 minutes. No testnet tokens needed, no waiting for blocks. Perfect for exploring Ixian APIs and testing transactions before diving deeper.
+
+### Choose based on your background:
+
+**Web Developers (JavaScript/Python/Node.js)**
+-> Start with [QuIXI Bridge](./quickstart/quixi-bridge) - familiar REST/MQTT patterns
+
+**Mobile/Desktop Developers (C#/.NET)**
+-> Start with [Client Apps](./quickstart/client-app) - full control over Ixian integration
+
+**Frontend Developers (HTML/CSS/JS)**
+-> Start with [Spixi Mini Apps](./quickstart/spixi-mini-app) - build P2P web apps
+
+**Blockchain Developers**
+-> Start with [Client Apps](./quickstart/client-app) - understand the protocol deeply
+
+### Choose based on your project:
+
+| Project Type | Recommended Path |
+|--------------|-----------------|
+| **First time with Ixian** | **[Docker Sandbox](./quickstart/docker-sandbox)** |
+| Cryptocurrency wallet | [Client Apps](./quickstart/client-app) |
+| Payment processor | [QuIXI Bridge](./quickstart/quixi-bridge) |
+| IoT integration | [QuIXI Bridge](./quickstart/quixi-bridge) |
+| Chatbot | [QuIXI Bridge](./quickstart/quixi-bridge) and/or [Client Apps](./quickstart/client-app) |
+| P2P game | [Spixi Mini Apps](./quickstart/spixi-mini-app) and/or [Client Apps](./quickstart/client-app) and/or [QuIXI Bridge](./quickstart/quixi-bridge) |
+| Social dApp | [Spixi Mini Apps](./quickstart/spixi-mini-app) and/or [Client Apps](./quickstart/client-app) and/or [QuIXI Bridge](./quickstart/quixi-bridge) |
+| Exchange integration | [QuIXI Bridge](./quickstart/quixi-bridge) |
+| AI agent | [QuIXI Bridge](./quickstart/quixi-bridge) |
+| **Testing & CI/CD** | **[Docker Sandbox](./quickstart/docker-sandbox)** |
+
+## Core Concepts (All Paths)
+
+Regardless of which path you choose, these concepts are fundamental:
+
+### Addresses & Wallets
+- Ixian addresses are cryptographic identities (base58-encoded with checksums when user facing, binary without checksum internally and on-wire)
+- Each wallet controls private keys for signing transactions
+- Addresses format: `1abc...xyz`
+
+### Transactions
+- All value transfers are cryptographically signed transactions
+- Minimum fee applies (configurable per network)
+- Transactions include block height for validity window
+
+### Presence & Starling Routing
+- **Starling** is Ixian's presence discovery protocol
+- Sector-based routing enables billion-scale networks
+- Addresses map to sectors (first 10 bytes of SHA3-512 hash)
+- S2 nodes announce their Presence to DLT nodes, which determine sectors algorithmically
+- Clients query sector nodes to find specific presences
+
+### S2 Streaming Protocol
+- Encrypted P2P messaging layer
+- Used for: contacts, chat, Mini Apps, presence updates
+- Runs on top of the blockchain network
+- Clients connect via `StreamClientManager`
+
+### Network Types
+- **Testnet**: Development and testing (use this first!)
+- **Mainnet**: Production network with real value
+
+## Prerequisites
+
+Before starting any path, ensure you have:
+
+- Basic understanding of distributed systems (helpful)
+- Familiarity with cryptographic signatures (helpful)
+- Development environment for your chosen tech stack
+
+## Getting Help
+
+- **Documentation**: [docs.ixian.io](https://docs.ixian.io)
+- **Discord Community**: [https://discord.gg/pdJNVhv](https://discord.gg/pdJNVhv)  
+- **Telegram Community**: [https://t.me/ixian_official_ENG](https://t.me/ixian_official_ENG)  
+- **GitHub Issues**: Report bugs or request features
+- **Example Code**: Check QuIXI and Spixi repositories
+
+## Next Steps
+
+1. **Choose your path** from the three guides above
+2. **Follow the quickstart** step-by-step
+3. **Test on testnet** before deploying to mainnet
+4. **Join the community** to share your project
+
+Ready to build? Pick your guide and let's get started!

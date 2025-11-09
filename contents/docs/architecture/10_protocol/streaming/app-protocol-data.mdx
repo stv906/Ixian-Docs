@@ -1,0 +1,24 @@
+---
+title: appProtocolData (45)
+description: Generic data for a specific, named app protocol.
+---
+
+The `appProtocolData` message is used to send data for a specific application protocol. Unlike `appData`, which is tied to a temporary session and a specific application, this message targets a persistent protocol identifier, which can be supported by multiple different apps.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload follows the structure of an `AppDataMessage`, but the `sessionId` field is repurposed to hold the `protocolId`.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `protocolId` | `IxiBytes` | * | * | The unique identifier of the application protocol this data is for. |
+| `data` | `IxiBytes` | 1 | * | The raw, protocol-specific data payload. |
+
+## Behavioral Notes
+
+*   **Prerequisite:** A client should first use `getAppProtocols` and `appProtocols` to confirm the recipient supports the `protocolId` before sending data with this message.
+*   **Recipient Action:** The recipient's client looks up the `protocolId` and dispatches the `data` payload to the corresponding local Mini-App or service that has registered to handle that protocol.

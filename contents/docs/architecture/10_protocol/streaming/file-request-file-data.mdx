@@ -1,0 +1,24 @@
+---
+title: requestFileData (11)
+description: Requests a specific chunk of a file.
+---
+
+The `requestFileData` message is sent by the file recipient to the sender to request a specific portion (a "chunk" or "packet") of the file. This pull-based mechanism allows the receiver to manage the download rate and re-request missing chunks.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string.
+*   **`uint64`**: A 64-bit unsigned integer, serialized in Little-Endian format.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `uid` | `string` | * | * | The unique identifier of the file transfer session. |
+| `packetNumber`| `uint64` | 0 | * | The sequential index of the file chunk being requested (starting from 0). |
+
+## Behavioral Notes
+
+*   **Receiver-Driven:** The file download is driven by the receiver. After sending `acceptFile`, the receiver's client begins sending a series of `requestFileData` messages, typically in sequential order, until all chunks have been requested.
+*   **Sender Response:** When the sender's client receives a `requestFileData` message, it must read the corresponding chunk of data from the source file and send it back to the recipient in a `fileData` message.
+*   **Retries:** If a `fileData` message for a specific chunk is not received within a timeout period, the recipient can resend the `requestFileData` message for that same `packetNumber`.

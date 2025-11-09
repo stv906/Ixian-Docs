@@ -1,0 +1,20 @@
+---
+title: Networking Protocols
+description: An overview of the Ixian communication layers, from the core DLT protocol to the S2 streaming protocol.
+---
+
+The Ixian network operates on a layered protocol stack. This design separates the concerns of core ledger synchronization from high-level, end-to-end encrypted communication, allowing for specialization and robustness.
+
+This section provides the complete on-wire specification for both primary protocol layers and defines the common data types used throughout the system.
+
+## Protocol Layers
+
+<div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+	<Card title="Core DLT Protocol" href="./10_protocol/core">
+	  The foundational protocol for peer-to-peer communication between DLT nodes. It handles node discovery, block and transaction propagation, consensus messages, and state synchronization.
+	</Card>
+
+	<Card title="S2 Streaming Protocol" href="./10_protocol/streaming">
+	  A secure, end-to-end encrypted overlay network built on top of the DLT Master Node network. It enables features like direct messaging, file transfers, and real-time data streaming for applications.
+	</Card>
+</div>

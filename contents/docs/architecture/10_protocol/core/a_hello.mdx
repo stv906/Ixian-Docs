@@ -1,0 +1,54 @@
+---
+title: hello (0)
+description: Initiates a handshake and exchanges node identity and capabilities.
+status: Planned Upgrade
+---
+
+The `hello` message is the first message sent by a peer after a TCP connection is established. Its purpose is to initiate the application-layer handshake.
+
+It communicates the sender's identity (address, public key, node type), software version, and other critical metadata. The message is signed to prove ownership of the public key and to bind the session to the sender's externally-visible IP address, preventing certain relay and spoofing attacks.
+
+A receiving peer validates this message and, if successful, responds with a `helloData` message to complete the handshake.
+
+### Core Data Types
+
+The protocol uses several custom data types for efficient serialization. For a full specification of variable-length integers, see **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: A length-prefixed byte array. See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`string`**: See **[Global Serialization Rules](./)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `protocolVersion` | `IxiVarUInt` | | | The protocol version the sending node supports. |
+| `address` | `IxiBytes` | | `70` bytes | The sender's Ixian wallet address. |
+| `isTestNet` | `bool` | | | `true` if the node is operating on a test network, `false` otherwise. |
+| `nodeType` | `char` | | | A single character representing the node type (`M`, `H`, `R`, `C`). |
+| `nodeVersion` | `string` | | `20` chars | A string identifying the node's software version (e.g., "dlt-1.0.0"). |
+| `deviceId` | `IxiBytes` | | `32` bytes | A unique identifier for the node instance. |
+| `publicKey` | `IxiBytes` | | | The sender's public key, from which the `address` is derived. |
+| `port` | `IxiVarInt` | | | The port on which the sending node listens for incoming connections. |
+| `timestamp` | `IxiVarInt` | | | The sender's current Unix timestamp. Used to prevent replay attacks. |
+| `signature` | `IxiBytes` | | | A digital signature over a concatenation of handshake data. |
+| `challenge` | `IxiVarUInt`| | | **Conditional Field.** A random value. Only present when a client sends `hello` to a server. |
+
+
+## Behavioral Notes
+
+A peer receiving a `hello` message must perform the following validations:
+
+1.  **Field Limits:** All fields must adhere to the `Min` and `Max` constraints specified in the table above.
+2.  **First Message:** It must be the first message received after connection.
+3.  **Protocol Version:** The `protocolVersion` must be compatible.
+4.  **Network Type:** The `isTestNet` flag must match the recipient's own network setting.
+5.  **Address and Public Key:** The `address` must be a valid derivation of the `publicKey`.
+6.  **Signature Verification:** This is the most critical step. The `signature` must be valid. The data signed is a precise binary concatenation of the following fields in order:
+    *   A constant, network-specific byte array (`ConsensusConfig.ixianChecksumLock`).
+    *   The `deviceId` bytes.
+    *   The `timestamp` value.
+    *   The **sender's IP address and port as seen by the receiver** (e.g., "123.45.67.89:12345").
+    *   The `challenge` value (if applicable for the connection type).
+
+If any of these validations fail, the receiving peer must terminate the connection, optionally sending a `bye` message with a reason code.

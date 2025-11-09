@@ -31,11 +31,11 @@ export default function Home() {
           decoding="async"
         />
         <TextElement type={"heading-lg"}>
-          Welcome to Ixian Documentation page.
+          Build the Future of Decentralized Applications
         </TextElement>
         <TextElement type={"body-lg"}>
-          Learn how you can leverage Ixian technology to build enterprise level
-          services.
+          Post-quantum secure, truly peer-to-peer, zero infrastructure costs.
+          Welcome to Ixian - where decentralization isn&apos;t just marketing.
         </TextElement>
       </div>
       <div className="w-full flex items-center justify-center">
@@ -50,29 +50,29 @@ export default function Home() {
       </div>
       <div className="homeCardGrid">
         <CustomCard
-          title="Technical Documents"
+          title="Node Operator Guides"
           description={
-            "Get yourself familiar with the technical aspects of Ixian technology. Learn more about the Cryptographic primitives, data formats and more."
+            "Learn how to install, configure, and maintain the different types of nodes that power the Ixian network."
           }
           icon={<IoArrowForwardCircleOutline size={48} />}
-          href="/docs/tech-docs"
+          href="/docs/operators"
         />
         <CustomCard
-          title="API Documentation"
-          description="Find all the information that is needed for seamless integration with Ixian."
-          href="/docs/api-docs"
+          title="Developer Guides"
+          description="Build serverless P2P apps, AI chatbots without API costs, and IoT devices with zero cloud bills."
+          href="/docs/developers"
           icon={<IoArrowForwardCircleOutline size={48} />}
         />
         <CustomCard
-          title="SDK Demos"
-          description="Learn how to build your next app on Ixian. Browse through our SDK Demos and get up and running with Ixian."
-          href="/docs/sdk-demos"
+          title="Architecture"
+          description="Explore the fundamental concepts, data structures, and protocols that power the Ixian ecosystem."
+          href="/docs/architecture"
           icon={<IoArrowForwardCircleOutline size={48} />}
         />
         <CustomCard
-          title="Guides"
-          description="Learn how to setup and use  Ixian DLT node  on different operating systems."
-          href="/docs/guides"
+          title="Reference"
+          description="Detailed technical specifications for the Ixian Platform's core components, and APIs."
+          href="/docs/reference"
           icon={<IoArrowForwardCircleOutline size={48} />}
         />
       </div>

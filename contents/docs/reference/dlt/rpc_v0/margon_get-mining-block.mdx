@@ -1,0 +1,120 @@
+---
+title: getMiningBlock
+description: Retrieves a block data "job" for an external miner, providing all necessary information to begin a Proof-of-Work search.
+status: Finalized
+---
+
+## Introduction
+
+The `getMiningBlock` method is a core function for integrating external miners and mining pools with an Ixian DLT node. It acts as a "job provider," supplying a miner with a candidate block and all the critical data required to start the Proof-of-Work (PoW) hashing process.
+
+The response includes the block number, difficulty, checksum, and, most importantly, the exact solver address that **must** be used in the PoW hash calculation for a solution to be considered valid. A miner can also specify a strategy for how the node should select the best block to work on.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `algo` | `integer` | Yes | A numeric code specifying the strategy for selecting a block. See the table below for valid options. |
+
+#### Algorithm Codes
+
+| Code | Algorithm Name | Description |
+| :--- | :--- | :--- | :--- |
+| `0` | `lowestDifficulty` | Selects the block tip with the lowest cumulative difficulty (the "heaviest" chain). |
+| `1` | `randomLowestDifficulty`| Identifies all tips tied for the lowest difficulty and randomly selects one. This is the recommended default. |
+| `2` | `latestBlock` | Selects the most recently received block tip, prioritizing the "longest" chain. |
+| `3` | `random` | Randomly selects from any available block tip. Primarily used for testing. |
+| `4` | `reset` | Clears any cached mining job and fetches a fresh block based on the node's default strategy. |
+
+### Example POST Request
+
+```json
+POST /getMiningBlock
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getMiningBlock",
+  "params": {
+    "algo": 1
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getMiningBlock?algo=1
+```
+
+---
+
+## Response
+
+The `result` is a JSON object containing the data required for a mining job.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `num` | `long` | The block number (height) to be mined. |
+| `ver` | `integer` | The version of the block. |
+| `dif` | `long` | The difficulty target for this block. |
+| `chk` | `string` | The block's checksum, which must be an input to the PoW hash function. |
+| `adr` | `string` | **CRITICAL:** The solver address that must be used as an input to the PoW hash function. Its format depends on the block version. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "num": 69502,
+    "ver": 13,
+    "dif": 25000000,
+    "chk": "a1b2c3d4e5f6...",
+    "adr": "AIeMKxG8QDs3a8fE0zmSK707zziHIptGk+JlML2he42R"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32603,
+        "message": "Cannot retrieve mining block"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **DLT Nodes Only:** This endpoint is exclusively for DLT nodes. It will fail if the node is not synchronized with the network, as it cannot provide a valid block to work on.
+*   **External Miner Workflow:** This endpoint is the first step in the external mining loop:
+    1.  Call `getMiningBlock` to get a job.
+    2.  The external miner uses `num`, `chk`, and **`adr`** as inputs to its PoW hashing function.
+    3.  The miner iterates through nonces until its hash result is less than the target derived from `dif`.
+    4.  The successful `nonce` is then submitted back to the node using the [`submitMiningSolution`](./margon_submit-mining-solution) endpoint.
+*   **CRITICAL: The Solver Address (`adr`):**
+    *   The `adr` field in the response is the primary wallet address of the **node providing the job**.
+    *   An external miner **MUST** use this exact address string as an input when calculating PoW hashes. Any solution submitted that was not generated using this address will be rejected.
+    *   The format of this address is version-dependent and is provided correctly by the node:
+        *   For blocks with `ver < 10`, it will be the `addressWithChecksum`.
+        *   For blocks with `ver >= 10`, it will be the `addressNoChecksum`.
+*   **Stale Work:** The job provided by this endpoint can become "stale" if another miner finds a solution for this block height first. Miners should periodically call `getMiningBlock` (e.g., every few seconds or when they see a new block on the network) to ensure they are always working on the most current and valid block tip.

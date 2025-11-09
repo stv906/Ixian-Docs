@@ -1,0 +1,50 @@
+---
+title: Core Data Structures
+description: A detailed reference for the fundamental data objects that constitute the Ixian ledger and network state.
+---
+
+The Ixian platform is built upon a set of well-defined data structures. These objects represent everything from the blocks that form the chain to the presence entries that map the network. Understanding their structure and serialization is essential for interacting with the Ixian DLT at a low level.
+
+This section provides a complete specification for each of these core components.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <Card title="Block" href="./10_data-structures/blocks">
+    The structure of a block, which contains transactions, state checksums, and consensus signatures that secure the ledger.
+  </Card>
+  <Card title="Transaction" href="./10_data-structures/transactions">
+    The format for an atomic state change, such as transferring funds or registering a name on the DLT.
+  </Card>
+  <Card title="Presence" href="./10_data-structures/presences">
+    The network discovery object that advertises a node's identity, public key, and contact endpoints to its peers.
+  </Card>
+  <Card title="KeepAlive" href="./10_data-structures/keepalives">
+    The signed "heartbeat" message used by nodes to maintain their active status in the global Presence List.
+  </Card>
+  <Card title="Address" href="./10_data-structures/addresses">
+    The format and derivation of Ixian addresses, which identify wallets and are used as network endpoints.
+  </Card>
+  <Card title="Wallets State" href="./10_data-structures/01_wallets-state">
+    The global state of all wallet balances and properties, validated through state checksums in each block.
+  </Card>
+  <Card title="Names State" href="./10_data-structures/01_names-state">
+    The global registry of Ixian Names and their associated data records, enabling human-readable name resolution.
+  </Card>
+</div>
+
+## Common Serialization Types
+
+The following data types are used globally across both the Core and Streaming protocols. Their encoding rules are fundamental to correctly serializing and deserializing any Ixian network message.
+
+<div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+    <Card title="IxiVarInt / IxiVarUInt" href="./10_data-structures/ixi-varint">
+      A custom variable-length integer encoding that uses fewer bytes for smaller numbers. This is the standard for encoding integers and counts in all message payloads.
+    </Card>
+
+    <Card title="IxiBytes" href="./10_data-structures/ixi-bytes">
+      The standard format for encoding any variable-length byte array, such as addresses, public keys, and hashes. It prefixes the raw bytes with its length encoded as an `IxiVarUInt`.
+    </Card>
+
+    <Card title="IxiNumber" href="./10_data-structures/ixi-number">
+      The fixed-point decimal type used for all currency values, including transaction amounts and fees, ensuring consistent precision across all platforms.
+    </Card>
+</div>

@@ -1,0 +1,27 @@
+---
+title: getAvatar (25)
+description: Requests the avatar for a contact.
+---
+
+The `getAvatar` message is sent to request a contact's profile picture. A node that receives this message is expected to respond with an `avatar` message containing its current avatar image data.
+
+This message can also be used by a bot to request the avatar of a specific third-party user within a group chat it manages.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is optional and is used to specify a third-party address, primarily in the context of bot interactions.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `targetAddress` | `IxiBytes` | 0 | * | Optional. The address of the user whose avatar is being requested. If this field is empty or omitted, it is a request for the recipient's own avatar. |
+
+## Behavioral Notes
+
+*   **Standard Request:** To fetch a direct contact's avatar, a client sends a `getAvatar` message with an empty payload.
+*   **Bot Request:** A client can send this message to a bot, providing a `targetAddress`, to request the avatar of a specific user within a group chat that the bot manages.
+*   **Response:** Upon receiving a `getAvatar` message, a node MUST respond with an `avatar` message. If the avatar is not set, the node should respond with an `avatar` message containing an empty or zero-byte payload.
+*   **Timing:** This request is typically sent after a handshake is fully completed (`handshakeStatus == 3`), but may be sent at any time to refresh contact information.

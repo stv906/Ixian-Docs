@@ -1,0 +1,77 @@
+---
+title: getWalletBackup
+description: Retrieves the encrypted, serialized raw data of a wallet for backup purposes.
+status: Finalized
+---
+
+## Introduction
+
+The `getWalletBackup` method provides a straightforward way to export the entire contents of a wallet into a single, portable string. This string serves as a complete backup of the wallet's private keys, addresses, and other metadata.
+
+The output is a hex-encoded representation of the raw, encrypted wallet file, prefixed with the identifier `IXIHEX`. This allows for easy storage and subsequent restoration on another node or device.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                             |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded Ixian wallet address to back up. If omitted, it defaults to the node's primary wallet. |
+
+### Example POST Request
+
+```json
+POST /getWalletBackup
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getWalletBackup",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getWalletBackup?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a single string containing the prefixed, hex-encoded wallet data.
+
+### Result Fields
+
+| Name     | Type     | Description                                                                                               |
+| :------- | :------- | :-------------------------------------------------------------------------------------------------------- |
+| `result` | `string` | The complete wallet backup, consisting of the literal prefix `IXIHEX` followed by the hex-encoded wallet data. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "IXIHEX0700...44c900",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Security Warning:** The output of this endpoint contains the wallet's encrypted private keys. This is extremely sensitive information. It should be handled securely, never transmitted over insecure channels, and stored in a safe, offline location.
+*   **Encrypted Data:** The raw wallet data is encrypted with the password that was set when the wallet was created. This password is required to decrypt and restore the wallet from this backup string. The password itself is never transmitted or stored by the node.
+*   **Portability:** This string is a complete, self-contained backup. It can be used with another Ixian node or wallet application to restore full access to the funds.
+*   **Default Wallet:** If the `wallet` parameter is not provided, the backup will be for the default wallet loaded by the DLT node.

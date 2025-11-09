@@ -1,0 +1,69 @@
+---
+title: Economics
+description: An overview of the economic model that powers the Ixian Platform, incentivizing node operators and ensuring network sustainability.
+---
+
+## Introduction
+
+The Ixian Platform is sustained by a carefully designed economic model that ensures its long-term viability, security, and decentralization. The economy operates across its two distinct but interconnected layers - the **Ixian DLT (blockchain)** and the **Ixian S2 (streaming overlay network)** - creating a system of incentives that rewards participants for contributing essential resources.
+
+The native cryptocurrency, **IXI** serves as the exclusive medium for transaction fees, service payments, and reward distributions, creating a self-sustaining cycle that aligns the interests of users and infrastructure operators.
+
+## The Dual-Layer Incentive Model
+
+Ixian's unique architecture necessitates a dual-layer incentive system. Each layer has a distinct role, and therefore, a distinct economic model to encourage participation.
+
+1.  **DLT Master Nodes:** These nodes form the backbone of the platform. They are responsible for producing and validating blocks, securing the ledger, and maintaining the consensus of the entire network. Their incentives are derived directly from the blockchain's core operations.
+2.  **S2 Streamer Nodes:** These nodes provide the critical data relay and streaming services that make the platform accessible and useful for real-time applications. They act as the on-ramp to the DLT for lightweight clients and are compensated for the traffic they handle.
+
+---
+
+## Layer 1: The DLT Economy
+
+The DLT economy is designed to reward Master Node operators for providing the security and consensus that anchors the entire Ixian ecosystem. Their compensation is a composite of three distinct revenue streams, which are bundled into block rewards.
+
+### 1. Block Rewards (New Issuance)
+
+For each block successfully added to the blockchain, a predetermined amount of new $IXI is created and distributed among the block signers. This serves two primary purposes:
+*   It ensures a predictable, foundational level of income for node operators.
+*   It facilitates the gradual and fair distribution of the $IXI supply into the ecosystem.
+
+**Reward Maturity**: All block rewards (both mining and signing) become spendable after a maturity period of **960 blocks** (approximately 8 hours).
+
+### 2. Transaction Fees
+
+Every transaction on the Ixian DLT - whether a simple token transfer or a more complex data entry - includes a small fee paid in $IXI. These fees are collected and pooled within the block and subsequently distributed to the Master Nodes that participated in signing that block.
+
+**Reward Distribution**: Transaction fees are distributed proportionally among block signers based on their PoW difficulty contribution.
+
+This creates a direct market-based incentive: the more utility and transaction volume the network processes, the greater the rewards for the operators who secure it.
+
+### 3. IXI Names Registration Fees
+
+The Ixian DLT includes a decentralized naming system that allows users to register human-readable names (e.g., `my-wallet.ixi`). A portion of the fee collected for registering or renewing a name is placed into a reward pool. This pool is then disbursed incrementally over time to the signers of future blocks, creating a long-term, stable revenue stream for DLT node operators.
+
+---
+
+## Layer 2: The S2 Economy
+
+The Ixian S2 network provides the platform's utility layer, handling real-time communication, managing the decentralized **presence system** for client discovery, and streaming data. Its economic model is designed to incentivize the operation of a robust and geographically diverse set of nodes, enabling the network to provide low-latency service and **scale to meet global demand**.
+
+### The Fee Model & Relay Rewards
+
+To compensate S2 node operators, Ixian employs a **split fee model**. When a user sends a transaction to the DLT via an S2 node (a common scenario for mobile or light clients), the total fee paid by the user is split:
+
+1.  **DLT Transaction Fee:** The standard network fee required to process the transaction on the blockchain. This portion is passed on to the DLT Master Nodes.
+2.  **S2 Relay Fee:** A fee that is paid directly to the S2 node operator for their service of relaying the transaction and contributing to the network's presence and discovery infrastructure.
+
+This "relay reward" system creates a direct economic incentive for individuals and businesses to run S2 nodes. It allows the S2 network to scale horizontally as demand increases, ensuring that the Ixian Platform remains fast, responsive, and accessible for all users without burdening the core DLT nodes with simple relay tasks.
+
+## The Economic Flywheel
+
+The two economic layers create a symbiotic relationship, or an "economic flywheel," that drives network growth and stability:
+
+1.  Users and applications interact with the user-friendly **S2 Network**, generating **Relay Rewards** for S2 operators.
+2.  The S2 nodes forward transactions to the **DLT Network**, increasing on-chain volume.
+3.  Higher transaction volume on the DLT generates more **Transaction Fees** and **Name Fees** for DLT Master Nodes.
+4.  Increased rewards attract more operators to run both **Master Nodes** and **S2 Nodes**, further decentralizing and strengthening the entire platform.
+
+This self-reinforcing loop ensures that as the platform's utility grows, so does the robustness of its underlying infrastructure.

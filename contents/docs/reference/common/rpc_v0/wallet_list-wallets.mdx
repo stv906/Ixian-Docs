@@ -1,0 +1,69 @@
+---
+title: listWallets
+description: Retrieves the primary addresses of all wallets currently loaded in the node's active memory.
+status: Finalized
+---
+
+## Introduction
+
+The `listWallets` method is a simple administrative endpoint that returns a list of all wallets currently loaded and active on the node.
+
+It provides a quick way for clients and administrators to see which wallets are available to be used in other API calls (e.g., in the `wallet` parameter for `getTotalBalance` or `addTransaction`). The list returned by this method is modified by using the [`loadWallet`](./wallet_load-wallet) and [`unloadWallet`](./wallet_unload-wallet) commands.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /listWallets
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "listWallets",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /listWallets
+```
+
+---
+
+## Response
+
+The response `result` is a JSON array of strings, where each string is the primary address of a loaded wallet.
+
+### Result Structure
+
+The `result` is an array where each element is a `string` representing a base58-encoded primary wallet address.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "15Ahb5o2fi1h2nso7xzaFjQA2wE1y22G2F8bJdGzH3kLp4mNq"
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Read-Only:** This endpoint is a read-only operation that provides a snapshot of the wallets currently held in the node's memory.
+*   **Administrative Utility:** This method is primarily useful for administrative UIs or scripts that need to iterate over or allow a user to select from the set of currently active wallets on a node.
+*   **Empty List:** If no wallets are currently loaded on the node, this method will return an empty array (`[]`).

@@ -1,0 +1,23 @@
+---
+title: fileFullyReceived (23)
+description: Confirmation that all chunks of a file have been received.
+---
+
+The `fileFullyReceived` message is the final message in the file transfer process. It is sent by the file recipient to the sender to confirm that all file chunks have been successfully received and assembled.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains a hash of the file transfer's unique ID.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `uidHash` | `IxiBytes` | * | * | A cryptographic hash of the file transfer's unique identifier (`uid`). |
+
+## Behavioral Notes
+
+*   **Final Step:** The recipient sends this message only after it has received and processed every single chunk of the file.
+*   **Sender Action:** Upon receiving `fileFullyReceived`, the sender's client knows the transfer was successful. It can then close any open file handles and clear the transfer session from its memory, marking the transfer as "complete" in the user interface.

@@ -1,0 +1,101 @@
+---
+title: sendRawTransaction
+description: Broadcasts a signed, serialized raw transaction to the Ixian network.
+status: Finalized
+---
+
+## Introduction
+
+The `sendRawTransaction` method is the final step in the offline signing or "cold storage" workflow. Its function is to take a complete, signed, and serialized raw transaction (in hex format) and submit it to the Ixian network for processing.
+
+Upon receiving the transaction, the node will validate it one last time before adding it to its local transaction pool and broadcasting it to its peers. A successful response indicates the transaction was accepted by the node, but does not guarantee its inclusion in a block.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters. Due to the potentially very long transaction string, `POST` is strongly recommended.
+
+### Parameters
+
+| Name               | Type     | Required | Description                                                    |
+| :----------------- | :------- | :------- | :------------------------------------------------------------- |
+| `transaction`      | `string` | Yes      | The hex-encoded string of the raw, **signed** transaction.     |
+| `relayNodeAddress` | `string` | Yes      | The base58-encoded address of the S2 node to use for relaying the transaction to the DLT network. |
+
+### Example POST Request
+
+```json
+POST /sendRawTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendRawTransaction",
+  "params": {
+    "transaction": "0700fd200d010001010005402a...563c7b1d44c900",
+    "relayNodeAddress": "15Ahb5o2fi1h2nso7xzaFjQA2wE1y22G2F8bJdGzH3kLp4mNq"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+The `transaction` and `relayNodeAddress` parameters are provided as a URL query string.
+
+```
+GET /sendRawTransaction?transaction=0700fd...c900&relayNodeAddress=15Ahb5...p4mNq
+```
+
+---
+
+## Response
+
+If the transaction is valid and accepted by the node, the response `result` is the standard `Transaction` object in JSON format, confirming the details of what was broadcast.
+
+### Result: `Transaction` Object Structure
+The structure is identical to the one defined in the [`addTransaction`](./tx_add-transaction#result-transaction-object-structure) documentation.
+
+### Example Success Response
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "68874-prFPNo1GeQ8HzwPMnuFEGSXiq9qRyUL7gFxiaE5FaKPL8BTZodJBcZ5L81n9",
+    "version": 7,
+    "blockHeight": "68874",
+    "signature": "6b26d...f7",
+    "fee": "0.01000000",
+    "...": "..."
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+This error is returned if a mandatory parameter is not included in the request.
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "relayNodeAddress parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Signature Required:** The raw transaction provided to this endpoint **must** be fully signed. Submitting an unsigned or partially signed transaction will result in a verification error.
+*   **Relay Node is Mandatory:** Unlike `addTransaction` (where a client can auto-select a relay), this endpoint requires the caller to explicitly specify which S2 node should be used to broadcast the transaction. This ensures the sender has full control over the submission path.
+*   **Final Step:** This method completes the standard three-step offline signing process:
+    1.  [`createRawTransaction`](./tx_create-raw-transaction): Generate an unsigned transaction.
+    2.  [`signRawTransaction`](./tx_sign-raw-transaction): Sign the transaction on a secure machine.
+    3.  `sendRawTransaction`: Broadcast the signed transaction to the network.
+*   **No Guarantee of Confirmation:** A successful response from this API only confirms that the transaction was well-formed and accepted into the node's local memory pool. It must still be selected by miners and included in a finalized block to be considered confirmed.

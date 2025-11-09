@@ -1,0 +1,41 @@
+---
+title: IxiNumber
+description: Technical specification for the IxiNumber data type used for token amounts.
+status: Finalized
+---
+
+`IxiNumber` is the data type used throughout the Ixian protocol to represent token amounts. It is a high-precision, fixed-point decimal number designed to handle large values without rounding errors.
+
+### Concept
+
+An `IxiNumber` represents a value with **8 decimal places**. Internally, the value is stored as a `BigInteger` that has been multiplied by 10^8.
+
+-   **Divisor:** 100,000,000 (`10^8`)
+-   **Example:** The value `1.23` IXI is represented by the raw integer `123,000,000`. The value `150` IXI is represented by `15,000,000,000`.
+
+This approach allows all arithmetic to be performed on integers, avoiding the precision issues of floating-point numbers.
+
+### On-Wire Serialization Format
+
+When serialized for network transmission, an `IxiNumber` is encoded as a length-prefixed byte array.
+
+| Part | Data Type | Description |
+| :--- | :--- | :--- |
+| **Length** | `IxiVarUInt` | The length, in bytes, of the following `Raw Amount` data. |
+| **Raw Amount** | `byte[]` | The raw `BigInteger` amount, serialized using .NET's `BigInteger.ToByteArray()` method. |
+
+The `Raw Amount` serialization has specific properties that implementers must replicate:
+
+-   The integer is represented in **two's complement** format.
+-   The byte order is **little-endian**.
+-   The most significant bit of the last byte indicates the sign (1 for negative, 0 for positive). A zero-byte (`0x00`) may be appended to ensure a positive number is not misinterpreted as negative.
+
+#### Example
+
+Encoding the value **`1.5` IXI**:
+
+1.  **Raw Integer:** `1.5 * 10^8 = 150,000,000`
+2.  **Hex Representation:** `150,000,000` is `0x08F0D180`.
+3.  **Little-Endian Bytes:** The bytes for `0x08F0D180` in little-endian order are `80 D1 F0 08`.
+4.  **Length:** The byte array has a length of `4`. As an `IxiVarUInt`, this is `04`.
+5.  **Final Serialized Form:** `04 80 D1 F0 08`

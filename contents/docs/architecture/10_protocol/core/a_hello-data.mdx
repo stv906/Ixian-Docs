@@ -1,0 +1,37 @@
+---
+title: helloData (1)
+description: Completes the handshake and provides the peer with the sender's current blockchain state.
+status: Planned Upgrade
+---
+
+The `helloData` message is the successful response to a `hello` message. It confirms that the sender has accepted the handshake and provides the receiving peer with its current blockchain status.
+
+Receiving a `helloData` message signifies that the application-layer handshake is complete and the session is fully established. Peers can then proceed to exchange other protocol messages.
+
+### Payload Structure
+
+The `helloData` payload is composed of two parts:
+
+1.  **The entire payload of the original `hello` message.** The structure is identical to the one sent by the initiator. See the **[hello message specification](./a_hello)** for a detailed breakdown of these fields.
+2.  Additional fields appended immediately after the `hello` payload, which describe the sender's current blockchain state.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`string`**: See **[Global Serialization Rules](./)**.
+
+### Appended Fields
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `lastBlockNum` | `IxiVarUInt` | `0` | | The block number of the latest block in the sender's blockchain. |
+| `lastBlockChecksum`| `IxiBytes` | | | The checksum of the latest block. |
+| `lastBlockVersion` | `IxiVarInt` | | | The version of the latest block. |
+| `myExternalAddress`| `string` | | | The recipient's IP address and port, as seen by the sender. |
+
+### Behavioral Notes
+
+-   **Handshake Completion:** Upon successfully parsing this message, a node should consider the connection fully authenticated and ready for general protocol communication.
+-   **Blockchain Synchronization:** The primary purpose of the appended fields is to allow the recipient to quickly compare its own blockchain state with the sender's. If the `lastBlockNum` or `lastBlockChecksum` do not match, the node knows it needs to initiate a synchronization process (e.g., by sending `getBlockHeaders3`).
+-   **NAT Traversal/IP Discovery:** The `myExternalAddress` field serves as a confirmation of the recipient's public-facing network address. This is useful for nodes behind NAT to discover their external IP and determine their network reachability.

@@ -1,0 +1,119 @@
+---
+title: sendSpixiMessage
+description: Sends a raw, structured Spixi application message to an approved contact over the S2 network.
+status: Finalized
+---
+
+## Introduction
+
+The `sendSpixiMessage` method is a versatile endpoint for sending structured, application-level data to a contact. Unlike `sendChatMessage`, which is designed for plain-text human communication, `sendSpixiMessage` is used to transmit custom commands, signals, or serialized data between Spixi-compatible applications.
+
+Each message consists of a numeric `type` code, which defines how the `data` payload should be interpreted by the recipient, and the raw `data` payload itself. This allows for a rich, extensible communication protocol beyond simple text chat.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the recipient contact. |
+| `type` | `integer`| Yes | The numeric `SpixiMessageCode` that defines the message type. |
+| `data` | `string` | Yes | The raw message payload, encoded as a hexadecimal string. |
+| `channel` | `integer`| Yes | The communication channel ID to send the message on. |
+
+### Example POST Request
+
+```json
+POST /sendSpixiMessage
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendSpixiMessage",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "type": 100,
+    "data": "a1b2c3d4e5f6",
+    "channel": 1
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /sendSpixiMessage?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&type=100&data=a1b2c3d4e5f6&channel=1
+```
+
+---
+
+## Response
+
+If successful, the `result` is the full `Contact` object of the recipient, which can be used to check their latest known status.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "nickname": "Viper",
+    "approved": true,
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If the contact does not exist:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}```
+
+If a required parameter like `data` is missing:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "data parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Structured Data vs. Chat:** This endpoint is for application-to-application communication. The `data` is a raw byte payload (sent as hex) and is not intended for direct display as a chat message. Use `sendChatMessage` for human-readable text.
+*   **No Local Persistence:** Unlike `sendChatMessage`, this method does **not** automatically save the message to the local history. It is a "fire-and-forget" dispatch of a data packet to the network. The calling application is responsible for any desired local persistence.
+*   **Prerequisite:** A secure communication channel must be fully established with the contact (`approved: true`).
+*   **End-to-End Encryption:** The `data` payload is end-to-end encrypted using the established session keys before being transmitted over the S2 network.
+*   **Channels:** Channels allow for multiplexing different streams of application data. For example, channel `0` might be for chat, while channel `1` is used for custom application signals sent via this method.

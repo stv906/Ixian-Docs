@@ -1,0 +1,143 @@
+---
+title: Transactions
+description: The atomic data structure representing a state change on the Ixian DLT.
+status: Planned Upgrade
+---
+
+## Introduction
+
+A `Transaction` is an atomic operation that modifies the state of the Ixian ledger, most commonly by transferring value between wallets. Every action, from a simple payment to a Proof-of-Work reward claim, is encapsulated within a transaction.
+
+Each transaction is cryptographically signed to prove ownership of the source funds and is validated by the network before being included in a block.
+
+**On-Wire Format:** All transaction versions are serialized for network transport using the **v7** structure. Parsers must be implemented according to the v7 specification detailed below, as legacy formats are no longer used for peer-to-peer communication.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: Variable-length integers. See **[IxiVarInt Encoding](./ixi-varint)**.
+*   **`IxiBytes`**: A byte array prefixed by its length as an `IxiVarUInt`. See **[IxiBytes Encoding](./ixi-bytes)**.
+*   **`IxiNumber`**: A variable-length integer used for token values. See **[IxiNumber Encoding](./ixi-number)**.
+
+---
+
+## Transaction Types
+
+The `type` field in the transaction header is an `IxiVarInt` that determines the transaction's purpose and structure.
+
+| Type Code | Name                     | Description                                                                                               |
+| :-------- | :----------------------- | :-------------------------------------------------------------------------------------------------------- |
+| `0`       | `Normal`                 | A standard transfer of funds between wallets.                                                             |
+| `1`       | `PoWSolution`            | Submits an argon2 Proof-of-Work solution for a block to claim a mining reward.                                    |
+| `2`       | `SigningReward`          | A network-generated transaction that distributes signing rewards to Master Nodes.                         |
+| `3`       | `Genesis`                | A special transaction used only in the first block to create the initial coin supply.                     |
+| `4`       | `RegName`                | A transaction used to register or manage an Ixian Name record.                                            |
+
+> **Note**: Transaction types 997-999 (MultisigTX, ChangeMultisigWallet, MultisigAddTxSignature) were deprecated and never used on mainnet.
+
+---
+
+## Payload Structure (Version 7)
+
+A v7 transaction is composed of a header, a list of fund sources (`fromList`), and a list of fund destinations (`toList`). The serialization of these components is strictly ordered.
+
+**Checksum Exclusions:** Several fields are **excluded** when calculating the transaction's `checksum` for signature verification. A correct implementation must serialize the transaction without these fields to verify the signature. Excluded fields are explicitly noted below.
+
+### Header and Core Fields
+
+These fields form the main body of the transaction, defining its metadata and wrapping the source and destination lists. The v7 serialization order is:
+
+| Field          | Data Type     | Description                                                                                                             |
+| :------------- | :------------ | :---------------------------------------------------------------------------------------------------------------------- |
+| `version`      | `IxiVarUInt`  | The version of the transaction structure. Must be `>= 7`.                                                               |
+| `type`         | `IxiVarInt`   | The transaction type from the table above.                                                                              |
+| `blockHeight`  | `IxiVarUInt`  | The block number at which the transaction was created. Used to prevent replay attacks.                                  |
+| `fromListCount`| `IxiVarUInt`  | The number of source entries in the `From List` section that immediately follows.                                       |
+| `fromList`     | `FromList[]`  | A list of `FromEntry` structures, repeated `fromListCount` times.                               |
+| `toListCount`  | `IxiVarUInt`  | The number of destination entries in the `To List` section that immediately follows.                                    |
+| `toList`       | `ToList[]`    | A list of `ToEntry` structures, repeated `toListCount` times.                                   |
+| `nonce`        | `IxiVarInt`   | A unique random number to ensure transaction hash uniqueness.                                                           |
+| `pubKey`       | `IxiBytes`      | The public key or wallet address of the signer.                                    |
+| `signature`    | `IxiBytes`      | **(Not in Checksum)** The cryptographic signature over the transaction's `checksum`. |
+| `applied`      | `IxiVarUInt`  | **(Not in Checksum)** The block number at which this transaction was applied to the ledger.                             |
+
+### From List (Sources)
+
+This section, appearing after `fromListCount`, details the sources of the funds for the transaction. The total value of all `fromAmount` entries must equal the total of all `toAmount` entries plus the transaction fee.
+
+Each `FromEntry` is serialized as:
+
+| Field          | Data Type     | Description                                                                                                             |
+| :------------- | :------------ | :---------------------------------------------------------------------------------------------------------------------- |
+| `fromAddress`  | `IxiBytes`      | The source wallet address from which funds are withdrawn.                          |
+| `fromAmount`   | `IxiNumber`   | The amount of IXI being withdrawn from this specific `fromAddress`.                                                     |
+| `reserved1`    | `IxiVarUInt`  | Reserved for potential future use. Must be parsed and must be `0`. Included in checksum.                                |
+| `reserved2`    | `IxiVarUInt`  | **(Not in Checksum)** Reserved for potential future use. Must be parsed and must be `0`.                                |
+
+### To List (Destinations)
+
+This section, appearing after `toListCount`, details the destinations for the funds. The total value of all `toAmount` entries represents the principal amount being transferred.
+
+Each `ToEntry` is serialized as:
+
+| Field          | Data Type     | Description                                                                                                             |
+| :------------- | :------------ | :---------------------------------------------------------------------------------------------------------------------- |
+| `toAddress`    | `IxiBytes`      | The destination wallet address **without checksum**.                             |
+| `toAmount`     | `IxiNumber`   | The amount of IXI being sent to this specific `toAddress`.                                                              |
+| `dataChecksum` | `IxiBytes`      | A 32-byte `sha3_512sqTrunc` hash of the `data` field payload. Can be zero-length if no data. |
+| `data`         | `IxiBytes`      | **(Not in Checksum)** Optional arbitrary data payload.                             |
+
+
+---
+
+## Specialized Data Payloads
+
+For certain transaction types, the `data` field of the **first `ToEntry`** contains a specifically structured payload.
+
+### PoWSolution (`type: 1`) Data
+
+The PoW solution is stored in the first `ToEntry`'s `data` field with the following v7 structure:
+
+| Field       | Data Type     | Description                                                     |
+| :---------- | :------------ | :-------------------------------------------------------------- |
+| `blockNum`  | `IxiVarUInt`  | The block number for which this Proof-of-Work solution is valid. |
+| `nonce`     | `IxiBytes`      | The nonce that satisfies the block's difficulty target.         |
+
+### SigningReward (`type: 2`) Data
+
+The signing reward transaction (network-generated) stores the target block number for which rewards are being distributed:
+
+| Field       | Data Type     | Description                                                     |
+| :---------- | :------------ | :-------------------------------------------------------------- |
+| `blockNum`  | `IxiVarUInt`  | The block number being rewarded (typically `currentBlock - rewardMaturity`). |
+
+---
+
+## Checksum and TXID Calculation
+
+The `checksum` and transaction `id` are fundamental to transaction integrity and identification.
+
+### Checksum (v7+)
+
+*   **Algorithm:** `sha3_512sqTrunc` (truncated to 32 bytes)
+*   **Data:** The transaction is serialized according to the v7 payload structure, but with the following fields **omitted**:
+    1.  The `reserved2` field in each `From List Entry`.
+    2.  The `data` field in each `To List Entry`.
+    3.  The top-level `signature` field.
+    4.  The top-level `applied` field.
+*   The serialized data is also prefixed with a constant `ixianChecksumLock` byte array before hashing.
+
+### Transaction ID (TXID) (v5+)
+
+The TXID is not part of the serialized data but is derived from other fields. It provides a unique identifier for each transaction.
+
+*   **Structure:** The TXID is a concatenation of three variable-length fields:
+    1.  `typePrefix`: `IxiVarUInt`. `0` if `type` is `SigningReward`, `1` otherwise.
+    2.  `blockHeight`: `IxiVarUInt`. The block height at which the transaction was created.
+    3.  `checksum`: `byte[]`. The 32-byte transaction checksum calculated as described above.
+
+### Legacy Checksum Calculation
+
+For historical reference, older transaction versions used different hashing algorithms:
+*   **Version 6:** `sha512sqTrunc` over a custom concatenation of fields.
+*   **Version 3-5:** `sha512sqTrunc` over a different custom concatenation.
+*   **Version 0-2:** `sha512quTrunc` over a similar structure to v3-5.

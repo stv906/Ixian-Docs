@@ -1,0 +1,101 @@
+---
+title: Common RPC v0 API Reference
+description: A complete reference for the common JSON-RPC API methods available on all Ixian node types.
+---
+
+## Introduction
+
+The Common RPC API provides a foundational set of methods that are available on all Ixian node types, including DLT, S2, and client-facing nodes. These endpoints allow applications to manage wallets, create transactions, query the network, and perform basic node administration.
+
+All endpoints are accessible via `HTTP GET` or `HTTP POST` requests and follow the standard [JSON-RPC 2.0 specification](https://www.jsonrpc.org/specification).
+
+---
+
+## Node & Network Management
+
+These methods are used to control the node's process and manage its P2P network connections.
+
+| Method | Description |
+| :--- | :--- |
+| [`shutdown`](./rpc_v0/node_shutdown) | Initiates a graceful shutdown of the node. |
+| [`reconnect`](./rpc_v0/node_reconnect) | Forces the node to disconnect and reconnect to the network. |
+| [`connect`](./rpc_v0/node_connect) | Manually instructs the node to establish a connection to a specific peer. |
+| [`isolate`](./rpc_v0/node_isolate) | Immediately disconnects the node from all peers. |
+| [`blacklistPeer`](./rpc_v0/node_blacklist-peer) | Adds a peer's IP address to the blacklist, preventing future connections. |
+| [`clearPeerBlacklist`](./rpc_v0/node_clear-peer-blacklist) | Clears all entries from the peer blacklist. |
+
+---
+
+## Wallet Management
+
+These methods are used to handle the node's local wallets, including loading, unloading, creating addresses, and performing backups.
+
+| Method | Description |
+| :--- | :--- |
+| [`listWallets`](./rpc_v0/wallet_list-wallets) | Lists all wallet files available in the node's wallet directory. |
+| [`loadWallet`](./rpc_v0/wallet_load-wallet) | Loads a specified wallet into memory, making it active. |
+| [`unloadWallet`](./rpc_v0/wallet_unload-wallet) | Unloads a specified wallet from memory, making it inactive. |
+| [`generateNewAddress`](./rpc_v0/wallet_generate-new-address) | Generates a new address for the primary loaded wallet. |
+| [`getWalletBackup`](./rpc_v0/wallet_get-wallet-backup) | Retrieves a Base64-encoded backup of the primary wallet file. |
+| [`getViewingWallet`](./rpc_v0/wallet_get-viewing-wallet) | Creates a new wallet file that only has viewing permissions. |
+
+---
+
+## Transaction Handling
+
+These methods are used to create, sign, decode, and broadcast transactions to the network.
+
+| Method | Description |
+| :--- | :--- |
+| [`addTransaction`](./rpc_v0/tx_add-transaction) | A high-level method to create, fund, and broadcast a standard transaction. |
+| [`calculateTransactionFee`](./rpc_v0/tx_calculate-transaction-fee) | Calculates the required fee for a transaction with a given data size. |
+| [`createRawTransaction`](./rpc_v0/tx_create-raw-transaction) | Creates an unsigned transaction in its raw, hex-encoded format. |
+| [`signRawTransaction`](./rpc_v0/tx_sign-raw-transaction) | Signs a raw, hex-encoded transaction with the primary wallet's key. |
+| [`sendRawTransaction`](./rpc_v0/tx_send-raw-transaction) | Broadcasts a signed, raw, hex-encoded transaction to the network. |
+| [`decodeRawTransaction`](./rpc_v0/tx_decode-raw-transaction) | Decodes a raw, hex-encoded transaction into its JSON representation. |
+
+---
+
+## Ixian Name System (IXI-NS)
+
+These methods provide a high-level interface for registering and managing names on the Ixian network.
+
+| Method | Description |
+| :--- | :--- |
+| [`registerName`](./rpc_v0/names_register-name) | Registers a new name in the IXI-NS. |
+| [`extendName`](./rpc_v0/names_extend-name) | Extends the registration period for an existing name. |
+| [`updateNameCapacity`](./rpc_v0/names_update-name-capacity) | Changes the data capacity and/or owner of a name. |
+| [`updateNameRecord`](./rpc_v0/names_update-name-record) | Adds, updates, or removes data records associated with a name. |
+| [`recoverName`](./rpc_v0/names_recover-name) | Recovers control of a name using its designated recovery address. |
+| [`decodeNameData`](./rpc_v0/names_decode-name-data) | Decodes the raw data payload from an IXI-NS transaction. |
+
+---
+
+## Information & Queries
+
+These methods are used to get status, balances, and other data from the node and network.
+
+| Method | Description |
+| :--- | :--- |
+| [`status`](./rpc_v0/info_status) | Retrieves a comprehensive overview of the node's current state. |
+| [`blockHeight`](./rpc_v0/info_block-height) | Retrieves the block number of the most recent block. |
+| [`getTotalBalance`](./rpc_v0/wallet_get-total-balance) | Retrieves the total combined balance of all loaded wallets. |
+| [`myWallet`](./rpc_v0/wallet_my-wallet) | Retrieves the primary address of the loaded wallet. |
+| [`myPubKey`](./rpc_v0/wallet_my-pub-key) | Retrieves the full public key of the primary loaded wallet. |
+| [`clients`](./rpc_v0/info_clients) | Lists all clients currently connected to the node's server. |
+| [`servers`](./rpc_v0/info_servers) | Lists all servers (peers) the node is currently connected to. |
+| [`getPresence`](./rpc_v0/info_get-presence) | Retrieves the presence data for a specific Ixian address. |
+| [`getSectorNodes`](./rpc_v0/info_get-sector-nodes) | Retrieves the list of S2 nodes responsible for a given sector. |
+| [`activity2`](./rpc_v0/wallet_activity-2) | Retrieves the transaction history for a specific wallet address. |
+
+---
+
+## Cryptographic Utilities
+
+These methods provide access to the node's cryptographic functions for signing messages and validating addresses.
+
+| Method | Description |
+| :--- | :--- |
+| [`sign`](./rpc_v0/crypto_sign) | Signs an arbitrary message with the primary wallet's private key. |
+| [`verify`](./rpc_v0/crypto_verify) | Verifies a signature against a message and a public key. |
+| [`validateAddress`](./rpc_v0/wallet_validate-address) | Checks if a given string is a valid Ixian address. |

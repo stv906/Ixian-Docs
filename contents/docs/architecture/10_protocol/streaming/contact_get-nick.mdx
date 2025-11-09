@@ -1,0 +1,27 @@
+---
+title: getNick (1)
+description: Requests the nickname of a contact.
+---
+
+The `getNick` message is sent to a peer to request their current public nickname. It is part of the initial information exchange that occurs after a friend connection is established. A node that receives this message is expected to respond with a `nick` message.
+
+This message can also be used by a bot to request the nickname of a specific third-party user within a group chat it manages.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is optional and specifies the address of the user whose nickname is being requested.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `targetAddress` | `IxiBytes` | 0 | * | Optional. The address of the user whose nickname is being requested. If this field is empty or omitted, the message is a request for the recipient's own nickname. This field is primarily used by bots. |
+
+## Behavioral Notes
+
+*   **Standard Request:** A user's client sends a `getNick` message with an empty payload to a contact to ask for their nickname.
+*   **Bot Request:** A bot may receive a request from a user to identify another user in a chat. The bot would then send a `getNick` message to the target user, including their address in the `targetAddress` field.
+*   **Response:** Upon receiving a `getNick` message, a node MUST respond with a `nick` message containing the current nickname.
+*   **Timing:** This request is typically sent after a handshake is fully completed (`handshakeStatus == 3`), but may be sent at any time to refresh contact information.

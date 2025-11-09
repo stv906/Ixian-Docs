@@ -1,0 +1,51 @@
+---
+title: DLT Configuration Quick Reference
+description: A quick reference guide to the most common configuration settings for an Ixian DLT node operator.
+---
+
+## Introduction
+
+This guide covers the most frequently used configuration settings for running an Ixian DLT node. For a complete list of all possible parameters, please see the [full configuration reference](../../reference/dlt/config).
+
+Settings can be placed in a configuration file (e.g., `ixian.cfg`) or passed as command-line arguments, which will override the file settings.
+
+## Configuration File (`ixian.cfg`)
+
+The file uses a `key = value` format.
+
+### Most Common Settings
+
+| Parameter | Example Value | Description |
+| :--- | :--- | :--- |
+| `networkType` | `mainnet` | Sets the network to operate on. Can be `mainnet`, `testnet`, or `regtest`. |
+| `dltPort` | `10234` | The main TCP port for peer-to-peer communication. |
+| `apiPort` | `8081` | The local port for the JSON-RPC API. |
+| `externalIp` | `203.0.113.42`| Your node's public IP address. Helps with peer discovery. |
+| `dataFolderPath`| `/opt/ixian/data` | The directory where blockchain data will be stored. |
+| `logFolderPath` | `/opt/ixian` | Specifies the directory to store log files. |
+| `activityFolderPath` | `/opt/ixian/activity` | Specifies the directory to store activity data. |
+| `apiAllowIp` | `127.0.0.1` | **Security:** Whitelists an IP to access the API. Use multiple lines for multiple IPs. |
+| `apiBind` | `127.0.0.1` | **Security:** Binds the API to a specific local IP. `127.0.0.1` is recommended. |
+| `logVerbosity`| `14` | Sets logging detail (Info=2, Warn=4, Error=8). `14` is a good default (2+4+8). |
+
+## Command-Line Arguments
+
+These are the most common flags used when launching a DLT node.
+
+| Flag | Example | Description |
+| :--- | :--- | :--- |
+| `-t`, `--testnet` | `IxianDLT.exe -t` | Starts the node on the testnet. |
+| `--networkType` | `IxianDLT.exe --networkType regtest` | Explicitly sets the network type: `mainnet`, `testnet`, or `regtest`. |
+| `--config` | `IxianDLT.exe --config ixian.cfg` | Specifies the path to the configuration file (default: `ixian.cfg`). |
+| `-p`, `--port` | `IxianDLT.exe -p 10234` | Sets the P2P network port. |
+| `-a`, `--apiport` | `IxianDLT.exe -a 8081` | Sets the JSON-RPC API port. |
+| `-i`, `--ip` | `IxianDLT.exe -i 203.0.113.42` | Sets the external IP address. |
+| `-w`, `--wallet` | `IxianDLT.exe -w mywallet.wal` | Specifies the path to the wallet file. |
+| `-n`, `--node` | `IxianDLT.exe -n seed1.ixian.io:10234` | Connects to a specific DLT seed node. |
+| `--dataFolderPath`| `IxianDLT.exe --dataFolderPath /opt/ixian/data` | Specifies the blockchain data directory. |
+| `--logFolderPath` | `IxianDLT.exe --logFolderPath /opt/ixian` | Specifies the directory for log files. |
+| `--activityFolderPath` | `IxianDLT.exe  --activityFolderPath /opt/ixian/activity` | Specifies the directory for activity data. |
+| `--worker` | `IxianDLT.exe --worker` | Runs the node in worker-only mode. |
+| `-c`, `--clean` | `IxianDLT.exe -c` | **DANGEROUS:** Prompts to delete all blockchain data and resync from scratch. |
+| `--blockStorage` | `IxianDLT.exe --blockStorage RocksDB` | The storage engine for blocks and transactions. Can be `SQLite` or `RocksDB`. |
+

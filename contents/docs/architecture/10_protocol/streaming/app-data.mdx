@@ -1,0 +1,27 @@
+---
+title: appData (21)
+description: Generic data for a mini-app or service.
+---
+
+The `appData` message is the primary means of transporting data for an active Mini-App session. It is a generic container sent repeatedly between two peers after a session has been established via `appRequest` and `appRequestAccept`.
+
+For example, a real-time game would use a continuous stream of `appData` messages to send player coordinates back and forth.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is an `AppDataMessage` object, which encapsulates the session ID and the raw application data.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier of the active Mini-App session this data belongs to. |
+| `data` | `IxiBytes` | 1 | * | The raw, application-specific payload for this message. |
+
+## Behavioral Notes
+
+*   **Prerequisite:** This message is only valid within an active session. A node should ignore `appData` messages with a `sessionId` that does not correspond to an established session.
+*   **Unreliable by Default:** The `StreamMessage` envelope for `appData` typically sets `requireRcvConfirmation` to `false`. This is suitable for applications that prioritize low latency over guaranteed delivery, such as streaming media or real-time games, which have their own methods for handling packet loss.
+*   **Context:** The meaning of the `data` field is defined entirely by the Mini-App itself. The S2 protocol treats it as an opaque byte array.

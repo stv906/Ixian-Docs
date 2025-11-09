@@ -1,0 +1,27 @@
+---
+title: balance2 (31)
+description: Responds to a `getBalance2` request with the balance and the block height at which it was calculated.
+status: Planned Upgrade
+---
+
+The `balance2` message is the response to a `getBalance2` request. It provides the requested balance along with the specific block context (height and hash) in which that balance is valid. Including the block context is crucial, as it allows the requester to know exactly "as of when" the balance was calculated.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `walletAddress` | `IxiBytes` | | | The wallet address (without checksum) this balance is for. Echoes the value from the request. |
+| `balance` | `IxiNumber` | | | The raw `IxiNumber` amount of the balance. |
+| `blockNum` | `IxiVarUInt` | | | The block number at which this balance was calculated. |
+| `blockChecksum` | `IxiBytes` | | | The checksum (hash) of the block at `blockNum`. |
+
+## Behavioral Notes
+
+-   A node receiving this message can update its local state or display the balance information to a user.
+-   The `balance` field is the raw internal integer of an `IxiNumber`. To convert it to a human-readable value, it must be divided by 10^8.
+-   The `blockNum` and `blockChecksum` fields provide essential context. If the recipient has a different block at that `blockNum`, it knows its state has diverged from the sender's.

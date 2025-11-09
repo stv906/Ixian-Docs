@@ -1,0 +1,32 @@
+---
+title: getTransactions2 (56)
+description: Requests the full data for a specific list of transactions identified by their IDs.
+status: Planned Upgrade
+---
+
+The `getTransactions2` message is used to request the full binary data for a list of transactions when the requester already knows their transaction IDs (TxIDs). This is a common operation after receiving a block header, which contains the TxIDs but not the full transaction bodies.
+
+If the list of requested TxIDs is large, the request will be automatically split into multiple `getTransactions2` messages.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB`| The total size of the message payload must not exceed the global maximum. |
+| `blockNum` | `IxiVarInt` | | | The block number context for this request. `0` can be used for mempool transactions. |
+| `txCount` | `IxiVarUInt` | `1` | `5000`* | The number of transaction IDs that follow in this message. |
+| `transactionIDs` | `IxiBytes[]` | | | An array of `txCount` transaction IDs (hashes) being requested. |
+
+\* The maximum value for `txCount` is determined by the node configuration (`CoreConfig.maximumTransactionsPerChunk`), which defaults to `5000`.
+
+## Behavioral Notes
+
+-   A node sends this message to download the bodies of transactions it needs for block validation or for a light client's wallet.
+-   The `blockNum` field provides important context. A positive `blockNum` indicates a request for confirmed transactions from a specific block and is treated as a high-priority message. A `blockNum` of `0` or less may indicate a request for unconfirmed transactions from the mempool.
+-   Upon receiving this message, a peer should look up each transaction by its ID.
+-   The full transaction data for all found transactions should be sent back to the requester in one or more `transactionsChunk3` messages.

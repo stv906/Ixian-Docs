@@ -1,0 +1,69 @@
+---
+title: clients
+description: Retrieves a list of all client network addresses currently connected to the node's server.
+status: Finalized
+---
+
+## Introduction
+
+The `clients` method is a diagnostic endpoint used to retrieve a real-time list of all remote clients that are currently maintaining an active network connection *to* the DLT node's server component.
+
+This method is primarily intended for node operators and developers for monitoring, debugging, and administrative purposes. It provides a quick snapshot of the node's inbound network activity.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /clients
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "clients",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /clients
+```
+
+---
+
+## Response
+
+The response `result` is a JSON array of strings, with each string representing the network address of a connected client.
+
+### Result Structure
+
+The `result` is an array where each element is a `string` in the format `IP_ADDRESS:PORT`.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    "10.24.150.3:11235",
+    "84.112.55.198:45910"
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Scope of "Clients":** The term "clients" in this context refers to any remote peer that has initiated a network connection to this node's server. This can include other DLT nodes, S2 nodes, or light wallet clients.
+*   **Real-Time Data:** The returned list is a snapshot of the active connections at the moment the request is processed. The list can change rapidly as clients connect and disconnect.
+*   **Diagnostic Use:** This endpoint is not typically used for application logic but is a valuable tool for node operators to verify that their node is accessible and to monitor inbound connections.

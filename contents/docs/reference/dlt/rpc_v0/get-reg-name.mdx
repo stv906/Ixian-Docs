@@ -1,0 +1,138 @@
+---
+title: getRegName
+description: Retrieves a registered name record from the Ixian Name System (IXI-NS) by its name or hashed ID.
+status: Finalized
+---
+
+## Introduction
+
+The `getRegName` method is a read-only endpoint used to query the Ixian Name System (IXI-NS) for the details of a specific registered name. It can look up a name using either its plain-text version (e.g., "my-alias") or its unique hashed identifier.
+
+This is the primary method for resolving a name to its associated data, checking its ownership, expiration status, and other properties. The endpoint can return the data as a structured JSON object or as a raw byte string for specialized applications.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Conditionally | The plain-text name to look up. Required if `id` is not provided. |
+| `id` | `string` | Conditionally | The hex-encoded, hashed identifier of the name. Required if `name` is not provided. |
+| `asBytes` | `boolean` | No | If `true`, the response will be the raw, hex-encoded record data instead of a JSON object. Defaults to `false`. |
+| `useAbsoluteId`| `boolean` | No | A technical parameter for the lookup mechanism. In nearly all cases, this should be omitted to use the default of `true`. |
+
+### Example POST Request (by name)
+
+```json
+POST /getRegName
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getRegName",
+  "params": {
+    "name": "my-cool-name"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (by ID, as bytes)
+
+```
+GET /getRegName?id=a1b2c3...&asBytes=true
+```
+
+---
+
+## Response
+
+The response format depends on the `asBytes` parameter.
+
+### Result 1: `RegisteredNameRecord` Object (default)
+
+If `asBytes` is `false` or omitted, the `result` is a JSON object representing the name record.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name` | `string` | The hashed identifier of the name, Base64-encoded. |
+| `pkHash` | `string` | The Base58-encoded address of the current owner. |
+| `recoveryHash`| `string` | The Base58-encoded address designated for recovery. |
+| `capacity` | `integer` | The allocated data storage capacity in kilobytes (kB). |
+| `expirationBlockHeight`| `long` | The block number at which the registration expires. |
+| `sequence` | `long` | The current sequence number of the record, incremented with each update. |
+| `dataRecords` | `array` | An array of objects, each representing a data record associated with the name. |
+
+#### `dataRecords` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `key` | `string` | The hashed key of the data record, Base64-encoded. |
+| `type` | `integer` | The record type identifier. |
+| `value` | `string` | The encrypted value of the record, Base64-encoded. |
+
+#### Example Success Response (JSON)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "name": "QJvmcPJuOp0Po+TaVV4zTntdtT1v2I6eLhPVtqD14+0h...",
+    "pkHash": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "recoveryHash": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo",
+    "capacity": 20,
+    "expirationBlockHeight": 750000,
+    "sequence": 4,
+    "dataRecords": [
+      {
+        "key": "hashed_key_for_ip...",
+        "type": 1,
+        "value": "encrypted_value_for_ip..."
+      }
+    ]
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Result 2: Hex-Encoded String
+
+If `asBytes` is `true`, the `result` is a single string containing the raw, serialized name record data.
+
+#### Example Success Response (Bytes)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "0141409be670f26e3a9d0fa3e4da555e334e7b5db53d6fd88e9e2e13d5b6a0f5e3ed...",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Name with 'id' a1b2c3... does not exist."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local State Query:** This endpoint queries the node's local Registered Name State database. The data returned is only as current as the node's synchronization height.
+*   **Encrypted Data:** Note that the `value` of each data record is returned in its encrypted, on-chain format. Decrypting it requires knowledge of both the plain-text name and the plain-text record key.
+*   **Name vs. ID:** You must provide either `name` or `id`. If `name` is provided, the node will hash it internally to perform the lookup. Providing the `id` directly is slightly more efficient.

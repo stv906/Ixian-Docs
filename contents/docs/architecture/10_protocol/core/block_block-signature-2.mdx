@@ -1,0 +1,32 @@
+---
+title: blockSignature2 (13)
+description: Broadcasts a single signature for a specific block, which is a core component of the consensus mechanism.
+status: Finalized
+---
+
+The `blockSignature2` message is used by a node to broadcast its validation of a specific block. As part of the Proof of Collaborative Work (PoCW) consensus, nodes that validate a block and are eligible to sign it will generate and broadcast this message.
+
+Other nodes collect these signatures. Once a block gathers a sufficient number of valid signatures, it becomes accepted and is considered a permanent part of the blockchain.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | `1` | | The block number that this signature is for. |
+| `blockHash` | `IxiBytes` | | | The checksum (hash) of the block being signed. |
+| `signerAddress` | `IxiBytes` | | | The address or public key of the node that created the signature. |
+| `powSolution` | `IxiBytes` | | | The Proof of Work solution that makes this node eligible to sign the block. |
+| `signature` | `IxiBytes` | | | The digital signature over the `blockHash`, created with the signer's private key. |
+
+For the precise logic, please consult the canonical **[Block Signatures documentation](../../10_data-structures/block-signatures)**.
+
+## Behavioral Notes
+
+-   **Signature Validation:** Upon receiving this message, a node must verify the `signature`. The signature is a standard digital signature of the `blockHash` field, and it must be verifiable using the public key associated with the `signerAddress`.
+-   **Consensus Role:** Valid signatures are collected for their respective blocks. The number of signatures is a critical factor in block finality.
+-   **PoW Eligibility:** The `powSolution` provides the proof that the signer was eligible to participate in the consensus for this specific block, preventing spam and ensuring fair participation.

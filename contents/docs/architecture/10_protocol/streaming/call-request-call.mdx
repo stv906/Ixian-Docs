@@ -1,0 +1,29 @@
+---
+title: requestCall (14)
+description: Initiates a voice or video call.
+---
+
+The `requestCall` message is sent to a contact to initiate a real-time voice or video call session. It signals the desire to open a media stream and contains the necessary information for the recipient to respond.
+
+Under the hood, this message is a specialized version of the `appRequest` message, where the application identifier is `spixi.voip`.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`string`**: A standard UTF-8 encoded string.
+
+## Payload Structure
+
+The payload follows the structure of an `AppDataMessage`, which is the standard for Mini-App communications.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | A unique identifier generated for this specific call session. |
+| `data` | `IxiBytes` | 0 | * | Optional. Contains call setup parameters, such as supported codecs or call type (audio/video). |
+| `appInfo` | `string` | * | * | A composite string identifying the application. For a call request, this MUST be set to `spixi.voip`. |
+
+## Behavioral Notes
+
+*   **Sending:** To start a call, the client generates a unique `sessionId`, constructs the `AppDataMessage` payload with `appInfo` set to `spixi.voip`, and sends it within a `SpixiMessage` of type `appRequest`.
+*   **Receiving:** The recipient's client receives an `appRequest` and parses the `appInfo` field. If it identifies the request as `spixi.voip`, it treats it as an incoming call. It then uses the `sessionId` to manage the call state and presents a UI to the user to accept or reject the call.
+*   **Response:** The recipient must respond with either an `acceptCall` or `rejectCall` message, referencing the same `sessionId`.

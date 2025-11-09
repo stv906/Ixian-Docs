@@ -1,0 +1,79 @@
+---
+title: getViewingWallet
+description: Exports the viewing key for a specified wallet, allowing for read-only balance and transaction monitoring.
+status: Finalized
+---
+
+## Introduction
+
+The `getViewingWallet` method exports the "viewing key" for a wallet managed by the node. A viewing key (or watch-only wallet) allows a third party to see all addresses, balances, and the complete transaction history associated with a wallet without granting them the ability to spend any funds.
+
+This is a powerful feature for use cases such as:
+*   **Secure Monitoring:** Loading a viewing key onto a less secure device (like a mobile phone) to monitor a cold storage wallet without exposing the private keys.
+*   **Accounting & Auditing:** Providing auditors or accounting software with read-only access to financial records.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                             |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded Ixian wallet address to query. If omitted, it defaults to the node's primary wallet. |
+
+### Example POST Request
+
+```json
+POST /getViewingWallet
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getViewingWallet",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getViewingWallet?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a single string containing the prefixed, hex-encoded viewing key.
+
+### Result Structure
+
+The `result` is a string with a specific format:
+*   It begins with the constant prefix `IXIHEX`.
+*   The prefix is immediately followed by the hex-encoded raw data of the viewing wallet.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "IXIHEX04a3f8c...9ecef7",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Privacy Warning:** The viewing key grants complete and unrestricted visibility into a wallet's entire transaction history (past, present, and future). While it does not allow spending, it is still highly sensitive data from a privacy perspective. Share it with caution.
+*   **Read-Only:** It is cryptographically impossible to derive the private spending keys from the viewing key. Its access is strictly read-only.
+*   **Format:** Client applications intending to import this key must be prepared to handle the `IXIHEX` prefix and parse the subsequent hex-encoded data.
+*   **Default Wallet:** If the `wallet` parameter is not provided, the viewing key for the default wallet loaded by the DLT node will be returned.

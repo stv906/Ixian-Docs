@@ -1,0 +1,68 @@
+---
+title: DLT RPC v0 API Reference
+description: A complete reference for the JSON-RPC API methods exposed by an Ixian DLT node.
+---
+
+## Introduction
+
+The Ixian DLT (Distributed Ledger Technology) node exposes a rich JSON-RPC API that allows applications to interact with the blockchain, manage wallets, query the name system, and control mining operations. This section provides a detailed reference for every available method.
+
+All endpoints are accessible via `HTTP GET` or `HTTP POST` requests and follow the standard [JSON-RPC 2.0 specification](https://www.jsonrpc.org/specification).
+
+---
+
+## Blockchain & Transaction Queries
+
+These methods are used to query the state of the blockchain, including blocks, transactions, and overall supply.
+
+| Method | Description |
+| :--- | :--- |
+| [`getBestBlockHash`](./rpc_v0/bc_get-best-block-hash) | Retrieves the checksum (hash) of the most recent block. |
+| [`getBlockCount`](./rpc_v0/bc_block-count) | Retrieves the block number (height) of the most recent block. |
+| [`getBlock`](./rpc_v0/bc_get-block) | Retrieves a block by its number or hash. |
+| [`getFullBlock`](./rpc_v0/bc_get-full-block) | Retrieves a full block, including all transaction data, by number or hash. |
+| [`getLastBlocks`](./rpc_v0/bc_get-last-blocks) | Retrieves a list of the most recently added blocks. |
+| [`getTransaction`](./rpc_v0/tx_get-transaction) | Retrieves a single transaction by its unique ID. |
+| [`tx`](./rpc_v0/tx) | Retrieves a paginated list of both confirmed and unconfirmed transactions. |
+| [`txa`](./rpc_v0/txa) | Retrieves a paginated list of applied (confirmed) transactions only. |
+| [`txu`](./rpc_v0/txu) | Retrieves a paginated list of unapplied (unconfirmed) transactions from the mempool. |
+| [`supply`](./rpc_v0/bc_supply) | Retrieves the total calculated circulating supply of IXI coins. |
+
+---
+
+## Wallet & Name System (IXI-NS)
+
+These methods are used to query wallet balances, the name registry, and trigger wallet maintenance.
+
+| Method | Description |
+| :--- | :--- |
+| [`getBalance`](./rpc_v0/wallet_get-balance) | Retrieves the balance for a specific wallet address. |
+| [`getWallet`](./rpc_v0/wallet_get-wallet) | Retrieves the public state of a wallet, including balance and properties. |
+| [`getRegName`](./rpc_v0/get-reg-name) | Retrieves a registered name record by its name or hashed ID. |
+| [`getRegNameDataRecords`](./rpc_v0/get-reg-name-data-records) | Retrieves all data records associated with a specific registered name. |
+| [`rescanBlockchain`](./rpc_v0/wallet_rescan-blockchain) | Initiates a background rescan of the blockchain to find wallet transactions. |
+
+---
+
+## Mining Operations
+
+These methods are specific to DLT nodes participating in Proof-of-Work mining and are used to control and monitor the mining process.
+
+| Method | Description |
+| :--- | :--- |
+| [`getMiningBlock`](./rpc_v0/margon_get-mining-block) | Retrieves a block data "job" for an external miner to work on. |
+| [`minerStats`](./rpc_v0/margon_miner-stats) | Retrieves real-time statistics about the node's internal mining activity. |
+| [`setBlockSelectionAlgorithm`](./rpc_v0/margon_set-block-selection-algorithm) | Configures the strategy used by the internal miner to select the next block. |
+| [`submitMiningSolution`](./rpc_v0/margon_submit-mining-solution) | Submits a Proof-of-Work solution from an external miner. |
+| [`verifyMiningSolution`](./rpc_v0/margon_verify-mining-solution) | Verifies if a given nonce is a valid solution for a specific block. |
+
+---
+
+## Node & Network Status
+
+These methods provide information about the node's operational state and its view of the network.
+
+| Method | Description |
+| :--- | :--- |
+| [`status`](./rpc_v0/info_status) | Retrieves a comprehensive overview of the node's current state. |
+| [`countNodeVersions`](./rpc_v0/info_count-node-versions) | Retrieves a summary of all node versions currently active on the network. |

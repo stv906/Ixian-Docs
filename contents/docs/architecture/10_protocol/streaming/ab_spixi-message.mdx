@@ -1,0 +1,111 @@
+---
+title: Spixi Message Protocol
+description: Specification for the SpixiMessage, the application-level payload of the S2 Streaming Protocol.
+---
+
+A `SpixiMessage` is the application-level payload carried within the encrypted `data` field of a `StreamMessage`. It represents the actual command or content being sent between users, such as a chat message, a file transfer request, or a contact request.
+
+### Serialization Structure
+
+A `SpixiMessage` is a simple, typed data container.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `type` | `int32` | | | The `SpixiMessageCode` that defines the purpose and structure of the `data` field. |
+| `data` | `IxiBytes` | | | The SpixiMessage payload for this message type. |
+| `channel`| `int32` | | | An identifier for a specific chat channel. |
+
+---
+
+## Spixi Message Codes
+
+The `type` field determines how the `data` payload should be interpreted. The following codes are defined.
+
+### Chat & Profile
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 0 | `chat` | A standard text chat message. |
+| 1 | `getNick` | Requests the nickname of a contact. |
+| 2 | `nick` | Provides the nickname of a contact. |
+| 24 | `avatar` | Sends an avatar image. |
+| 25 | `getAvatar`| Requests the avatar for a contact. |
+| 35 | `msgTyping`| Indicates that the user is currently typing a message. |
+
+### Messaging Status & Reactions
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 8 | `msgRead` | Confirmation that a message has been read by the recipient. |
+| 9 | `msgReceived`| Confirmation that a message has been delivered to the recipient's device. |
+| 33 | `msgDelete`| A request to delete a previously sent message. |
+| 34 | `msgReaction`| Adds a reaction (e.g., an emoji) to a specific message. |
+| 36 | `msgError` | Reports an error in processing a previous message. |
+| 39 | `msgReport` | Reports a message for moderation or abuse (e.g. for group servers/bots). |
+
+### Contact & Group Management
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 19 | `acceptAddBot`| A specialized request that the peer who accepted the contact request is a bot. |
+| 37 | `leave` | A notification that a user is leaving a group chat. |
+| 38 | `leaveConfirmed`| Confirmation that the leave request was processed. |
+| 40 | `requestAdd2` | A request to add a user as a contact. |
+| 41 | `acceptAdd2` | Accepts a contact request. |
+| 26 | `getPubKey`| Requests the public key of a contact. |
+| 27 | `pubKey` | Provides a public key in response to a request. |
+| 42 | `keys2` | Exchanges session keys for end-to-end encryption. |
+
+### Funds & Transactions
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 5 | `sentFunds` | A notification that funds have been sent. |
+| 6 | `requestFunds`| A request for a payment from a contact. |
+| 18 | `requestFundsResponse`| The response to a `requestFunds` message. |
+
+### File Transfer
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 10 | `fileData` | A chunk of a file's binary data. |
+| 11 | `requestFileData`| Requests a specific chunk of a file. |
+| 12 | `fileHeader` | Contains metadata about a file being sent (name, size, type). |
+| 13 | `acceptFile` | The recipient agrees to accept an incoming file transfer. |
+| 23 | `fileFullyReceived`| Confirmation that all chunks of a file have been received. |
+
+### Voice/Video Calls
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 14 | `requestCall` | Initiates a voice or video call. |
+| 15 | `acceptCall` | Accepts an incoming call request. |
+| 16 | `rejectCall` | Rejects an incoming call request. |
+| 17 | `callData` | A chunk of real-time audio or video data. |
+
+### Generic Application Layer
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 21 | `appData` | Generic data for a mini-app or service. |
+| 22 | `appRequest`| A generic request to a mini-app or service. |
+| 28 | `appRequestAccept`| Accepts an `appRequest`. |
+| 29 | `appRequestReject`| Rejects an `appRequest`. |
+| 30 | `appRequestError`| Signals an error occurred during an `appRequest`. |
+| 31 | `appEndSession`| Terminates a session with a mini-app. |
+| 43 | `getAppProtocols`| Requests the list of app protocols supported by the peer. |
+| 44 | `appProtocols` | Provides the list of supported app protocols. |
+| 45 | `appProtocolData`| Generic data for a specific, named app protocol. |
+
+### Bot Interaction
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 20 | `botGetMessages`| A request used by a bot to fetch messages from a channel. |
+| 32 | `botAction`| A generic action or command sent to a bot. |
+
+### Reserved
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| 240-255 | `reserved`| The range `0xF0` to `0xFF` is reserved for custom, user-defined applications. |

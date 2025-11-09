@@ -1,0 +1,359 @@
+---
+title: Trustless Client Discovery
+description: The process of locating and authenticating peers on the Ixian network using cryptographic addresses and ephemeral presence data with sector-based scalability.
+---
+
+## Introduction
+
+Traditional networks rely on centralized infrastructure for peer discovery: DNS for hostname resolution, Certificate Authorities for machine authentication, and central directories for user authentication. This introduces single points of failure, censorship vectors, and reliance on trusted third parties.
+
+The Ixian Platform replaces this model with a fully **decentralized, trustless discovery mechanism** built on two components:
+- **Ixian DLT** (blockchain): Coordination layer and global state
+- **Ixian S2** (streaming network): Presence storage and relay infrastructure
+
+Any client can securely locate and verify the authenticity of another client using only their cryptographic address. No central servers, no intermediaries, no trust assumptions.
+
+---
+
+## Core Concepts
+
+### Cryptographic Identity
+
+A user's or device's identity **is** their public cryptographic key. Authentication is achieved by proving ownership of the corresponding private key through digital signatures.
+
+**Benefits**:
+- No passwords or usernames
+- No third-party-issued certificates
+- Self-sovereign identity
+
+### Decentralized Presence System
+
+Instead of a central directory, clients periodically broadcast small, signed **presence** packets to the S2 network. These packets serve as temporary, verifiable claims of:
+- Being online
+- Reachable at specific network endpoint(s)
+
+### DLT as Coordination Layer
+
+The Ixian DLT maintains a global map of:
+- All active DLT and S2 nodes
+- Their network endpoints
+- Their assigned sectors
+- Their PoW proofs (for Master/History nodes)
+
+Clients query the DLT to determine which region of the S2 network handles a target address.
+
+### Scalability via Sectorization
+
+To handle massive scale (billions of clients), the S2 network uses **deterministic address hashing** to partition the address space.
+
+**Sector Calculation**:
+```
+addressBytes = address.addressNoChecksum  // Version + payload (excludes 3-byte checksum)
+fullHash = SHA3-512(addressBytes)         // 64-byte cryptographic hash
+sectorPrefix = fullHash[0:10]             // First 10 bytes = sector identifier
+```
+
+**Key Properties**:
+- **Deterministic**: Same address -> same sector always
+- **Uniform Distribution**: SHA-3 ensures statistically even address distribution
+- **Address Space**: 10-byte prefix = 2^80 possible sector values = ~1.2 septillion sectors
+- **Redundancy**: Each Client presence is tracked by at least seven S2 nodes.
+- **O(1) Lookup**: Direct sector targeting eliminates search overhead
+
+Each sector is managed by a subset of S2 nodes. Clients only query nodes serving the target's sector, dramatically reducing network load.
+
+---
+
+## The Discovery Lifecycle
+
+### Stage 1: Initiation
+
+**Client A** wants to communicate with **Client B**. Client A knows only Client B's **Ixian Address** (derived from RSA-4096 public key, with version byte and checksum).
+
+No other information is required to begin discovery.
+
+### Stage 2: Sector Resolution
+
+**Process**:
+1. Client A computes Client B's sector using the formula above
+2. Client A queries its connected S2 node: "Which nodes serve sector X?"
+3. S2 node consults the DLT for current sector assignments
+4. S2 node returns list of relay nodes responsible for that sector
+
+### Stage 3: Presence Request
+
+Client A sends a **[Get Presence](./10_protocol/core/presence_get-presence-2)** request to one or more S2 nodes in Client B's sector.
+
+**Request Contents**:
+- Target address (Client B)
+
+**Response**:
+If Client B is online, the S2 node returns Client B's latest **[Presence Data](./10_data-structures/presences)**.
+
+### Stage 4: Presence Verification
+
+Client A receives presence data and must verify its authenticity.
+
+**Verification Steps**:
+
+1. **Signature Validation** (per endpoint):
+```
+// Each PresenceAddress in the presence is signed individually
+for each address in presence.addresses:
+    // Signed data format for each endpoint:
+    checksumData = version || wallet || deviceId || timestamp || hostName || nodeType || powSolution
+    checksum = SHA3-512sqTrunc(ixianChecksumLock || checksumData)
+    signature = address.signature
+    publicKey = Client B's public key (from wallet address)
+    
+    if (!Crypto.verifySignature(checksum, publicKey, signature)):
+        reject this endpoint as forged
+```
+
+2. **Timestamp Freshness** (per endpoint):
+```
+currentTime = Clock.getNetworkTimestamp()
+endpointTime = address.lastSeenTime
+
+expiration = (address.type == 'C') ? 300 seconds : 300 seconds
+
+// Check expiration (+300 sec buffer, -30 sec sync tolerance)
+if (currentTime - endpointTime > expiration):
+    reject endpoint as expired
+if (currentTime - endpointTime < -30):
+    reject endpoint as timestamp tampering
+```
+
+3. **PoW Proof Validation** (Master/History nodes only):
+```
+if (address.type == 'M' OR address.type == 'H'):
+    if (!address.powSolution):
+        reject endpoint as missing required PoW
+    if (!verifyPowSolution(address.powSolution, minDifficulty, wallet)):
+        reject endpoint as invalid PoW
+```
+
+4. **Address Validation**:
+```
+// Verify the endpoint address is valid
+if (address.hostName.length > 21):
+    // Ixian address format - verify checksum
+    addr = new Address(address.hostName)
+    if (!addr.validateChecksum()):
+        reject endpoint
+else:
+    // IP:port format - verify public IP on mainnet
+    if (network == mainnet && !isPublicIP(address.hostName)):
+        reject endpoint as private IP
+```
+
+**Critical Rule**: Each endpoint in a presence must have a valid signature from the wallet's private key. Endpoints with invalid signatures are silently discarded. At least one valid endpoint must remain or the entire presence is rejected.
+
+### Stage 5: Communication Setup
+
+With a cryptographically verified endpoint, Client A can now connect to Client B.
+
+**Connection Options**:
+
+1. **Direct Connection**:
+   - If both clients have public IPs
+   - Use endpoint from presence data
+   - Initiate encrypted channel
+
+2. **NAT Traversal**:
+   - Use STUN/TURN-like techniques
+   - S2 relays coordinate hole-punching
+   - Fallback to relay-mediated connection
+
+3. **Relay-Mediated** (last resort):
+   - S2 node acts as transparent relay
+   - Encrypted end-to-end between clients
+   - Relay cannot read message contents
+
+### Stage 6: Keep-Alive Cycle
+
+Presence data expires after **300 seconds** (5 minutes). To remain discoverable, nodes must refresh their presence periodically.
+
+**Keep-Alive Protocol**:
+
+**Master/History Nodes ('M', 'H')**:
+- Interval: Implementation-defined (typically 100 seconds)
+- Must include valid PoW proof with each keep-alive
+- PoW must meet `minPresencePoWDifficulty` threshold
+- Expiration: 300 seconds (serverPresenceExpiration)
+
+**Relay Nodes ('R')**:
+- Interval: Implementation-defined (typically 200 seconds)
+- PoW proof planned but not yet enforced
+- Expiration: 300 seconds (serverPresenceExpiration)
+
+**Client Nodes ('C')**:
+- Interval: Implementation-defined (typically 100 seconds)
+- No PoW proof required
+- Expiration: 300 seconds (clientPresenceExpiration)
+
+**Keep-Alive Message Structure**:
+```
+// For each endpoint being kept alive:
+- Version (IxiVarInt)
+- Wallet address (no checksum, IxiVarInt length prefix)
+- Device ID (IxiVarInt length prefix)
+- Timestamp (network time, IxiVarInt)
+- Hostname (string: IP:port or Ixian address)
+- Node type (char: 'M', 'H', 'R', 'C')
+- PoW solution (IxiVarInt length prefix, optional)
+- Signature (IxiVarInt length prefix)
+
+// Signature covers: ixianChecksumLock || SHA3-512sqTrunc(all fields except signature)
+```
+
+**Expiration Handling**:
+- Presence older than 300 seconds -> dropped from S2 caches
+- Node appears offline until next keep-alive received
+- No grace period (strict 300s expiration limit)
+- Keep-alive intervals are shorter than expiration to provide buffer
+
+---
+
+## Presence Types and Requirements
+
+Different node types have different discovery requirements.
+
+| Type | PoW Required | Keep-Alive Interval | Expiration | Typical Use Case |
+|------|--------------|---------------------|------------|------------------|
+| **Master (M)** | Yes | 100 seconds | 300 seconds | DLT consensus nodes (currently also full history) |
+| **History (H)** | Yes | 100 seconds | 300 seconds | Full History archive nodes (distinction not yet implemented - all M nodes are currently H) |
+| **Relay (R)** | Future | 200 seconds | 300 seconds | S2 relay/routing nodes |
+| **Client (C)** | No | 100 seconds | 300 seconds | End-user applications |
+
+**PoW Requirements** (Master/History):
+- Must solve PoW challenge for current DLT block
+- Difficulty must meet `minPresencePoWDifficulty` threshold
+- PoW validity window: 30 blocks (v12+), 120 blocks (v10-v11)
+- Invalid/missing PoW -> presence rejected by S2 nodes
+
+**Why PoW for Master/History?**
+- Prevents spam attacks on consensus/relay infrastructure
+- Ensures only committed nodes participate in core network functions
+- Makes Sybil attacks economically infeasible
+
+> **Note**: The distinction between Master (M) and History (H) nodes is planned but not yet implemented. Currently, all Master nodes also maintain full history.
+
+---
+
+## Security Analysis
+
+### Impersonation Resistance
+
+**Attack**: Malicious node claims to be Client B by forging presence data.
+
+**Defense**: Cryptographic signature verification. Without Client B's private key, attacker cannot generate a valid signature. Any forged presence is immediately detected and rejected.
+
+### Replay Attack Resistance
+
+**Attack**: Attacker captures old, valid presence from Client B and replays it to redirect traffic to a malicious endpoint.
+
+**Defense**:
+- Timestamp validation (300-second expiration)
+- Signature covers timestamp and hostname
+- Replaying old presence fails freshness check
+
+### Sybil Attack Resistance
+
+**Attack**: Attacker creates many fake identities to flood S2 network with presence data.
+
+**Defense for Critical Nodes**:
+- Master/History require PoW proofs
+- PoW has computational cost
+- Cost of attack ≈ cost of legitimate participation
+- No economic incentive to create fake nodes
+
+**Client/Relay Considerations**:
+- No PoW required (lower barrier for end-users)
+- Rate limiting at S2 relays prevents spam
+- DDoS mitigation via sector isolation
+
+### Sector Flooding
+
+**Attack**: Attacker creates many addresses in same sector to overwhelm specific S2 nodes.
+
+**Defense**:
+- Sector assignment is deterministic (attacker can't control it)
+- Randomized relay tree rotates sector assignments
+- Multiple relays per sector for redundancy
+
+---
+
+## Scalability Characteristics
+
+### Lookup Performance
+
+**Time Complexity**: O(1) for sector resolution
+- No tree traversal
+- No iterative searching
+- Direct sector targeting
+
+**Network Overhead**:
+- Single query to local S2 node -> sector list
+- Single query to target sector -> presence data
+- Total: 2 round trips for any discovery operation
+
+### Storage Requirements
+
+**Per S2 Node**:
+```
+sectors_served = 2 (typical)
+clients_per_sector = total_network_clients / 65,536
+presences_stored ≈ clients_per_sector * 2
+
+For 1 billion clients:
+  clients_per_sector ≈ 15,259
+  presences_per_node ≈ 30,518
+  
+At ~2KB per presence:
+  storage_per_node ≈ 244 MB
+```
+
+**Global Network**:
+- Presence data distributed across all S2 nodes
+- No single node stores all presences
+- Redundancy via multiple relays per sector
+
+### Bandwidth Requirements
+
+**Keep-Alive Traffic**:
+```
+For 1 billion clients:
+  clients_sending_keepalive = 1,000,000,000
+  interval = 200 seconds (average)
+  keepalive_size ≈ 2000 bytes
+  
+  global_traffic = (1e9 * 2000) / 200 = 10 GB/s
+  per_relay_traffic = 10 GB / relay_count
+  
+With 10,000 relays:
+  per_relay = 1000 KB/s (manageable)
+```
+
+**Discovery Query Traffic**:
+- Highly variable (depends on user behavior)
+- Cached at client side (reduces repeated queries)
+- Load distributed across all relays
+
+---
+
+## Related Documentation
+
+- **[Presences](./10_data-structures/presences)**: Presence data structure specification
+- **[Get Presence Protocol](./10_protocol/core/presence_get-presence-2)**: Discovery message format
+- **[Keep Alive Protocol](./10_protocol/core/presence_keep-alive)**: Keep-alive message format
+- **[Relay Updates](./10_protocol/core/presence_sector-nodes**: Sector assignment updates
+- **[Network Parameters](./network-parameters)**: Timeouts, difficulty thresholds, and limits
+
+---
+
+This trustless discovery system enables:
+- **Zero-trust peer location**: No reliance on centralized servers
+- **Cryptographic authentication**: Prove identity without passwords
+- **Massive scalability**: O(1) lookups across billions of clients
+- **Privacy preservation**: Minimal metadata exposure, encrypted end-to-end communication

@@ -1,0 +1,27 @@
+---
+title: getRandomPresences (48)
+description: Requests a random selection of presences of a specific type for network discovery.
+status: Finalized
+---
+
+The `getRandomPresences` message is a request for a random sample of active presences of a particular type. This is a key mechanism for network discovery, allowing a new or isolated node to find a set of initial peers to connect to without needing a hardcoded list.
+
+### Core Data Types
+
+*   **`char`**: See **[Global Serialization Rules](..)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `nodeType` | `char` | `1` | `1` | A single character representing the desired node type (`M`, `H`, `R`, `C`). |
+
+## Behavioral Notes
+
+-   **Purpose:** This message is a tool for peer discovery and bootstrapping. A node sends it to find a random set of other nodes to connect to.
+-   **Response Mechanism:** There is **no unique response message** for `getRandomPresences`. Instead, a node receiving this request will respond by sending a series of **[`updatePresence`](./presence_update-presence)** messages back to the requester.
+-   **Response Logic:**
+    1.  The receiving node queries its local `PresenceList` for up to 20 presences matching the requested `nodeType`.
+    2.  If more than 10 presences are found, it selects a random subset of 10.
+    3.  For each `Presence` object in the final selection, it sends one or more `updatePresence` messages to the requester. (A single `Presence` might be split into multiple chunks/messages if it's very large).
+-   The requester should be prepared to receive multiple `updatePresence` messages in response to a single `getRandomPresences` request.

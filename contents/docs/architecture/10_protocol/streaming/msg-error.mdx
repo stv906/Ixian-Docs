@@ -1,0 +1,28 @@
+---
+title: msgError (36)
+description: Reports an error in processing a previous message.
+---
+
+The `msgError` message is sent to inform a peer that a previously received message could not be processed. This is used for signaling application-level failures, such as malformed data or contextually invalid requests that are not covered by lower-level protocol rejections.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`IxiVarInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`string`**: A standard UTF-8 encoded string, prefixed with its length.
+
+## Payload Structure
+
+The payload provides context about the message that failed and the reason for the failure.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `failedMessageId` | `IxiBytes` | 16 | 64 | The unique ID (`StreamMessage.id`) of the message that caused the error. |
+| `errorCode` | `IxiVarInt` | 0 | * | An application-defined integer code representing the type of error. |
+| `errorMessage` | `string` | 0 | * | Optional. A human-readable, UTF-8 encoded string describing the error in more detail. |
+
+## Behavioral Notes
+
+*   **Error Reporting:** A node should send this message when it receives a `SpixiMessage` that is syntactically valid but cannot be processed due to application logic (e.g., referencing a non-existent file, invalid parameters for a bot command).
+*   **Sender Action:** The original sender of the failed message can use this information to notify the user that their action failed, or for logging and debugging purposes.
+*   **Usage:** This message is intended for recoverable, application-level errors. It should not be used for protocol violations or decryption failures, which are handled at a lower level (e.g., with a `rejected` message).

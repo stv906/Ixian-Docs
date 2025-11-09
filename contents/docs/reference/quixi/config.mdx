@@ -1,0 +1,112 @@
+---
+title: Quixi Configuration
+description: A complete reference for the Quixi Bridge configuration file (ixian.cfg) and its command-line arguments.
+---
+
+## Introduction
+
+The behavior of a Quixi Bridge node is controlled by a combination of a configuration file and command-line arguments. By default, the node reads a file named `ixian.cfg` from its working directory on startup. Settings specified in this file can be overridden by arguments provided on the command line.
+
+This document serves as a complete reference for all available configuration options.
+
+---
+
+## Configuration File (`ixian.cfg`)
+
+The configuration file uses a simple `key = value` format. Each option must be on its own line. Lines starting with a semicolon (`;`) are treated as comments and are ignored.
+
+**Example `ixian.cfg`:**
+
+```ini
+; Set the main API port
+apiPort = 8001
+
+; Allow API access only from the local machine and a specific IP
+apiAllowIp = 127.0.0.1
+apiAllowIp = 192.168.1.100
+
+; Set a friendly name for this bridge
+name = My-Quixi-Bridge
+```
+
+### General Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `name` | `string` | Sets a user-friendly name for this Quixi instance. |
+| `externalIp` | `string` | The publicly routable IP address of this node. Overrides automatic detection. |
+| `networkType` | `string` | Sets the network to operate on. Can be `mainnet`, `testnet`, or `regtest`. |
+| `checksumLock`| `string` | A custom string for the seeding checksum. Only needed for private networks. |
+
+### API and Network Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `serverPort` | `integer` | The port for peer-to-peer communication. `0` for auto-selection (not recommended). |
+| `apiPort` | `integer` | The TCP port for the JSON-RPC API server to listen on. |
+| `apiAllowIp` | `string` | Whitelists an IP address for API access. Can be specified multiple times. |
+| `apiBind` | `string` | Binds the API server to a specific local IP address. Can be specified multiple times. |
+| `addApiUser` | `string` | Adds a required `user:password` credential for API access. Can be specified multiple times. |
+| `addPeer` | `string` | Adds a seed node for the mainnet. Can be specified multiple times to build a custom peer list. |
+| `addTestnetPeer`| `string` | Adds a seed node for the testnet. Can be specified multiple times. |
+
+### Logging Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `maxLogSize` | `integer` | The maximum size of a single log file in Megabytes (MB). |
+| `maxLogCount` | `integer` | The maximum number of historical log files to keep (log rotation). |
+| `logVerbosity` | `integer` | A bitmask to set logging detail. Add numbers for combined verbosity: Trace=1, Info=2, Warn=4, Error=8. (e.g., `14` for Info+Warn+Error). |
+
+### Advanced Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `streamCapabilities` | `integer` | A bitmask to define the node's S2 capabilities. See `StreamCapabilities` enum for details. |
+| `mqDriver` | `string` | The message queue driver to use. Can be `none`, `mqtt`, or `rabbitmq`. |
+| `mqHost` | `string` | The hostname or IP address of the message queue server. |
+| `mqPort` | `integer` | The port of the message queue server. |
+
+---
+
+## Command-Line Arguments
+
+Command-line flags provide a way to launch the node with specific settings or to perform one-off actions. They override any conflicting settings in `ixian.cfg`.
+
+### General Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | - | Displays the help screen and exits. |
+| `-v`, `--version` | - | Displays the node version and exits. |
+| `-t`, `--testnet` | - | Starts the node in testnet mode. Overrides `networkType` in the config file. |
+| `--networkType` | `string` | Explicitly sets the network type. Can be `mainnet`, `testnet`, or `regtest`. |
+| `--config` | `filepath` | Specifies the path to the configuration file. Default is `ixian.cfg`. |
+
+### Node Operation Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-c`, `--clean` | - | Deletes cache, log, and peer data files before starting. |
+| `-x`, `--changepass`| - | Prompts to change the password of the specified wallet (`-w`) and exits. |
+| `-a`, `--apiport` | `port` | Sets the JSON-RPC API port. Overrides `apiPort` in the config file. |
+| `-i`, `--ip` | `ip_address`| Sets the external IP address. Overrides `externalIp` in the config file. |
+| `-w`, `--wallet` | `filepath` | Specifies the path to the wallet file. Default is `ixian.wal`. |
+| `-n`, `--node` | `ip:port` | Connects to a specific seed node, ignoring the default list. |
+| `--name` | `string` | Sets a user-friendly name for this instance. Overrides `name` in the config file. |
+
+### Logging Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--maxLogSize` | `megabytes` | Sets the maximum log file size in MB. |
+| `--maxLogCount` | `count` | Sets the maximum number of log files to keep. |
+| `--logVerbosity` | `integer` | Sets the logging verbosity using the bitmask (Trace=1, Info=2, Warn=4, Error=8). |
+| `--verboseOutput`| - | Enables verbose logging directly to the console output. |
+
+### Developer Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--walletPassword`| `password` | **(UNSAFE)** Provides the wallet password directly on the command line. Use with extreme caution. |
+| `--checksumLock` | `string` | Sets the checksum lock for private networks. |

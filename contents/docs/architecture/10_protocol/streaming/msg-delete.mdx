@@ -1,0 +1,24 @@
+---
+title: msgDelete (33)
+description: A request to delete a previously sent message.
+---
+
+The `msgDelete` message is a request sent from one user to another to retract a message that was previously sent. The recipient's client is expected to honor this request by removing the specified message from its local storage and chat history.
+
+### Core DataTypes
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains the unique ID of the message that should be deleted.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `targetMessageId` | `IxiBytes` | 16 | 64 | The unique ID (`StreamMessage.id`) of the message to be deleted. |
+
+## Behavioral Notes
+
+*   **Recipient's Duty:** Upon receiving `msgDelete`, the client MUST search its local message history for the specified `channel` and `targetMessageId`. If found, the message should be permanently deleted from both the UI and local database.
+*   **Sender Verification:** If the message is part of a bot-managed group chat, the recipient (the bot) MUST verify the signature of the enclosing `StreamMessage` to ensure the delete request comes from the original sender of the message.
+*   **Best-Effort Delivery:** Deletion is a "best-effort" request. If the recipient is offline or using a modified client that ignores the request, the message may not be deleted on their end.
