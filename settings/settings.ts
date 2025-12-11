@@ -1,4 +1,4 @@
-export const url = "https://docs2.ixian.io"
+export const url = "https://docs.ixian.io"
 export const siteicon = "/logo.svg"
 
 export const gtm = "GTM-TM2RTBLM"
