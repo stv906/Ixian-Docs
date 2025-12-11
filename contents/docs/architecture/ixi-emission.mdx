@@ -1,0 +1,58 @@
+---
+title: IXI Emission Details
+description: An overview of the initial IXI supply distribution (premine) and the ongoing inflation schedule for network rewards.
+---
+
+## Overview
+
+A strong incentive model is essential for maintaining the security and decentralization of the Ixian network. This incentive is delivered through the native cryptocurrency, IXI, which is used for network transactions, fees, and rewards.
+
+The total supply of IXI is determined by two factors:
+1.  **The Premine:** A fixed amount of IXI created in the genesis block to fund initial development, node infrastructure, and long-term project growth.
+2.  **Inflation:** New IXI created in every block and distributed to network participants (Master Nodes and Miners) as a reward for securing the network.
+
+## Premine
+
+The genesis block (#1) contains seven transactions that constitute the premine, allocating funds for initial seed nodes, developer rewards, and the foundation.
+
+-   **`240,000 IXI`** to `1AAF8ZagTw6UqiQPUoiKjmoAN45jvR8tdmSmeev4uNzq45QWB`: Intended for setting up 12 initial seed nodes (used by seed1.ixian.io).
+-   **`20,000 IXI`** to `1NpizdRi5rmw586Aw883CoQ7THUT528CU5JGhGomgaG9hC3EF`: Intended for running an Ixian DLT seed node (used by seed2.ixian.io).
+-   **`20,000 IXI`** to `1Dp9bEFkymhN8PcN7QBzKCg2buz4njjp4eJeFngh769H4vUWi`: Intended for running an Ixian DLT seed node (used by seed3.ixian.io).
+-   **`20,000 IXI`** to `1SWy7jYky8xkuN5dnr3aVMJiNiQVh4GSLggZ9hBD3q7ALVEYY`: Intended for running an Ixian DLT seed node (used by seed4.ixian.io).
+-   **`20,000 IXI`** to `1R2WxZ7rmQhMTt5mCFTPhPe9Ltw8pTPY6uTsWHCvVd3GvWupC`: Intended for running an Ixian DLT seed node (used by seed5.ixian.io).
+-   **`1,000,000,000 IXI`** to `13fiCRZHPqcCFvQvuggKEjDvFsVLmwoavaBw1ng5PdSKvCUGp`: Intended to be used as a reward for developers.
+-   **`1,000,000,000 IXI`** to `16LUmwUnU9M4Wn92nrvCStj83LDCRwvAaSio6Xtb3yvqqqCCz`: Intended to be used by the foundation to further evolve Ixian technology.
+
+The total premine amounts to **2,000,320,000 IXI**. Of this, 1 billion IXI for the developer reward is subject to a 5-year vesting period, with 20% released at the end of each year. The other 1 billion IXI is allocated to the foundation for ongoing development, marketing, and other operational activities.
+
+## Inflation and Block Rewards
+
+New IXI coins are generated with every new block. These "block rewards" are distributed to network participants via two mechanisms: **Signing Rewards** and **Argon2 Mining Rewards**. This process creates a predictable inflation schedule designed to incentivize network security.
+
+### Signing Rewards
+
+The signing reward is the primary mechanism for new coin issuance and is distributed to the Master Nodes that validate and sign blocks. The reward structure began with an inflationary model tied to the circulating supply and later transitioned to a fixed schedule with periodic "halvings."
+
+| Block Number Range | Reward per Block | Description |
+| :--- | :--- | :--- |
+| **1 to 86,400** | `~0.1%` of supply (per-block) | Initial high-inflation phase. |
+| **86,401 to 1,801,999** | `~5%` of supply (per-block) | Main inflationary phase. |
+| **1,802,000 to 6,307,199** | `576 IXI` | First fixed reward era. |
+| **6,307,200 to 9,460,799** | `288 IXI` | First halving. |
+| **9,460,800 to 12,614,399**| `144 IXI` | Second halving. |
+| **12,614,400 to 15,767,999**| `72 IXI` | Third halving. |
+| **15,768,000 and above** | `36 IXI` | Final, perpetual signing reward. |
+
+### Argon2 Mining Rewards
+
+The mining reward was a legacy mechanism for initial coin distribution. This reward also followed a halving schedule and has a fixed expiration date.
+
+| Block Number Range | Reward per Block | Description |
+| :--- | :--- | :--- |
+| **1 to 1,051,199** | Linearly increases from an initial base of `10 IXI`. The formula `((blockNum * 9) / 2 + 10000) * 100000` approximates this growth. | First year |
+| **1,051,200 to 1,801,999** | `4740.40 IXI` | Second year (pre-adjustment) |
+| **1,802,000 to 6,307,199** | `2304 IXI` | First fixed reward era. |
+| **6,307,200 to 9,460,799** | `1152 IXI` | First halving. |
+| **9,460,800 to 12,614,399**| `576 IXI` | Second halving. |
+| **12,614,400 to 105,119,999** | `18 IXI` | Final reward era. |
+| **105,120,000 and above** | `0 IXI` | Argon2 PoW mining is permanently expired. |

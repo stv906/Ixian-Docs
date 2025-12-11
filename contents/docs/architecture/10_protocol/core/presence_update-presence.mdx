@@ -1,0 +1,30 @@
+---
+title: updatePresence (24)
+description: Announces a node's presence information to the network.
+status: Planned Upgrade
+---
+
+The `updatePresence` message is used by a node to broadcast its complete presence information to its peers. It serves as a full "business card," containing the node's wallet address, public key, and a list of all its network endpoints.
+
+This message is sent proactively when a node first connects to the network. It is distinct from a `keepAlivePresence` message, which is a lightweight heartbeat to prevent an existing presence entry from expiring.
+
+### Core Data Types
+
+*   **[`Presence` Object](../../10_data-structures/presences)**: The comprehensive data structure that contains a node's identity and list of contact addresses.
+
+## Payload Structure
+
+The entire payload of an `updatePresence` message consists of a single field: the raw bytes of a complete, serialized `Presence` object.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `presenceData` | `Presence` Object | * | * | The full binary representation of the sender's `Presence` object. For a detailed breakdown, see the **[Presence data structure documentation](../../10_data-structures/presences)**. |
+
+## Behavioral Notes
+
+*   **Recipient's Action:** A node receiving an `updatePresence` message MUST perform the following steps:
+    1.  Deserialize the payload into a `Presence` object.
+    2.  Perform full validation on the `Presence` object. This includes verifying the signature of each nested `PresenceAddress` entry against the public key provided in the top-level `Presence` object.
+    3.  If the `Presence` is valid, the node updates its local Presence List, replacing any existing entry for that wallet address with the new data.
+
+*   **Propagation:** Master Nodes that receive and validate a new `updatePresence` message may propagate it to their own peers to ensure the information is disseminated throughout the  network.

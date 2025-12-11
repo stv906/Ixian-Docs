@@ -1,0 +1,110 @@
+---
+title: verifyMiningSolution
+description: Verifies if a given Proof-of-Work nonce is a valid solution for a specific block at a certain difficulty.
+status: Finalized
+---
+
+## Introduction
+
+The `verifyMiningSolution` method is a utility endpoint designed for external miners and mining pools. It allows them to check whether a Proof-of-Work (PoW) `nonce` they have found is a valid solution for a given block at a specific difficulty, without needing to construct and submit a full block candidate.
+
+This endpoint performs the verification calculation locally using the node's current blockchain context. It is an essential tool for pool operators to validate shares submitted by miners and for solo miners to confirm their own work before broadcasting it.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `nonce` | `string` | Yes | The Proof-of-Work solution to verify, encoded as a hexadecimal string. |
+| `blocknum` | `integer` | Yes | The block number (height) for which the nonce was calculated. |
+| `diff` | `integer` | Yes | The difficulty target against which the nonce should be validated. This is typically the block's difficulty. |
+
+### Example POST Request
+
+```json
+POST /verifyMiningSolution
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "verifyMiningSolution",
+  "params": {
+    "nonce": "000000000000000000000000000000000000000000000000123456789abcdef0",
+    "blocknum": 69500,
+    "diff": 25000000
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /verifyMiningSolution?nonce=...&blocknum=69500&diff=25000000
+```
+
+---
+
+## Response
+
+The `result` is a boolean value indicating whether the provided solution is valid.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `boolean` | `true` if the nonce is a valid solution; `false` otherwise. |
+
+### Example Success Response (Valid Solution)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": true,
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Success Response (Invalid Solution)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": false,
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Parameter 'nonce' is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **DLT Nodes Only:** This RPC call is specific to DLT nodes and requires access to the blockchain to function.
+*   **Local Verification:** The operation is performed entirely locally on the node. It fetches the specified block from its own database and runs the PoW verification algorithm. It does not involve any network communication.
+*   **Solver Address Context:** A critical detail is that the verification is performed **in the context of the node's primary wallet address**. The PoW hash input includes the solver's address. This endpoint implicitly uses the address of the node's own loaded wallet as the `solver_address`. For verification to succeed, an external miner must have constructed their hash using this same address.
+*   **Block Version Dependency:** The PoW hashing algorithm changed at block version 10. This endpoint automatically handles the logic:
+    *   For `blocknum` corresponding to a block with version `< 10`, it uses the `addressWithChecksum` of the solver.
+    *   For `blocknum` corresponding to a block with version `>= 10`, it uses the `addressNoChecksum` of the solver.
+    External miner implementations must be aware of this distinction.
+*   **Verification vs. Submission:** This endpoint only *verifies* work. A `true` response does not mean a block has been submitted or accepted. It is a mathematical check, not a network action.

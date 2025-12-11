@@ -9,6 +9,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
+import searchData from "@/public/search-data/documents.json"
+
 export default function PageBreadcrumb({ paths }: { paths: string[] }) {
   return (
     <div className="pb-5">
@@ -27,11 +29,11 @@ export default function PageBreadcrumb({ paths }: { paths: string[] }) {
                 <BreadcrumbItem>
                   {index < paths.length - 1 ? (
                     <BreadcrumbLink href={href} className="a">
-                      {toTitleCase(path)}
+                      {toTitleCase(path, href)}
                     </BreadcrumbLink>
                   ) : (
                     <BreadcrumbPage className="b">
-                      {toTitleCase(path)}
+                      {toTitleCase(path, href)}
                     </BreadcrumbPage>
                   )}
                 </BreadcrumbItem>
@@ -44,7 +46,11 @@ export default function PageBreadcrumb({ paths }: { paths: string[] }) {
   )
 }
 
-function toTitleCase(input: string): string {
+function toTitleCase(input: string, href: string): string {
+  const page = searchData.find((x) => "/docs" + x.slug === href)
+  if (page) {
+    return page.title
+  }
   const words = input.split("-")
   const capitalizedWords = words.map(
     (word) => word.charAt(0).toUpperCase() + word.slice(1)

@@ -1,0 +1,123 @@
+---
+title: extendName
+description: Creates and broadcasts a transaction to extend the registration period for a name in the Ixian Naming System (IXI-NS).
+status: Proposed
+---
+
+## Introduction
+
+The `extendName` method allows the owner of a name to renew its registration, pushing its expiration date further into the future. It functions similarly to `registerName` by creating, funding, and broadcasting the appropriate transaction.
+
+Crucially, this method first queries the DLT for the existing name's record to retrieve its `capacity`. This value is then used to accurately calculate the cost of the extension period. The name's owner, recovery address, and capacity cannot be changed with this method.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | The existing name to extend. |
+| `extensionTime` | `string` | Yes | The duration to add to the registration, in blocks. Must be a multiple of `86400`. |
+
+### Example POST Request
+
+```json
+POST /extendName
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "extendName",
+  "params": {
+    "name": "my-cool-name",
+    "extensionTime": "518400"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /extendName?name=my-cool-name&extensionTime=518400
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object representing the name extension.
+
+### Result: `Transaction` Object Structure
+
+A successful call returns a full `Transaction` object. The structure is nearly identical to a registration transaction:
+
+*   **`type`**: Will be `4`.
+*   **`to`**: The recipient address will be the network's special address for name operations: `125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25`.
+*   **`amount`**: The calculated cost for the extension period.
+*   **`data`**: A hex-encoded string containing the serialized extension details (a unique prefix, the hashed name, and the extension time).
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "id": "446-iSQxh1KZf5bHADpfg9rFnBQWJksF8jtNbQEGMkvR92rskETRK46cvov29Rko",
+    "version": 7,
+    "blockHeight": "446",
+    "nonce": "93785",
+    "signature": "5155031ee73...13e3f077009811",
+    "pubKey": "JHgSS7hbUN...Ywi5i2EPPWjtyTRYRN",
+    "data": "0341409...02f0d00",
+    "timestamp": "1711931901",
+    "type": "4",
+    "amount": "50000.00000000",
+    "applied": "0",
+    "checksum": "7f72ba1ae8b47b3efb5283fbef7256d861d9e8c2fbdf436faedb4042769991500f41ab8b066dd159a4fcaabc",
+    "from": {
+      "1": "50000.01000000"
+    },
+    "to": {
+      "125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25": "50000.00000000"
+    },
+    "fee": "0.01000000",
+    "totalAmount": "50000.01000000"
+  },
+  "error": null,
+  "id": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Missing parameter 'name'"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **State Lookup:** This call performs a read operation on the DLT **before** creating the transaction. It must find the existing name record to retrieve its `capacity` for the cost calculation. If the name does not exist, the call will fail.
+*   **Cost Calculation:** The cost of extension is based on the name's *existing* capacity. The formula is:
+    `Cost = PricePerUnit * ExistingCapacity (in kB) * (ExtensionTime (in blocks) / MonthInBlocks)`
+*   **Consensus Constants:** The cost formula relies on fixed consensus parameters:
+    *   `PricePerUnit`: `500.00000000` IXI
+    *   `MonthInBlocks`: `86400` (approximately 30 days)
+*   **Parameter Constraints:**
+    *   `extensionTime` must be a multiple of `86400`.
+    *   The total new registration period (`current expiry + extensionTime`) cannot exceed the maximum allowed registration time of `2102400` blocks.
+*   **Transaction Funding:** The transaction is automatically funded from the node's primary wallet. The wallet must have sufficient funds to cover the calculated extension cost plus the network fee.
+*   **Transaction Broadcast:** A successful response indicates that the transaction has been created and broadcast to the network. Confirmation is not guaranteed and should be monitored using the returned transaction `id`.

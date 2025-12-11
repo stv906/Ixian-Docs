@@ -1,0 +1,118 @@
+---
+title: sendChatMessage
+description: Sends an end-to-end encrypted chat message to an approved contact on the Ixian S2 network.
+status: Finalized
+---
+
+## Introduction
+
+The `sendChatMessage` method is the primary endpoint for sending peer-to-peer messages over the Ixian S2 streaming layer. It can be used to facilitate secure, decentralized communication.
+
+When called, this method first saves the message to the node's local history for the specified contact. It then encrypts the message and dispatches it over the S2 network to the recipient. The entire process requires a pre-existing, approved connection with the contact.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the recipient contact. |
+| `message` | `string` | Yes | The plain-text content of the message to be sent. |
+| `channel` | `integer`| Yes | The communication channel ID to send the message on (e.g., `0` for primary chat). |
+
+### Example POST Request
+
+```json
+POST /sendChatMessage
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendChatMessage",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "message": "Hello, Ixian!",
+    "channel": 0
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /sendChatMessage?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&message=Hello, Ixian!&channel=0
+```
+
+---
+
+## Response
+
+If successful, the `result` is the full `Contact` object of the recipient. This can be used to check the contact's latest known status.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "nickname": "Viper",
+    "approved": true,
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If the contact does not exist:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}
+```
+
+If a required parameter like `message` is missing:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "message parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Prerequisite:** A secure communication channel must be fully established with the contact before messages can be sent. The contact must exist in the local friend list and have a status of `approved`.
+*   **End-to-End Encryption:** The `message` content is encrypted locally using the established session keys before being transmitted. Only the intended recipient can decrypt it.
+*   **Local Persistence:** The message is added to the node's local message history for that contact *before* it is sent over the network. A successful API response confirms the message has been queued for sending, not that it has been delivered.
+*   **Channels:** Channels are logical streams within a single contact connection, allowing for different types of communication (e.g., chat, file transfers, application data) to be multiplexed. Channel `0` is typically used for standard text chat.
+*   **Asynchronous Delivery:** Network delivery is asynchronous. The actual time of delivery depends on network conditions and the recipient's online status.

@@ -1,0 +1,26 @@
+---
+title: requestFundsResponse (18)
+description: The response to a requestFunds message.
+---
+
+The `requestFundsResponse` message is sent in reply to a `requestFunds` message. It indicates whether the request was accepted (and fulfilled with a transaction) or declined.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string.
+
+## Payload Structure
+
+The payload is a composite string containing the ID of the original `requestFunds` message and, optionally, the ID of the fulfillment transaction.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `response` | `string` | * | * | A string with the format `originalMessageId:transactionId` if accepted, or just `originalMessageId` if declined. |
+
+## Behavioral Notes
+
+*   **Structure:** The `response` string is parsed by splitting it with a colon (`:`).
+    *   If two parts are present, the request was accepted. The first part is the ID of the original `requestFunds` message, and the second part is the new transaction ID.
+    -   If only one part is present, the request was declined. This part is the ID of the original `requestFunds` message.
+*   **Sender Action:** After the user acts on a payment request (accepts and sends, or declines), the client sends this message back to the original requester.
+*   **Recipient Action:** The original requester receives this message and updates the status of their sent request in the chat history, marking it as either completed (with a link to the transaction) or declined.

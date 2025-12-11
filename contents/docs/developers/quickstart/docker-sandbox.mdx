@@ -1,0 +1,373 @@
+---
+title: "Docker Sandbox Quick Start"
+description: "Get a complete local Ixian test network running in 5 minutes with DLT nodes, S2 streaming nodes, and Explorer - no compilation required"
+---
+
+## Overview
+
+The Ixian Sandbox provides a complete local test network with **zero setup complexity**. Perfect for:
+
+- **Testing integrations** before hitting production
+- **Learning Ixian** without mainnet IXI tokens
+- **Development workflows** with instant blockchain feedback
+- **CI/CD testing** for automated integration tests
+
+**What you get:**
+- 2 DLT nodes forming a regtest network
+- 10 S2 streaming nodes
+- Ixian Explorer (blockchain browser)
+- All services with accessible APIs
+
+**Time to running:** ~5 minutes (depending on Docker image builds)
+
+---
+
+## Prerequisites
+
+You'll need Docker Compose installed. See [Docker's installation guide](https://docs.docker.com/compose/install/).
+
+**System Requirements:**
+- Docker Engine 20.10+
+- Docker Compose v2+
+- 4GB+ RAM available
+- 10GB+ disk space
+
+---
+
+## Quick Start
+
+### 1. Clone the Ixian Sandbox Repository
+
+```bash
+**Test the DLT API:**
+```bash
+curl http://localhost:8081/status
+curl http://localhost:8081/blockheight
+```
+### 2. Start the Sandbox
+
+```bash
+./sandbox up
+```
+
+The first run will:
+1. Pull base images from Docker Hub
+2. Clone Ixian repositories from GitHub
+
+**Expected time:** 3-5 minutes for first build, ~30 seconds for subsequent starts.
+
+### 3. Verify Everything is Running
+
+Once started, you should see services running. Access the APIs:
+
+| Service | API Endpoint | Purpose |
+|---------|-------------|----------|
+| **DLT Node 1** | http://localhost:8081/ | Primary blockchain node |
+| **DLT Node 2** | http://localhost:8082/ | Secondary blockchain node |
+| **S2 Nodes (API)** | http://localhost:8600/ - 8609/ | Streaming nodes REST API (10 instances) |
+| **Explorer** | https://localhost:443/ | Blockchain explorer |
+
+**Test the DLT API:**
+```bash
+curl http://localhost:8081/status
+```
+
+You should see JSON with blockchain status, block height, and connected peers.
+
+---
+
+## Understanding the Test Network
+
+### REGTEST Mode
+
+- ✅ **Isolated network** - completely separate from mainnet
+- ✅ **Pre-funded wallet** - starts with test IXI tokens
+This is **not** the public Ixian network - it's a private test environment.
+
+### Network Topology
+```
+┌─────────────────┐         ┌─────────────────┐
+│   DLT Node 1    │◄───────►│   DLT Node 2    │
+│   :10234        │         │   :10235        │
+└────────┬────────┘         └────────┬────────┘
+         │                           │
+         │ Seed Node                 │ Seed Node
+         │                           │
+         ▼                           ▼
+    ┌────────────────────────────────────┐
+    │      S2 Streaming Nodes (10)       │
+    │  :10600 - :10609 (P2P ports)       │
+    │  :8600 - :8609 (API ports)         │
+    └────────────────────────────────────┘
+```
+
+- **DLT nodes** maintain the blockchain and consensus
+- **S2 nodes** provide streaming connections for lightweight clients
+- All services auto-discover each other via the seed node (DLT Node 1)
+
+### Docker Networking Explained
+
+The sandbox uses Docker's internal networking with port mapping:
+
+**From your host machine (your computer):**
+- Access DLT APIs via `localhost:8081` and `localhost:8082`
+- Access S2 APIs via `localhost:8600-8609`
+- These are **port mappings** from Docker's internal network
+- Use these for `curl` commands and browser access
+
+**Inside Docker containers (between nodes):**
+- Nodes communicate using internal IPs like `10.24.231.1:10234`
+- These are on the `ixian-network` Docker bridge network
+- Container hostnames: `ixian-dlt-1`, `ixian-dlt-2`, `ixian-s2-1`, etc.
+
+**What this means for your apps:**
+- ✅ Use `localhost:8081` for API calls from your host
+- ✅ Use `10.24.231.1:10234` when configuring clients to connect to DLT
+- ✅ Use container hostnames (`ixian-dlt-1:10234`) inside Docker containers
+- ❌ Don't mix localhost with internal IPs in the same config
+
+### Accessible P2P Ports
+
+**From your applications (Docker or local network):**
+- `10.24.231.1:10234` - DLT Node 1 P2P port
+- `10.24.232.128:10235` - DLT Node 2 P2P port
+- `10.24.232.129+:10600-10609` - S2 nodes P2P ports
+- Use these in your app's `addPeer` or connection configuration
+
+**Example configurations:**
+```ini
+# QuIXI config (connecting to sandbox)
+addPeer = 10.24.231.1:10234
+networkType = regtest
+
+# API testing from host
+curl http://localhost:8081/status
+```
+
+---
+
+## Basic Sandbox Commands
+
+The `sandbox` script provides convenient management commands:
+
+### Start and Stop
+
+```bash
+# Start everything
+./sandbox up
+
+# Stop without destroying data
+./sandbox stop
+
+# Start previously stopped sandbox
+./sandbox start
+
+# Stop and destroy all data
+./sandbox down
+```
+
+### Rebuilding
+
+```bash
+# Rebuild all images from source
+./sandbox build
+
+# Completely clean and rebuild
+./sandbox clean
+./sandbox up
+```
+
+### Updating Code
+
+```bash
+# Pull latest code from GitHub and rebuild
+./sandbox update
+```
+
+### Executing Commands
+
+```bash
+# Run commands inside a specific service
+./sandbox exec ixian-dlt-1 bash
+./sandbox exec ixian-s2 ps aux
+```
+
+---
+
+## Quick Test: Send a Transaction
+
+Once the network is running, you can test it by sending a transaction.
+
+### 1. Access DLT Node 1 Console
+
+```bash
+./sandbox exec ixian-dlt-1 bash
+```
+
+### 2. Check the Blockchain Status
+
+```bash
+curl localhost:8081/status
+```
+
+Look for:
+- `"blockHeight"` - should be increasing over time
+- `"connectedPeers"` - should show at least 1 (the other DLT node)
+- `"networkType": "regtest"` - confirms test mode
+
+### 3. View the Genesis Wallet
+
+The sandbox creates a pre-funded wallet with test IXI tokens. Check balances:
+
+```bash
+curl localhost:8081/wallet
+```
+
+You'll see addresses with `100000000000` (100 billion) test IXI tokens.
+
+---
+
+## Connecting Your Application
+
+Now that you have a local test network, connect your applications:
+
+### For Client Apps (C#/.NET)
+
+Configure your `IxianNode` to connect to the local S2 nodes:
+
+```csharp
+CoreConfig.testnet = true; // Use testnet/regtest settings
+
+// Connect to local S2 nodes instead of public network
+StreamClientManager.connectTo("10.24.231.1", 10234);
+```
+
+See the [Client App Quickstart](./client-app) for full details.
+
+### For QuIXI Bridge
+
+Point QuIXI to your local DLT node:
+
+```bash
+./quixi --networkType regtest --checksumLock DOCKER -n 10.24.231.1:10234
+```
+
+See the [QuIXI Integration Guide](./quixi-bridge) for configuration details.
+
+### For Testing Spixi Mini Apps
+
+Spixi doesn't directly support custom networks, but you can:
+1. Test P2P logic locally with mock sessions
+2. Use the sandbox to verify transaction logic via API calls
+3. Deploy to testnet before mainnet
+
+See the [Spixi Mini App Guide](./spixi-mini-app).
+
+---
+
+## Troubleshooting
+
+### Containers Won't Start
+
+**Check Docker is running:**
+```bash
+docker ps
+```
+
+**Check logs for errors:**
+```bash
+docker compose logs ixian-dlt-1
+docker compose logs ixian-s2
+```
+
+### Ports Already in Use
+
+If ports 8081, 8082, or 10234 are taken, edit `docker-compose.yml`:
+
+```yaml
+ports:
+  - "9081:8081"  # Change 8081 to 9081
+  - "10234:10234"
+```
+
+### Nodes Not Connecting
+
+**Check network connectivity:**
+```bash
+./sandbox exec ixian-dlt-1 ping ixian-dlt-2
+```
+
+**Restart the network:**
+```bash
+./sandbox down
+./sandbox up
+```
+
+### Performance Issues
+
+**Reduce S2 node replicas** - Edit `docker-compose.yml`:
+
+```yaml
+ixian-s2:
+  deploy:
+    mode: replicated
+    replicas: 3  # Reduce from 10 to 3
+```
+
+Then rebuild:
+```bash
+./sandbox down
+./sandbox up
+```
+
+---
+
+## Next Steps
+
+Now that you have a local test network:
+
+1. **[Build a Client App](./client-app)** - Connect to your local S2 nodes
+2. **[Integrate QuIXI](./quixi-bridge)** - Bridge REST/MQTT to your test network
+3. **[Development Workflows](../howto/local-dev-docker)** - Learn advanced testing patterns
+4. **[Deploy to Testnet](../../operators/dlt)** - Move to the public test network
+
+---
+
+## Sandbox Configuration
+
+### Environment Variables
+
+Customize behavior by editing `.env` or exporting variables:
+
+```bash
+# Branch selection
+export CORE_BRANCH="master"
+export DLT_BRANCH="master"
+export S2_BRANCH="master"
+
+# Network configuration
+export NETWORK_TYPE="REGTEST"
+export GENESIS_FUNDS="100000000000"
+```
+
+### Using Custom Wallets
+
+Provide your own wallet file:
+
+Edit `docker-compose.yml`:
+```yaml
+environment:
+  WALLET_FILE: "/app/my-wallet.ixi"
+  WALLET_PASSWORD: "your_password_here"
+```
+
+**Warning:** Only use test wallets in the sandbox. Never use mainnet private keys.
+
+---
+
+## Resources
+
+- **[Ixian Sandbox Repository](https://github.com/ixian-platform/Ixian-Sandbox)** - Full source and updates
+- **[Docker Compose Docs](https://docs.docker.com/compose/)** - Docker Compose reference
+- **[Local Development Guide](../howto/local-dev-docker)** - Advanced workflows and testing patterns
+- **[Operator Guides](../../operators)** - Running production nodes

@@ -1,0 +1,40 @@
+---
+title: transactionData2 (8)
+description: Transmits a complete, serialized Ixian Transaction object.
+status: Planned Upgrade
+---
+
+## Introduction
+
+The `transactionData2` message serves as the network envelope for a single, complete Ixian Transaction. Its payload is the fully serialized transaction data structure, including its type, amounts, source and destination wallets, and cryptographic signature.
+
+This message is used to send a specific transaction in response to a `getTransaction3` request or to propagate a new, unconfirmed transaction to peers.
+
+The payload of this message is a complete, serialized Transaction. For a definitive, field-by-field specification of the transaction structure, checksum calculations, and specialized data payloads, refer to the canonical **[Transaction Data Structure documentation](../../10_data-structures/transactions)**.
+
+---
+
+## Payload Summary
+
+The payload of the `transactionData2` message is a single byte stream representing a complete transaction, serialized according to its **v7 on-wire format**.
+
+The structure is composed of a header containing core metadata (`version`, `type`, `blockHeight`, `nonce`, `pubKey`), followed by lists of fund sources (`fromList`) and destinations (`toList`).
+
+For the precise layout, field definitions, and logic for specialized payloads (e.g., PoW solutions or multi-sig operations), please consult the canonical **[Transaction Data Structure documentation](../../10_data-structures/transactions)**.
+
+---
+
+## Checksum & Signature Verification
+
+To validate a transaction received via this message, a parser must perform the following steps:
+1.  Deserialize the transaction object from the message payload.
+2.  Re-serialize the transaction object, making sure to **exclude** the fields that are not part of the checksum calculation (e.g., `signature`, `data`, `applied`).
+3.  Prefix the resulting byte array with the `ixianChecksumLock` constant and calculate its `sha3_512sqTrunc` hash.
+4.  Use the `pubKey` and the `hash` to cryptographically verify the `signature`.
+
+The definitive list of excluded fields and the hashing algorithm are specified in the **[Transaction Data Structure documentation](../../10_data-structures/transactions)**.
+
+## Behavioral Notes
+
+*   This message is the standard response to a `getTransaction3` request for a specific TXID.
+*   Nodes may also use this message to "gossip" new, unconfirmed transactions to their peers, which the recipients will then attempt to add to their local transaction pool.

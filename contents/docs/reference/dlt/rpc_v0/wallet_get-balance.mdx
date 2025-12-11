@@ -1,0 +1,92 @@
+---
+title: getBalance
+description: Retrieves the current balance of a specified Ixian address from the blockchain state.
+status: Finalized
+---
+
+## Introduction
+
+The `getBalance` method is a fundamental read-only endpoint that queries the node's local copy of the DLT's `walletState` to retrieve the balance for any given Ixian address.
+
+This is a primary function for wallets, explorers, and any application that needs to check the funds associated with an address on the network.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58Check encoded Ixian address to query for its balance. |
+
+### Example POST Request
+
+```json
+POST /getBalance
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getBalance",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getBalance?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a string representing the total balance of the specified address.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The balance of the address. The value is formatted as a string to preserve full precision. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "12345.67890123",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the required `address` parameter is missing from the request.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Parameter 'address' is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **State-Based Query:** This is a read-only operation that consults the node's local copy of the blockchain state. The returned balance is only as current as the node's last synchronized block.
+*   **Full Precision:** The balance is returned as a string to prevent potential floating-point precision errors that can occur with large numbers in some JSON parsers. It is recommended to handle this value using a high-precision decimal library.
+*   **Universal Lookup:** This method can be used to check the balance of any address on the Ixian DLT, not just addresses managed by the node's local wallet.

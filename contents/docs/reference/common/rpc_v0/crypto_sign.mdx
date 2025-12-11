@@ -1,0 +1,106 @@
+---
+title: sign
+description: Creates a cryptographic signature for a given message or hash using a wallet's primary private key.
+status: Finalized
+---
+
+## Introduction
+
+The `sign` method is a general-purpose cryptographic utility that allows a client to generate a digital signature for an arbitrary piece of data. This is the fundamental operation used to prove ownership or control of a wallet's primary address without exposing the private key.
+
+The method can operate in two modes:
+1.  **Message Signing:** Provide a plain-text string, which the node will first hash and then sign.
+2.  **Hash Signing:** Provide a pre-computed hash, which the node will sign directly.
+
+The resulting signature can be verified by anyone who has the corresponding public key, providing a robust mechanism for off-chain authentication and data integrity checks.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters. At least one of `message` or `hash` must be provided.
+
+### Parameters
+
+| Name      | Type     | Required                 | Description                                                                                                                              |
+| :-------- | :------- | :----------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `wallet`  | `string` | No                       | The base58-encoded address of the wallet to use for signing. If omitted, it defaults to the node's primary wallet.                     |
+| `message` | `string` | **Yes** (if `hash` is not present) | A UTF-8 encoded string to be signed. The node will first compute a `sha3_5_12sqTrunc` hash of this message before signing.          |
+| `hash`    | `string` | **Yes** (if `message` is not present) | A hex-encoded string representing a pre-computed hash to be signed directly.                                                       |
+
+### Example POST Request (Signing a Message)
+
+```json
+POST /sign
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sign",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "message": "I hereby authorize the action dated 2025-11-13."
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (Signing a Hash)
+
+```
+GET /sign?wallet=...&hash=932a7271107c82239ec2ea46f861637e239057d884c8965fd0c029d871ea124a2b83285ff5c37f58f4348b82
+```
+
+---
+
+## Response
+
+The response `result` is a single hex-encoded string representing the generated cryptographic signature.
+
+### Result Fields
+
+| Name     | Type     | Description                    |
+| :------- | :------- | :----------------------------- |
+| `result` | `string` | The hex-encoded signature.     |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "6b26dd...cef7",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error is returned if neither of the required data parameters is provided.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Missing parameter 'message' or 'hash'."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+:::danger Security Warning: Avoid Blind Signing
+Never sign a `hash` provided by an untrusted third party. A malicious actor could craft a valid transaction that sends your funds to their address and ask you to sign its hash. If you sign it, you have authorized that transaction, potentially leading to a complete loss of funds.
+
+**Best Practice:** Always prefer to sign a human-readable `message` that your application has constructed. If you must sign a hash, ensure that it was generated from data that is fully known and trusted by your application.
+:::
+
+*   **Hashing Algorithm:** When the `message` parameter is used, the node first converts the string to UTF-8 bytes and then calculates a hash using the `sha3_512sqTrunc` algorithm. This resulting hash is what is actually signed. Verifiers of the signature must follow the exact same hashing procedure.
+*   **Primary Key Only:** The signature is **always** generated using the private key associated with the wallet's *primary address*. It cannot be used to sign with keys from other addresses within the same wallet.
+*   **Security:** This is a security-critical endpoint as it directly uses a wallet's private key. Access should be restricted to trusted clients.
+*   **Use Cases:** Common uses for this method include signing challenges for login systems, creating verifiable attestations, or proving ownership of an address for a service.

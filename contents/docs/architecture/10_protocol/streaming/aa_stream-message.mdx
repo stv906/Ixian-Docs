@@ -1,0 +1,131 @@
+---
+title: StreamMessage Envelope
+description: Specification for the StreamMessage, the secure envelope for the S2 overlay network.
+---
+
+The `StreamMessage` is the fundamental wrapper for all S2 communication. It provides routing information, a unique message ID, and the encrypted payload. Complete `StreamMessage` objects are tunneled across the DLT network using the [`s2data`](../core/b_s2-data) core protocol message.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`bool`**: A single byte, `0x00` for `false` and `0x01` for `true`.
+
+### Serialization Structure (v1)
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `version` | `IxiVarUInt` | The `StreamMessage` version (currently `1`). |
+| `id` | `IxiBytes` | A unique identifier for this message. |
+| `type` | `IxiVarUInt` | The message type. See `StreamMessageCode` table below. |
+| `encryptionType` | `IxiVarUInt`| The encryption scheme used. See `StreamMessageEncryptionCode` table below. |
+| `sender` | `IxiBytes` | The wallet address (without checksum) of the original sender. |
+| `recipient` | `IxiBytes` | The wallet address (without checksum) of the final recipient. |
+| `data` | `IxiBytes` | The encrypted payload, which contains a [`SpixiMessage`](./ab_spixi-message). |
+| `timestamp` | `IxiVarInt` | The Unix timestamp of the message's creation. |
+| `signature` | `IxiBytes` | A signature over the message checksum. **Present and required** if `encryptionType` is `rsa2`. **Not included in checksum.** |
+| `requireRcvConfirmation`| `bool` | A flag indicating if a delivery confirmation is expected. **Not included in checksum.** |
+
+### `StreamMessageCode`
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| `0` | `error` | An error message, sent only by S2 nodes (e.g., routing failure). |
+| `1` | `info` | A free, rate-limited message type for low-priority data. |
+| `2` | `data` | The standard message type for general data. |
+
+### `StreamMessageEncryptionCode`
+
+| Code | Name | Description |
+| :--- | :--- | :--- |
+| `3` | `rsa2` | **(Handshake)** A key-wrapping scheme for securely transporting key exchange materials (e.g., ML-KEM public keys). The payload is encrypted using the recipient's long-term RSA key for confidentiality, while the message's signature provides authenticity from the sender, preventing man-in-the-middle attacks. |
+| `4` | `spixi2` | **(Data Transfer)** A robust AEAD scheme deriving per-message keys for encrypting the actual data after a secure session has been established. |
+
+### Signature Generation
+
+1.  The `StreamMessage` is serialized **excluding the `signature` and `requireRcvConfirmation` fields**.
+2.  The `sha3_512` hash of this serialized data is calculated. This is the `checksum`.
+3.  The `signature` is a standard RSA signature of this `checksum`, created using the `sender`'s private key.
+
+### Cryptographic Context
+
+`StreamMessage` encryption schemes plug into the composite primitives defined in **[Cryptographic Primitives](../../cryptographic-primitives)**. Base long‑lived symmetric keys (AES‑256 and ChaCha20) are derived from the hybrid shared secret described there; this document only specifies how they are consumed at the envelope layer.
+
+### Checksum & Integrity
+
+| Version | Hash Function | Checksum Input | Excludes |
+| :--- | :--- | :--- | :--- |
+| `1` | `sha3_512` | Serialization type `checksum` | `signature`, `requireRcvConfirmation` |
+
+The `checksum` authenticates all routing and cryptographic metadata except the two excluded fields. When `rsa2` is used, the `signature` is is computed over the `checksum`.
+
+### AEAD Associated Data (AAD)
+
+For all schemes using AEAD (`spixi2`, inner portion of `rsa2`), the AAD MUST be:
+
+```
+AAD = id || IxiVarUInt(type) || IxiVarInt(timestamp)
+```
+
+This binds the message ID, type, and timestamp to the encryption, preventing undetected tampering even if the outer envelope is unsigned.
+
+### `rsa2` Payload Structure (Handshake Transport)
+
+`rsa2` wraps a one‑time `spixi2` encryption with an RSA‑4096 key wrap of ephemeral symmetric keys. It does **not** transport the long‑lived base keys (those come from the hybrid secret process in the primitives spec); instead it enables a sender to deliver a single encrypted message to a recipient for whom only the RSA public key is known.
+
+Steps (sender side):
+1. Generate 32‑byte ephemeral AES key `K_AES_e` and 32‑byte ephemeral ChaCha key `K_CHACHA_e` using a secure RNG.
+2. Perform `spixi2` encryption of the plaintext using `K_AES_e`, `K_CHACHA_e` (see below) with AAD defined above. Result: `Cipher_spixi2`.
+3. Encode `K_AES_e` and `K_CHACHA_e` each as `IxiBytes`, concatenate -> `EphemeralKeysBlob`.
+4. RSA‑encrypt `EphemeralKeysBlob` with recipient's RSA‑4096 public key. Result: `EncryptedKeys` (encoded as `IxiBytes`).
+5. Concatenate `EncryptedKeys || Cipher_spixi2`. This byte stream becomes the `data` field of the `StreamMessage`.
+6. Compute checksum and create RSA signature (required for `rsa2`).
+
+Receiver side:
+1. Parse `EncryptedKeys` (first `IxiBytes`).
+2. RSA‑decrypt -> split back into two `IxiBytes` -> `K_AES_e`, `K_CHACHA_e`.
+3. Decrypt remaining bytes with `spixi2` using recovered ephemeral keys and AAD.
+4. (If present) Verify signature over checksum before accepting payload.
+
+### `spixi2` Payload Structure (Per-Message Key Derivation)
+
+`spixi2` provides two layers of AEAD (AES‑GCM then ChaCha20‑Poly1305) with per‑message derived keys and IVs to eliminate nonce/key reuse risks.
+
+Steps (sender side):
+1. Generate a 64‑byte `message_nonce` via secure RNG.
+2. Derive per‑message AES secret: `H_AES = sha3_512sq( baseAES || message_nonce )`.
+	- `key_AES = H_AES[0..31]`
+	- `iv_AES = H_AES[32..43]` (12 bytes for GCM)
+3. Encrypt plaintext with AES‑GCM using `key_AES`, `iv_AES`, AAD.
+4. Derive per‑message ChaCha secret: `H_CHACHA = sha3_512sq( baseChaCha || message_nonce )`.
+	- `key_CHACHA = H_CHACHA[0..31]`
+	- `iv_CHACHA = H_CHACHA[32..43]` (12 bytes for ChaCha20‑Poly1305 variant)
+5. Encrypt AES ciphertext with ChaCha20‑Poly1305 using `key_CHACHA`, `iv_CHACHA`, same AAD.
+6. Encode `message_nonce` as `IxiBytes`, then append the length‑prefixed ChaCha ciphertext. Result becomes `data`.
+
+Receiver side:
+1. Read `message_nonce` (`IxiBytes`).
+2. Derive `key_CHACHA`, `iv_CHACHA` with base ChaCha key and nonce; decrypt outer layer (ChaCha20‑Poly1305) using AAD.
+3. Derive `key_AES`, `iv_AES` with base AES key and nonce; decrypt inner layer (AES‑GCM).
+4. Output plaintext payload (which is a serialized `SpixiMessage`).
+
+### Reproduction Summary
+
+To reproduce envelope cryptography:
+1. Obtain or derive base symmetric keys (see **[Cryptographic Primitives](../../cryptographic-primitives)**) for the peer session.
+2. Build AAD exactly as specified.
+3. Choose encryption type:
+	- `rsa2`: follow rsa2 steps; sign checksum.
+	- `spixi2`: follow spixi2 steps; signature optional (not used unless explicitly set via `rsa2`).
+4. Serialize fields; compute checksum (version‑dependent hash); append signature if required.
+5. Wrap entire serialized object in the outer transport (`s2data` message) unchanged.
+
+### Security Properties (Informative)
+
+| Property | Mechanism |
+| :--- | :--- |
+| Replay resistance (payload) | Nonce‑derived per‑message keys (`message_nonce`) |
+| Integrity of routing fields | Checksum + optional RSA signature |
+| Confidentiality (`spixi2`) | Dual Encryption (AES‑GCM -> ChaCha20‑Poly1305) |
+| Ephemeral confidentiality (`rsa2`) | RSA key wrap of symmetric keys |
+| Tamper detection (unsigned) | AEAD AAD binding `id`, `type`, `timestamp` |

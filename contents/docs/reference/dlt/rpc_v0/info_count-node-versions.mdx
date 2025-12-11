@@ -1,0 +1,77 @@
+---
+title: countNodeVersions
+description: Retrieves a summary of all node versions currently active on the network, based on received presence data.
+status: Finalized
+---
+
+## Introduction
+
+The `countNodeVersions` method is a network monitoring endpoint that provides a census of the different software versions being run by nodes on the Ixian network. It works by scanning the node's local presence list, which is a cache of information broadcast by peers, and aggregates the version strings it finds.
+
+This is a valuable tool for network administrators and developers to track the adoption rate of new software updates, monitor network health, and identify nodes that may be running outdated or deprecated versions.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /countNodeVersions
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "countNodeVersions",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /countNodeVersions
+```
+
+---
+
+## Response
+
+The `result` is a JSON object where each key is a unique node version string and its corresponding value is the number of times that version was seen in the presence list.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `[version-string]` | `integer` | A key-value pair where the key is the node version (e.g., "xdc-0.9.7-r") and the value is the count of nodes reporting that version. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "xdc-0.9.6": 58,
+    "xdc-0.9.6a": 18,
+    "xs2c-0.9.3b": 5,
+    "xdc-0.9.7-r": 13,
+    "xdc-0.9.7-s": 6,
+    "xs2c-0.9.3a": 1,
+    "xs2c-0.9.2": 1
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Data Source:** The count is derived from the node's local `PresenceList`. This list is built from presence data broadcast by peers across the network. The completeness of this data depends on the node's connectivity and how long it has been online.
+*   **Node's Perspective:** The results represent the network's composition as seen by the specific node being queried. While it's generally a very good sample, it may not be a 100% complete or globally consistent count at any given instant.
+*   **Counting Method:** The method iterates through every presence *address* known to the node. If a single peer broadcasts its presence using multiple distinct addresses or configurations, it may be counted more than once.
+*   **Ephemeral Data:** Presence information is temporary and expires after a set period. The count includes all nodes whose presences are currently considered active and have not yet expired.

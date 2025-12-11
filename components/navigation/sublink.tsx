@@ -23,14 +23,13 @@ export default function SubLink(
   props: Path & { level: number; isSheet: boolean }
 ) {
   const path = usePathname()
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(path.startsWith(props.href))
 
   useEffect(() => {
     if (
       isRoute(props) &&
       props.href &&
-      path !== props.href &&
-      path.includes(props.href)
+      path.startsWith(props.href)
     ) {
       setIsOpen(true)
     }
@@ -41,7 +40,7 @@ export default function SubLink(
   }
 
   const { title, href, items, noLink, level, isSheet } = props
-
+  
   const Comp = (
     <Anchor activeClassName="text-primary text-sm font-medium" href={href}>
       {title}
@@ -92,7 +91,7 @@ export default function SubLink(
 
               const modifiedItems = {
                 ...innerLink,
-                href: `${href}${innerLink.href}`,
+                href: `/docs${innerLink.href}`,
                 level: level + 1,
                 isSheet,
               }

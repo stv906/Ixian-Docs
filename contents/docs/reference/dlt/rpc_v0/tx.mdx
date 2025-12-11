@@ -1,0 +1,110 @@
+---
+title: tx
+description: Retrieves a paginated list of transactions, combining confirmed blockchain transactions with unconfirmed mempool transactions.
+status: Finalized
+---
+
+## Introduction
+
+The `tx` method provides a paginated view of the node's transaction history. It's a powerful endpoint that seamlessly combines two sources: the historical, confirmed transactions from the blockchain and the live, unconfirmed transactions from the memory pool.
+
+The method first retrieves the most recently applied transactions from the blockchain. If the requested page extends beyond the available history, it continues by listing unapplied transactions currently in the mempool. This provides a comprehensive, chronological view of the network's activity as seen by the node.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `fromIndex` | `integer` | No | The starting index (offset) for the transaction list. Defaults to `0`. |
+| `count` | `integer` | No | The maximum number of transactions to return in a single page. Defaults to `50`. |
+
+### Example POST Request
+
+```json
+POST /tx
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "tx",
+  "params": {
+    "fromIndex": 0,
+    "count": 2
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /tx?fromIndex=0&count=2
+```
+
+---
+
+## Response
+
+The `result` is a JSON object where each key is a unique transaction ID and its corresponding value is the full `Transaction` object.
+
+### Result Structure
+
+The returned object is a map, not an array.
+
+```json
+{
+    "transaction-id-1": { ...Transaction Object 1... },
+    "transaction-id-2": { ...Transaction Object 2... },
+    ...
+}
+```
+
+The structure of the inner `Transaction` object is identical to the one defined in the [`getTransaction`](./tx_get-transaction#result-1-transaction-object-default) documentation.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR": {
+      "id": "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR",
+      "version": 7,
+      "blockHeight": "69441",
+      "type": "2",
+      "amount": "1000.06798237",
+      "applied": "69442",
+      "from": { "1": "1000.06798237" },
+      "to": { "...": "..." },
+      ...
+    },
+    "68896-24JTma56fubZkntM9tuAHkX5bdmMBgLAdWoFkH79iqEDwfVrftzAFxeEDtGKc": {
+      "id": "68896-24JTma56fubZkntM9tuAHkX5bdmMBgLAdWoFkH79iqEDwfVrftzAFxeEDtGKc",
+      "version": 7,
+      "blockHeight": "68896",
+      "type": "0",
+      "amount": "1000.00000000",
+      "applied": "68897",
+      "from": { "...": "..." },
+      "to": { "...": "..." },
+      ...
+    }
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Combined Data Source:** This endpoint provides a unified view of transactions. It starts with confirmed (applied) transactions and, if necessary, continues with unconfirmed (unapplied) transactions from the mempool to fulfill the requested `count`.
+*   **Pagination:** Use the `fromIndex` and `count` parameters to page through the transaction history. For example, to get the second page of 50 transactions, you would use `fromIndex: 50` and `count: 50`.
+*   **Response Format:** Note that the response is a JSON object (a map of transaction IDs to transaction objects), not a simple array. This allows for quick lookups by transaction ID on the client side but requires parsing as an object.
+*   **Order:** The primary sort order is by confirmation status (applied first, then unapplied) and then generally by the order in which the node processed them.

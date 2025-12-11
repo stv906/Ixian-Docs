@@ -1,0 +1,26 @@
+---
+title: appEndSession (31)
+description: Terminates an active Mini-App session.
+---
+
+The `appEndSession` message is sent to gracefully terminate an active Mini-App session. Either party in the session can send this message to signal that they are ending their participation.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is an `AppDataMessage` object, identifying the session being terminated.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier of the active session being terminated. |
+| `data` | `IxiBytes` | 0 | * | Optional. Application-specific data providing context for the session termination (e.g., reason code, final state). |
+
+## Behavioral Notes
+
+*   **Trigger:** This message is sent when either participant in an active Mini-App session wants to end it gracefully.
+*   **Bilateral Termination:** Either the session initiator or the recipient can send this message. The other party should acknowledge the termination and clean up session resources.
+*   **Clean Shutdown:** Unlike abrupt disconnections, this provides an orderly way to close a session, allowing apps to save state or display closure notifications.
+*   **Resource Cleanup:** Upon receiving `appEndSession`, both parties should stop sending `appData` messages for this session ID and release associated resources.

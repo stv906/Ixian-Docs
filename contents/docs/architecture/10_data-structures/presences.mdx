@@ -1,0 +1,62 @@
+---
+title: Presence
+description: The data structure for network discovery, advertising a node's identity, public key, and contact addresses.
+status: Planned Upgrade
+---
+
+## Introduction
+
+A `Presence` object is a node's business card on the Ixian network. It bundles a node's identity (wallet address and public key) with a list of one or more network endpoints, called `PresenceAddress`es. This allows other nodes to discover and connect to it. A node broadcasts its `Presence` to the network, and Master Nodes collect these broadcasts to build a distributed network map known as the Presence List.
+
+This document describes the on-wire serialization formats for the `Presence` container and its nested `PresenceAddress` and `SignerPowSolution` structures.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](./ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](./ixi-bytes)**.
+*   **`string`**: A standard UTF-8 encoded string, prefixed with its length.
+*   **`char`**: A single byte representing a character.
+
+## Top-Level Presence Structure (v1)
+
+This is the main container object.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `version` | `IxiVarUInt` | `1` | | The `Presence` structure version. |
+| `wallet` | `IxiBytes` | * | * | The wallet address of the node. |
+| `pubkey` | `IxiBytes` | * | * | The public key associated with the wallet address. |
+| `metadata` | `IxiBytes` | 0 | * | Optional, application-specific metadata. |
+| `addressCount`| `IxiVarUInt` | 1 | * | The number of `PresenceAddress` entries that follow. |
+| `addresses` | `PresenceAddress[]`| * | * | An array of contact addresses for the node. |
+
+## PresenceAddress Structure (v2)
+
+Each `Presence` object contains one or more `PresenceAddress` entries, each representing a specific client instance or endpoint for the node. Each `PresenceAddress` is individually signed.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `version` | `IxiVarUInt` | `2` | | The `PresenceAddress` structure version. |
+| `device` | `IxiBytes` | * | * | A unique identifier for this specific device or client instance. |
+| `address` | `string` | * | * | The network contact address (e.g., "123.45.67.89:10234"). |
+| `type` | `char` | 1 | 1 | A character code for the node type: 'M' (Master), 'H' (Full History), 'R' (Relay), 'C' (Client). |
+| `nodeVersion` | `string` | * | * | The version string of the Ixian node software. |
+| `lastSeenTime`| `IxiVarInt` | * | * | The Unix timestamp when this presence entry was last updated. |
+| `signature` | `IxiBytes` | * | * | A signature over the checksum of this `PresenceAddress` entry, created with the node's private key. |
+| `powSolution` | `IxiBytes` | 0 | * | Optional. A serialized `SignerPowSolution` object, required for 'M' and 'H' type nodes. |
+
+## SignerPowSolution Structure
+
+This structure provides a Proof-of-Work solution that is required for Master Nodes to be listed in the Presence List. It proves the node has expended computational effort.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | * | * | The block number this PoW solution is valid for. |
+| `solution` | `IxiBytes` | 1 | 64 | The nonce or solution that satisfies the PoW challenge. |
+| `signingPubKey`| `IxiBytes` | * | * | The public key used in the PoW calculation. |
+
+## Behavioral Notes
+
+*   **Individual Signatures:** The top-level `Presence` object is an unsigned container. Security and authenticity are enforced at the `PresenceAddress` level, where each entry is individually signed. A recipient MUST validate the signature of each `PresenceAddress` against the `pubkey` from the parent `Presence` object.
+*   **PoW Requirement:** Master Nodes (`type = 'M'`) and Full History Nodes (`type = 'H'`) MUST include a valid `SignerPowSolution` in their `PresenceAddress` entries. Other nodes can omit this field. The PoW difficulty is adjusted dynamically by the network.
+*   **Note:** Currently, all Master nodes also function as Full History nodes, as the distinction is not yet implemented in the codebase.

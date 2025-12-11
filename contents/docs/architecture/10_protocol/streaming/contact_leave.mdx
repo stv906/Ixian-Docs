@@ -1,0 +1,25 @@
+---
+title: leave (37)
+description: A notification that a user is leaving a group chat.
+---
+
+The `leave` message is sent by a user to a bot to request removal from a group chat or channel managed by that bot. The message is signed to prove that the request is authentic.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains the public key of the user who is leaving, which is used for signature verification.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `userPubKey` | `IxiBytes` | * | * | The public key of the user initiating the leave request. |
+
+## Behavioral Notes
+
+*   **Target:** This message is always sent to a bot's address. The `friend` object in the sending context is the bot itself.
+*   **Signature:** The `StreamMessage` containing this payload MUST be signed with the private key corresponding to `userPubKey`.
+*   **Bot Action:** Upon receiving a `leave` message, the bot verifies the signature. If valid, it removes the user from its internal list of group members and stops sending them messages for that group. The bot should then respond with a `leaveConfirmed` message.
+*   **Client Action:** After sending `leave`, the user's client should mark the bot contact as `pendingDeletion` and await confirmation before removing it from the user's contact list.

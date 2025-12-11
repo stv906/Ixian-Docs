@@ -1,0 +1,75 @@
+---
+title: shutdown
+description: Initiates a graceful shutdown of the Ixian node.
+status: Finalized
+---
+
+## Introduction
+
+The `shutdown` method is an administrative endpoint that instructs the Ixian node to begin a graceful shutdown sequence. This is the preferred method for stopping the node programmatically, as it ensures all data is saved, connections are closed cleanly, and the risk of data corruption is minimized.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /shutdown
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "shutdown",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /shutdown
+```
+
+---
+
+## Response
+
+The response is a simple confirmation message indicating that the shutdown process has been initiated.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Node shutdown". |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "Node shutdown",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This method does not have specific application-level errors. If an error occurs, it will likely be a general RPC server or transport-level issue.
+
+---
+
+## Behavioral Notes
+
+*   **Graceful Shutdown:** This command triggers a controlled shutdown process. The node will:
+    *   Stop accepting new connections.
+    *   Attempt to finish any in-progress tasks.
+    *   Save the current state of the wallet and blockchain data to disk.
+    *   Close all network connections gracefully.
+    *   Terminate the process.
+*   **Irreversible Action:** Once this command is successfully executed, the node process will terminate. The RPC server will become unavailable, and the node will need to be manually or automatically restarted to resume operation.
+*   **Security:** As this is a powerful administrative command, access to this RPC endpoint should be restricted, for example, by binding the RPC server to a local interface (`localhost`) or using a firewall to prevent unauthorized remote access.

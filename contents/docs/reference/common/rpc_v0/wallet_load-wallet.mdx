@@ -1,0 +1,98 @@
+---
+title: loadWallet
+description: Loads and decrypts a wallet file from the node's local filesystem, making it active for use in other API calls.
+status: Finalized
+---
+
+## Introduction
+
+The `loadWallet` method is a state-changing administrative endpoint that loads a wallet from a file on the node's local filesystem into active memory. Once a wallet is loaded, it becomes available for use in all other RPC methods that interact with wallet data (e.g., `addTransaction`, `myWallet`, `getTotalBalance`).
+
+This method is essential for initializing a node with the wallets it needs to manage or for dynamically adding new wallets to a running node.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters. **`POST` is strongly recommended for security reasons.**
+
+### Parameters
+
+| Name       | Type     | Required | Description                                                               |
+| :--------- | :------- | :------- | :------------------------------------------------------------------------ |
+| `file`     | `string` | Yes      | The filename (and optional path) of the wallet file on the node's server. |
+| `password` | `string` | Yes      | The password required to decrypt the specified wallet file.               |
+
+### Example POST Request
+
+```json
+POST /loadWallet
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "loadWallet",
+  "params": {
+    "file": "my_cold_storage.wal",
+    "password": "MySuperSecretPassword123"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+:::danger Security Warning
+Sending a password in a URL via a `GET` request is **highly discouraged**. It may be logged in server logs, browser history, and network devices. Use `POST` instead.
+:::
+
+```
+GET /loadWallet?file=my_cold_storage.wal&password=MySuperSecretPassword123
+```
+---
+
+## Response
+
+If the wallet is loaded and decrypted successfully, the response `result` is a single string containing the primary address of that wallet.
+
+### Result Fields
+
+| Name     | Type     | Description                                               |
+| :------- | :------- | :-------------------------------------------------------- |
+| `result` | `string` | The base58-encoded primary address of the loaded wallet. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error is returned if decryption fails due to an incorrect password or if the file cannot be found.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32000,
+        "message": "Error occurred while reading wallet file - incorrect password or file doesn't exist."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Security:** The password is sent in plaintext over the HTTP connection to the RPC server. This connection **must** be secured (e.g., via a TLS reverse proxy or by only being accessible on a trusted local network) to prevent password interception.
+*   **Local Filesystem Only:** The `file` parameter refers to a path on the **server's filesystem** where the DLT node is running. This is **not a file upload**. The wallet file must be placed on the server beforehand.
+*   **Stateful Operation:** This is a state-changing call. A successful execution makes the wallet active on the node until the node is restarted. The loaded wallet can then be referenced by its primary address in the `wallet` parameter of other RPC calls.
+*   **Idempotency:** If a wallet file is already loaded, calling `loadWallet` again for the same file will succeed without reloading it and will simply return the wallet's primary address.
+*   **Address Scanning:** The first time a wallet is loaded, the node automatically triggers a background process (`scanForLostAddresses`) to scan the blockchain for all addresses and transactions associated with that wallet. This process can be resource-intensive and may take some time to complete depending on the age of the wallet.

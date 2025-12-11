@@ -1,0 +1,93 @@
+---
+title: validateAddress
+description: Checks if a given Ixian address string is structurally valid, including its checksum.
+status: Finalized
+---
+
+## Introduction
+
+The `validateAddress` method is a simple utility endpoint used to verify the structural integrity of an Ixian address. It performs two key checks:
+1.  It verifies that the address is a valid Base58Check-encoded string.
+2.  It validates the internal checksum of the decoded address to ensure it has not been corrupted or mistyped.
+
+This endpoint is the recommended way to validate user input before sending a transaction or storing an address, preventing errors caused by typos or malformed data.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name      | Type     | Required | Description                                          |
+| :-------- | :------- | :------- | :--------------------------------------------------- |
+| `address` | `string` | Yes      | The base58-encoded Ixian address string to validate. |
+
+### Example POST Request
+
+```json
+POST /validateAddress
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "validateAddress",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /validateAddress?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+If the address is valid, the response `result` is a simple confirmation string. If invalid, an error object is returned.
+
+### Result Fields (on Success)
+
+| Name     | Type     | Description                                |
+| :------- | :------- | :----------------------------------------- |
+| `result` | `string` | The static string `"OK"` if validation passes. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "OK",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the address is not valid Base58Check or fails the checksum verification.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid address was specified"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Structural Validation Only:** This method **only** checks if the address format and checksum are correct. A successful response does not imply that the address exists on the blockchain, and has a balance.
+*   **Use Case:** This endpoint is primarily intended for input validation in user interfaces. For example, a wallet application should call this method on a recipient address field to provide immediate feedback to the user before they attempt to build or send a transaction.

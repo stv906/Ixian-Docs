@@ -1,0 +1,134 @@
+---
+title: registerName
+description: Creates and broadcasts a transaction to register a name in the Ixian Naming System (IXI-NS).
+status: Proposed
+---
+
+## Introduction
+
+The `registerName` method is a high-level endpoint for creating, funding, and broadcasting a transaction to register a unique name on the Ixian network. This is the primary mechanism for users to claim a human-readable alias that can be associated with addresses, data, or services.
+
+The method automates the process of calculating the registration cost, constructing the specialized transaction, funding it from the node's primary wallet, and submitting it to the network.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | The unique name to register (e.g., "my-alias"). |
+| `registrationTime` | `string` | Yes | The duration of the registration in blocks. Must be a multiple of `86400`. |
+| `capacity` | `string` | Yes | The amount of data storage to associate with the name, in kilobytes (kB). |
+| `recoveryHash` | `string` | No | The Ixian address that can recover the name. Defaults to the node's primary wallet address. |
+| `pkHash` | `string` | No | The Ixian address that will own and control the name. Defaults to the node's primary wallet address. |
+
+### Example POST Request
+
+```json
+POST /registerName
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "registerName",
+  "params": {
+    "name": "my-cool-name",
+    "registrationTime": "518400",
+    "capacity": "10"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /registerName?name=my-cool-name&registrationTime=518400&capacity=10
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object representing the name registration.
+
+### Result: `Transaction` Object Structure
+
+A successful call returns a full `Transaction` object. Key fields for a name registration transaction are:
+
+*   **`type`**: Will be `4`.
+*   **`to`**: The recipient address will be the network's special address for name registrations: `125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25`.
+*   **`amount`**: The calculated registration cost.
+*   **`data`**: A hex-encoded string containing the serialized registration details (hashed name, registration time, capacity, recovery hash, and owner hash).
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "id": "403-yjSY9heSFDLcrvu7yXu3jfKkw4xJoe6YpCULZw3zC4FS89YCEseFByShUANt",
+    "version": 7,
+    "blockHeight": "403",
+    "nonce": "40792",
+    "signature": "a3861219705...863b3d2ccd178097981c95b",
+    "pubKey": "JHgSS7hbUN...3NFmiMazymoYwi5i2EPPWjtyTRYRN",
+    "data": "0141409b...7cdda12e4dd6fe9fbf004331aa46a645",
+    "timestamp": "1711930571",
+    "type": "4",
+    "amount": "50000.00000000",
+    "applied": "0",
+    "checksum": "ae7c44383cb5a488088abc188f06eb3bf652d4e90922019da84e34e0f2c37b80aff6b83761f8d260b0c93b91",
+    "from": {
+      "1": "50000.01000000"
+    },
+    "to": {
+      "125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25": "50000.00000000"
+    },
+    "fee": "0.01000000",
+    "totalAmount": "50000.01000000"
+  },
+  "error": null,
+  "id": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Missing parameter 'name'"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Cost Calculation:** The cost of registration is determined by the `registrationTime` and `capacity`. The formula is:
+    `Cost = PricePerUnit * Capacity (in kB) * (RegistrationTime (in blocks) / MonthInBlocks)`
+
+*   **Consensus Constants:** The cost formula relies on several fixed consensus parameters:
+    *   `PricePerUnit`: `500.00000000` IXI
+    *   `MonthInBlocks`: `86400` (approximately 30 days)
+
+*   **Parameter Constraints:**
+    *   `registrationTime` must be a multiple of `86400`.
+    *   Minimum `registrationTime`: `518400` blocks (approx. 6 months).
+    *   Maximum `registrationTime`: `2102400` blocks (approx. 2 years).
+    *   Minimum `capacity`: `10` kB.
+
+*   **Transaction Funding:** This endpoint automatically funds the transaction from the node's primary wallet. The wallet must have a sufficient balance to cover the calculated registration cost plus the standard network transaction fee. If funds are insufficient, the call will fail.
+
+*   **Name Hashing:** The provided `name` string is not stored in plaintext. It is encoded and hashed before being included in the transaction's `data` field to preserve privacy and ensure a uniform data structure.
+
+*   **Transaction Broadcast:** A successful response indicates that the transaction has been created and submitted to the network's transaction pool. It does not guarantee confirmation. The returned transaction `id` should be used to monitor its status.

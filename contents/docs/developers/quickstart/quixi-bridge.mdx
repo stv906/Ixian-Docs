@@ -1,0 +1,779 @@
+---
+title: "QuIXI Bridge Quickstart"
+description: "Get started with QuIXI - the gateway between Ixian P2P and traditional technologies (REST, MQTT, RabbitMQ)"
+---
+
+QuIXI (pronounced "quicksy") is a lightweight Ixian gateway node that bridges the gap between the Ixian peer-to-peer network and traditional client-server architectures. It provides REST APIs and message queue integration (MQTT/RabbitMQ) so your existing applications can interact with Ixian without implementing the full P2P protocol.
+
+## Why QuIXI?
+
+### Perfect for:
+- **IoT Devices** - Connect sensors and actuators via MQTT
+- **AI Agents** - Build bots that interact with the Ixian network
+- **Legacy Systems** - Integrate existing applications through REST APIs
+- **Microservices** - Use RabbitMQ for event-driven architectures
+- **Rapid Prototyping** - Get started quickly without P2P complexity
+
+### Key Features:
+- REST API for sending messages and querying contacts
+- MQTT/RabbitMQ message queue integration
+- Light client (no full blockchain storage)
+- Post-quantum encryption support
+- Mini-App session management
+
+## Installation
+
+### Prerequisites
+- .NET 8.0 SDK or later
+- MQTT broker (Mosquitto) or RabbitMQ (optional)
+- Access to Ixian testnet or mainnet
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/ixian-platform/QuIXI.git
+cd QuIXI
+
+# Build
+dotnet build --configuration Release
+
+# Run
+cd QuIXI/bin/Release/net8.0
+./QuIXI
+```
+
+On first run, QuIXI will generate a wallet.
+
+### Windows
+
+```powershell
+# Build
+dotnet build --configuration Release
+
+# Run
+cd QuIXI\bin\Release\net8.0
+.\QuIXI.exe
+```
+
+## Configuration
+
+Edit `ixian.cfg`:
+
+```ini
+# Network settings - choose one:
+networkType = mainnet
+# Mainnet (production):
+addPeer = seed1.ixian.io:10234
+# Testnet (testing with real network):
+# addPeer = seedtest1.ixian.io:11234
+# Regtest (local Docker sandbox):
+# addPeer = 10.24.231.1:10234
+
+# API settings
+apiPort = 8001                      # REST API port
+apiBind = 127.0.0.1                 # Bind to localhost (use 0.0.0.0 for public)
+apiAllowIp = *                      # Allow all IPs (* means all, or comma-separated list)
+addApiUser = admin:password123      # Basic auth credentials
+
+# Message Queue settings
+mqDriver = mqtt                     # or 'rabbitmq'
+
+# MQTT/RabbitMQ Configuration
+mqHost = localhost
+mqPort = 1883
+
+
+# Streaming capabilities
+streamCapabilities = Incoming,Outgoing,IPN,Apps
+
+# Logging
+logVerbosity = 14                   # 0=off, 1=trace, 2=info, 4=warn, 8=error
+
+name = my-quixi
+```
+
+### Important Security Notes
+- Change default `addApiUser` credentials
+- Use `apiBind = 127.0.0.1` unless you need external access
+- For production, use proper authentication and proxy with TLS
+- Keep your wallet file secure (contains private keys)
+
+## Quick Start Guide
+
+### 1. Start QuIXI
+
+Choose your network:
+
+```bash
+# Testnet (recommended for development)
+./QuIXI --testnet
+
+# Mainnet (production)
+./QuIXI
+
+# Regtest (local Docker sandbox)
+./QuIXI --networkType regtest --checksumLock DOCKER -n 10.24.231.1:10234
+```
+
+**Network types explained:**
+- **Testnet**: Public test network, free test tokens, perfect for development
+- **Mainnet**: Production network, requires real IXI tokens
+- **Regtest**: Local Docker sandbox, completely isolated, instant testing
+
+**On first run**, QuIXI will generate a wallet and display your Ixian address. This address is your unique identity on the network - share it with contacts to receive messages and payments. The wallet is stored securely on your machine with encryption.
+
+### 2. Test the API
+
+```bash
+# Check status
+curl http://localhost:8001/status
+
+# Get your wallet addresses and balances
+curl http://localhost:8001/mywallet
+
+# Get total balance
+curl http://localhost:8001/gettotalbalance
+```
+
+**Note:** For testnet (`--testnet`), you can request free test IXI tokens. For mainnet, you'll need to obtain IXI tokens through exchange, mining, or relay earnings.
+
+### 3. Add a Contact
+
+```bash
+# Add a contact by address
+curl --get \
+  --data-urlencode "address=CONTACT_ADDRESS_HERE" \
+  "http://localhost:8001/addContact"
+```
+
+### 4. Send a Message
+
+```bash
+# Send a chat message
+curl --get \
+  --data-urlencode "address=CONTACT_ADDRESS_HERE" \
+  --data-urlencode "message=Hello from QuIXI!" \
+  --data-urlencode "channel=0" \
+  "http://localhost:8001/sendChatMessage"
+```
+
+## REST API Examples
+
+### Python Example
+
+```python
+import requests
+import json
+
+class QuIXIClient:
+    def __init__(self, base_url="http://localhost:8001"):
+        self.base_url = base_url
+        self.session = requests.Session()
+    
+    def get_status(self):
+        """Get QuIXI node status"""
+        response = self.session.get(f"{self.base_url}/status")
+        return response.json()
+    
+    def get_contacts(self):
+        """Get list of contacts"""
+        response = self.session.get(f"{self.base_url}/contacts")
+        return response.json()
+    
+    def add_contact(self, address):
+        """Add a new contact"""
+        response = self.session.post(
+            self.base_url,
+            json={
+                "method": "addContact",
+                "params": {"address": address}
+            }
+        )
+        return response.json()
+    
+    def send_message(self, address, message, channel=0):
+        """Send a chat message"""
+        response = self.session.post(
+            self.base_url,
+            json={
+                "method": "sendChatMessage",
+                "params": {
+                    "address": address,
+                    "message": message,
+                    "channel": str(channel)
+                }
+            }
+        )
+        return response.json()
+    
+    def get_last_messages(self, address, count=50):
+        """Get recent messages with a contact"""
+        response = self.session.get(
+            f"{self.base_url}/getLastMessages",
+            params={"address": address, "count": count}
+        )
+        return response.json()
+    
+    def send_app_data(self, address, session_id, data):
+        """Send Mini-App data"""
+        response = self.session.post(
+            f"{self.base_url}/sendAppData",
+            json={
+                "address": address,
+                "sessionId": session_id,
+                "data": data
+            }
+        )
+        return response.json()
+
+# Usage example
+if __name__ == "__main__":
+    client = QuIXIClient()
+    
+    # Check status
+    status = client.get_status()
+    print(f"Node status: {status}")
+    
+    # Get contacts
+    contacts = client.get_contacts()
+    print(f"Contacts: {contacts}")
+    
+    # Send a message
+    result = client.send_message(
+        address="YOUR_CONTACT_ADDRESS",
+        message="Hello from Python!"
+    )
+    print(f"Message sent: {result}")
+```
+
+### Node.js Example
+
+```javascript
+const axios = require('axios');
+
+class QuIXIClient {
+    constructor(baseURL = 'http://localhost:8001') {
+        this.client = axios.create({ baseURL });
+    }
+    
+    async getStatus() {
+        const { data } = await this.client.get('/status');
+        return data;
+    }
+    
+    async getContacts() {
+        const { data } = await this.client.get('/contacts');
+        return data;
+    }
+    
+    async addContact(address) {
+        const { data } = await this.client.post('/', {
+            method: 'addContact',
+            params: { address }
+        });
+        return data;
+    }
+    
+    async sendMessage(address, message, channel = 0) {
+        const { data } = await this.client.post('/', {
+            method: 'sendChatMessage',
+            params: { address, message, channel: channel.toString() }
+        });
+        return data;
+    }
+    
+    async getLastMessages(address, count = 50) {
+        const { data } = await this.client.get('/getLastMessages', {
+            params: { address, count }
+        });
+        return data;
+    }
+    
+    async sendAppData(address, sessionId, appData) {
+        const { data } = await this.client.post('/sendAppData', {
+            address,
+            sessionId,
+            data: appData
+        });
+        return data;
+    }
+}
+
+// Usage example
+(async () => {
+    const client = new QuIXIClient();
+    
+    try {
+        // Check status
+        const status = await client.getStatus();
+        console.log('Node status:', status);
+        
+        // Get contacts
+        const contacts = await client.getContacts();
+        console.log('Contacts:', contacts);
+        
+        // Send a message
+        const result = await client.sendMessage(
+            'YOUR_CONTACT_ADDRESS',
+            'Hello from Node.js!'
+        );
+        console.log('Message sent:', result);
+    } catch (error) {
+        console.error('Error:', error.response?.data || error.message);
+    }
+})();
+```
+
+## MQTT Integration Examples
+
+### Python MQTT Client
+
+```python
+import paho.mqtt.client as mqtt
+import json
+import base64
+
+class QuIXIMQTTClient:
+    def __init__(self, broker_address="localhost", broker_port=1883):
+        self.client = mqtt.Client()
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.broker_address = broker_address
+        self.broker_port = broker_port
+        
+    def on_connect(self, client, userdata, flags, rc):
+        print(f"Connected to QuIXI MQTT broker with result code {rc}")
+        
+        # Subscribe to topics
+        client.subscribe("Chat")
+        client.subscribe("SentFunds")
+        client.subscribe("AppRequest")
+        client.subscribe("AppData")
+        print("Subscribed to Chat, SentFunds, AppRequest, AppData")
+        
+    def on_message(self, client, userdata, msg):
+        try:
+            message = json.loads(msg.payload.decode())
+            self.handle_message(msg.topic, message)
+        except Exception as e:
+            print(f"Error processing message: {e}")
+    
+    def handle_message(self, topic, message):
+        sender = message.get('sender', 'unknown')
+        
+        if topic == "Chat":
+            text = message.get('data', '')
+            print(f"\nChat from {sender[:8]}...{sender[-8:]}:")
+            print(f"   {text}")
+            
+        elif topic == "SentFunds":
+            tx_id = message.get('data', '')
+            print(f"\nPayment received from {sender[:8]}...{sender[-8:]}:")
+            print(f"   Transaction: {tx_id}")
+            
+        elif topic == "AppRequest":
+            data = message.get('data', {})
+            session_id = data.get('sessionId', '')
+            app_id = data.get('appId', '')
+            print(f"\nApp Request from {sender[:8]}...{sender[-8:]}:")
+            print(f"   App: {app_id}")
+            print(f"   Session: {session_id[:16]}...")
+            
+        elif topic == "AppData":
+            data = message.get('data', {})
+            session_id = data.get('sessionId', '')
+            app_data = data.get('data', '')
+            print(f"\nApp Data from {sender[:8]}...{sender[-8:]}:")
+            print(f"   Session: {session_id[:16]}...")
+            print(f"   Data length: {len(app_data)} bytes")
+    
+    def connect(self):
+        self.client.connect(self.broker_address, self.broker_port, 60)
+        self.client.loop_forever()
+
+# Usage
+if __name__ == "__main__":
+    mqtt_client = QuIXIMQTTClient()
+    print("Starting QuIXI MQTT client...")
+    mqtt_client.connect()
+```
+
+### Node.js MQTT Client
+
+```javascript
+const mqtt = require('mqtt');
+
+class QuIXIMQTTClient {
+    constructor(brokerUrl = 'mqtt://localhost:1883') {
+        this.client = mqtt.connect(brokerUrl);
+        
+        this.client.on('connect', () => {
+            console.log('Connected to QuIXI MQTT broker');
+            
+            // Subscribe to topics
+            this.client.subscribe(['Chat', 'SentFunds', 'AppRequest', 'AppData']);
+            console.log('Subscribed to Chat, SentFunds, AppRequest, AppData');
+        });
+        
+        this.client.on('message', (topic, payload) => {
+            try {
+                const message = JSON.parse(payload.toString());
+                this.handleMessage(topic, message);
+            } catch (error) {
+                console.error('Error processing message:', error);
+            }
+        });
+    }
+    
+    handleMessage(topic, message) {
+        const sender = message.sender || 'unknown';
+        const shortSender = `${sender.slice(0, 8)}...${sender.slice(-8)}`;
+        
+        switch(topic) {
+            case 'Chat':
+                const text = message.data || '';
+                console.log(`\nChat from ${shortSender}:`);
+                console.log(`   ${text}`);
+                break;
+                
+            case 'SentFunds':
+                const txId = message.data || '';
+                console.log(`\nPayment received from ${shortSender}:`);
+                console.log(`   Transaction: ${txId}`);
+                break;
+                
+            case 'AppRequest':
+                const requestData = message.data || {};
+                console.log(`\nApp Request from ${shortSender}:`);
+                console.log(`   App: ${requestData.appId}`);
+                console.log(`   Session: ${requestData.sessionId?.slice(0, 16)}...`);
+                break;
+                
+            case 'AppData':
+                const appData = message.data || {};
+                console.log(`\nApp Data from ${shortSender}:`);
+                console.log(`   Session: ${appData.sessionId?.slice(0, 16)}...`);
+                console.log(`   Data length: ${appData.data?.length || 0} bytes`);
+                break;
+        }
+    }
+}
+
+// Usage
+const client = new QuIXIMQTTClient();
+console.log('Starting QuIXI MQTT client...');
+```
+
+## RabbitMQ Integration Example
+
+### Node.js RabbitMQ Consumer
+
+```javascript
+const amqp = require('amqplib');
+
+class QuIXIRabbitMQClient {
+    constructor(url = 'amqp://localhost') {
+        this.url = url;
+        this.connection = null;
+        this.channel = null;
+    }
+    
+    async connect() {
+        this.connection = await amqp.connect(this.url);
+        this.channel = await this.connection.createChannel();
+        console.log('Connected to QuIXI RabbitMQ');
+    }
+    
+    async subscribeToTopic(topic, handler) {
+        await this.channel.assertQueue(topic);
+        
+        console.log(`Subscribed to ${topic}`);
+        
+        this.channel.consume(topic, async (msg) => {
+            if (msg !== null) {
+                try {
+                    const message = JSON.parse(msg.content.toString());
+                    await handler(topic, message);
+                    this.channel.ack(msg);
+                } catch (error) {
+                    console.error(`Error processing ${topic}:`, error);
+                    this.channel.nack(msg);
+                }
+            }
+        });
+    }
+    
+    async subscribeAll() {
+        const topics = ['Chat', 'SentFunds', 'AppRequest', 'AppData'];
+        
+        for (const topic of topics) {
+            await this.subscribeToTopic(topic, this.handleMessage.bind(this));
+        }
+    }
+    
+    handleMessage(topic, message) {
+        const sender = message.sender || 'unknown';
+        const shortSender = `${sender.slice(0, 8)}...${sender.slice(-8)}`;
+        
+        switch(topic) {
+            case 'Chat':
+                console.log(`Chat from ${shortSender}: ${message.data}`);
+                break;
+                
+            case 'SentFunds':
+                console.log(`Payment from ${shortSender}: ${message.data}`);
+                break;
+                
+            case 'AppRequest':
+                const { appId, sessionId } = message.data;
+                console.log(`App Request from ${shortSender}: ${appId}`);
+                break;
+                
+            case 'AppData':
+                console.log(`App Data from ${shortSender}`);
+                break;
+        }
+    }
+    
+    async close() {
+        await this.channel?.close();
+        await this.connection?.close();
+    }
+}
+
+// Usage
+(async () => {
+    const client = new QuIXIRabbitMQClient();
+    
+    try {
+        await client.connect();
+        await client.subscribeAll();
+        console.log('Listening for messages...');
+        
+        // Keep the process running
+        process.on('SIGINT', async () => {
+            console.log('\nClosing connection...');
+            await client.close();
+            process.exit(0);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        process.exit(1);
+    }
+})();
+```
+
+## Building a Simple Chatbot
+
+Here's a complete example of a chatbot that responds to messages:
+
+```python
+import requests
+import paho.mqtt.client as mqtt
+import json
+import time
+
+class IxianChatbot:
+    def __init__(self, quixi_api="http://localhost:8001", 
+                 mqtt_broker="localhost", mqtt_port=1883):
+        self.api = quixi_api
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.on_connect = self.on_connect
+        self.mqtt_client.on_message = self.on_message
+        self.mqtt_broker = mqtt_broker
+        self.mqtt_port = mqtt_port
+        
+    def on_connect(self, client, userdata, flags, rc):
+        print("Chatbot connected to MQTT broker")
+        client.subscribe("Chat")
+        
+    def on_message(self, client, userdata, msg):
+        try:
+            message = json.loads(msg.payload.decode())
+            self.handle_chat(message)
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    def handle_chat(self, message):
+        sender = message.get('sender')
+        text = message.get('data', '').lower()
+        
+        print(f"Received: '{text}' from {sender[:8]}...")
+        
+        # Simple command responses
+        response = None
+        
+        if 'hello' in text or 'hi' in text:
+            response = "Hello! I'm an Ixian bot. How can I help you?"
+        elif 'help' in text:
+            response = "I can respond to: hello, help, balance, time"
+        elif 'balance' in text:
+            response = self.get_balance_message()
+        elif 'time' in text:
+            response = f"Current time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
+        else:
+            response = "I didn't understand that. Type 'help' for commands."
+        
+        if response:
+            self.send_message(sender, response)
+    
+    def send_message(self, address, text):
+        try:
+            response = requests.post(
+                self.api,
+                json={
+                    "method": "sendChatMessage",
+                    "params": {
+                        "address": address,
+                        "message": text,
+                        "channel": "0"
+                    }
+                }
+            )
+            print(f"Sent: '{text}'")
+        except Exception as e:
+            print(f"Failed to send message: {e}")
+    
+    def get_balance_message(self):
+        try:
+            response = requests.get(f"{self.api}/gettotalbalance")
+            balance = response.json()
+            return f"My balance: {balance.get('result', '0')} IXI"
+        except:
+            return "Could not retrieve balance"
+    
+    def start(self):
+        print("Starting Ixian chatbot...")
+        self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port, 60)
+        self.mqtt_client.loop_forever()
+
+# Run the bot
+if __name__ == "__main__":
+    bot = IxianChatbot()
+    bot.start()
+```
+
+## Use Case: IoT Payment Gateway
+
+Example of an IoT device that accepts payments:
+
+```python
+import paho.mqtt.client as mqtt
+import requests
+import json
+
+class IoTPaymentGateway:
+    def __init__(self, device_id, quixi_api="http://localhost:8001"):
+        self.device_id = device_id
+        self.api = quixi_api
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.on_connect = self.on_connect
+        self.mqtt_client.on_message = self.on_message
+        
+    def on_connect(self, client, userdata, flags, rc):
+        print(f"Device {self.device_id} connected")
+        # Subscribe to payment notifications
+        client.subscribe("SentFunds")
+        client.subscribe("RequestFunds")
+        
+    def on_message(self, client, userdata, msg):
+        message = json.loads(msg.payload.decode())
+        
+        if msg.topic == "SentFunds":
+            self.handle_payment(message)
+        elif msg.topic == "RequestFunds":
+            self.handle_payment_request(message)
+    
+    def handle_payment(self, message):
+        sender = message.get('sender')
+        tx_id = message.get('data')
+        
+        print(f"Payment received from {sender[:8]}...")
+        print(f"   Transaction: {tx_id}")
+        
+        # Activate device/service
+        self.activate_service(sender)
+        
+        # Send confirmation
+        self.send_confirmation(sender, tx_id)
+    
+    def activate_service(self, customer_address):
+        """Activate the IoT service for the customer"""
+        print(f"Activating service for {customer_address[:8]}...")
+        # Your device activation logic here
+        # e.g., unlock door, dispense product, start timer, etc.
+    
+    def send_confirmation(self, address, tx_id):
+        """Send payment confirmation message"""
+        confirmation = f"Payment confirmed! Transaction: {tx_id[:16]}..."
+        requests.post(
+            self.api,
+            json={
+                "method": "sendChatMessage",
+                "params": {
+                    "address": address,
+                    "message": confirmation,
+                    "channel": "0"
+                }
+            }
+        )
+    
+    def request_payment(self, customer_address, amount):
+        """Request payment from a customer"""
+        requests.post(
+            f"{self.api}/sendRequestFunds",
+            data={"address": customer_address, "amount": amount}
+        )
+        print(f"Requested {amount} IXI from {customer_address[:8]}...")
+    
+    def start(self):
+        print(f"Starting IoT Payment Gateway: {self.device_id}")
+        self.mqtt_client.connect("localhost", 1883, 60)
+        self.mqtt_client.loop_forever()
+
+# Usage
+if __name__ == "__main__":
+    gateway = IoTPaymentGateway("vending-machine-01")
+    gateway.start()
+```
+
+## Troubleshooting
+
+### QuIXI won't start
+- Check that port 8001 is not in use: `netstat -an | grep 8001`
+- Verify .NET 8.0 is installed: `dotnet --version`
+- Check logs in the QuIXI directory
+
+### Cannot connect to peers
+- Verify `networkType = testnet` for testnet or `mainnet` for mainnet
+- Check firewall settings
+- Try different seed nodes in `addPeer` setting
+
+### MQTT/RabbitMQ connection fails
+- Verify broker is running: `systemctl status mosquitto` or `systemctl status rabbitmq-server`
+- Check broker address and port in configuration
+- Test connection independently: `mosquitto_sub -h localhost -t test`
+
+### API returns 401 Unauthorized
+- Check `addApiUser` credentials in `ixian.cfg`
+- Use Basic Auth in requests: `-u admin:password123`
+
+### Messages not appearing on MQTT
+- Verify `mqDriver = mqtt` in configuration
+- Check QuIXI logs for connection errors
+- Ensure topics are correctly subscribed
+
+## Next Steps
+
+- [QuIXI REST API Reference](../../reference/quixi/rpc_v0)
+- [Message Queue Topics](../../reference/quixi/mq)
+- [Streaming Protocol](../../architecture/10_protocol/streaming)
+- [Mini-Apps Development](./spixi-mini-app)
+
+## Additional Resources
+
+- [QuIXI GitHub Repository](https://github.com/ixian-platform/QuIXI)
+- [Ixian Discord Community](https://discord.gg/pdJNVhv)  
+- [Ixian Telegram Community](https://t.me/ixian_official_ENG)  
+- [Example Projects](https://github.com/ixian-platform/QuIXI/tree/master/Examples)

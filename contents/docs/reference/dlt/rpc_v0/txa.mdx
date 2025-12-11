@@ -1,0 +1,110 @@
+---
+title: txa
+description: Retrieves a paginated list of applied (confirmed) transactions exclusively from the blockchain.
+status: Finalized
+---
+
+## Introduction
+
+The `txa` method provides a paginated view of the historical, confirmed transactions recorded on the Ixian blockchain. The 'a' in `txa` stands for "applied," meaning it only returns transactions that have been successfully included in a block and are considered immutable.
+
+This endpoint is the standard way to query the official transaction ledger. It is ideal for use cases like building a block explorer, retrieving a wallet's transaction history, or performing audits, as it guarantees that the returned data is part of the final consensus.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `fromIndex` | `integer` | No | The starting index (offset) for the transaction list. `0` represents the most recent transaction. Defaults to `0`. |
+| `count` | `integer` | No | The maximum number of transactions to return. Defaults to `50`. |
+
+### Example POST Request
+
+```json
+POST /txa
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "txa",
+  "params": {
+    "fromIndex": 0,
+    "count": 5
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /txa?fromIndex=10&count=5
+```
+
+---
+
+## Response
+
+The `result` is a JSON object where each key is a unique transaction ID and its corresponding value is the full `Transaction` object.
+
+### Result Structure
+
+The returned object is a map of transaction IDs to transaction objects.
+
+```json
+{
+    "confirmed-tx-id-1": { ...Transaction Object 1... },
+    "confirmed-tx-id-2": { ...Transaction Object 2... },
+    ...
+}
+```
+
+The structure of the inner `Transaction` object is identical to the one defined in the [`getTransaction`](./tx_get-transaction#result-1-transaction-object-default) documentation. A key characteristic of these transactions is that their `applied` field will always contain the non-zero block number in which they were confirmed.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "stk-69436...": {
+      "id": "stk-69436...",
+      "version": 7,
+      "blockHeight": "69441",
+      "type": "2",
+      "amount": "1000.06798237",
+      "applied": "69442",
+      "from": { "...": "..." },
+      "to": { "...": "..." },
+      ...
+    },
+    "68896-24JTm...": {
+      "id": "68896-24JTm...",
+      "version": 7,
+      "blockHeight": "68896",
+      "type": "0",
+      "amount": "1000.00000000",
+      "applied": "68897",
+      "from": { "...": "..." },
+      "to": { "...": "..." },
+      ...
+    }
+  },
+  "id": 1,
+  "error": null
+}```
+
+---
+
+## Behavioral Notes
+
+*   **Blockchain Only:** This method exclusively queries the confirmed transaction history stored on the blockchain. It will **never** include unconfirmed transactions from the memory pool. For unconfirmed transactions, use [`txu`](./txu).
+*   **Immutable History:** The data returned by this endpoint represents the immutable history of the ledger (barring a highly unlikely deep chain reorganization).
+*   **Indexing Order:** The list is ordered in reverse chronological order of confirmation. `fromIndex: 0` refers to the most recently applied transaction, not the oldest (genesis) transaction.
+*   **Pagination:** Use the `fromIndex` and `count` parameters to page through the entire transaction history of the blockchain as known by the node.
+*   **Response Format:** The response is a JSON object (a map), not an array. This provides a convenient way to look up transactions by ID within the result set.

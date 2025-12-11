@@ -1,0 +1,107 @@
+---
+title: decodeRawTransaction
+description: Decodes a raw, hex-encoded transaction string into its human-readable JSON representation.
+status: Finalized
+---
+
+## Introduction
+
+The `decodeRawTransaction` method is a utility endpoint that deserializes a raw transaction from its hexadecimal string format into a structured, human-readable JSON object.
+
+This method serves as the counterpart to [`createRawTransaction`](./tx_create-raw-transaction). Its primary use is to allow applications, hardware wallets, or users to inspect the contents of a transaction before it is signed or broadcast to the network, ensuring all details like amounts, recipients, and fees are correct.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name          | Type     | Required | Description                                    |
+| :------------ | :------- | :------- | :--------------------------------------------- |
+| `transaction` | `string` | Yes      | The raw transaction data, encoded as a hexadecimal string. |
+
+### Example POST Request
+
+```json
+POST /decodeRawTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "decodeRawTransaction",
+  "params": {
+    "transaction": "0700fd200d010001010005402a8648..."
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /decodeRawTransaction?transaction=0700fd200d010001010005402a8648...
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object, representing the decoded data from the raw hex string.
+
+### Result: `Transaction` Object Structure
+
+The structure of the returned object is identical to the one defined in the [`addTransaction`](./tx_add-transaction#result-transaction-object-structure) documentation. It will contain all fields that were present in the serialized data, including the signature if the transaction was signed.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "68896-24JTma56fubZkntM9tuAHkX5bdmMBgLAdWoFkH79iqEDwfVrftzAFxeEDtGKc",
+    "version": 7,
+    "blockHeight": "68896",
+    "nonce": "42868",
+    "pubKey": "1GjPTJzsbwyVRR2JCyDKBf8VxRQq3WK7QKXthWWrtsBpBbrsaDJRM3wuBo51rKRLZd...",
+    "timestamp": "0",
+    "type": "0",
+    "amount": "1000.00000000",
+    "applied": "0",
+    "checksum": "bc89f91fd78205f5cbf79fbd0a6a3e93bacfd3813b96d4726c7450381c26f8ec...",
+    "from": {
+      "1": "1000.01000000"
+    },
+    "to": {
+      "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo": "1000.00000000"
+    },
+    "fee": "0.01000000",
+    "totalAmount": "1000.01000000"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "transaction parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Operation:** This is a purely local utility function. It does not perform any network operations or consult the blockchain state.
+*   **No State Validation:** The method only decodes the provided data. It does not validate whether the transaction would be acceptable to the network (e.g., it does not check for sufficient funds, correct nonces, or valid signatures).
+*   **Signed vs. Unsigned:** The endpoint can decode both signed and unsigned transactions. If the transaction is unsigned, the `signature` field in the resulting JSON object will be missing or empty.

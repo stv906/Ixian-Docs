@@ -1,0 +1,107 @@
+---
+title: getFullBlock
+description: Retrieves a single, complete block from the blockchain, including its full transaction data.
+status: Finalized
+---
+
+## Introduction
+
+The `getFullBlock` method retrieves all available data for a single block, identified by its block number. Unlike `getLastBlocks`, which provides a summary, this endpoint returns the full block header information *and* the complete data for every transaction contained within that block.
+
+This method is essential for services like block explorers or any application that needs to analyze the specific contents of historical blocks and their transactions.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `num` | `string` | Yes | The block number (height) of the block to retrieve. |
+
+### Example POST Request
+
+```json
+POST /getFullBlock
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getFullBlock",
+  "params": {
+    "num": "69442"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getFullBlock?num=69442
+```
+
+---
+
+## Response
+
+The response `result` is a single, comprehensive `Block` object containing all header data and detailed transaction information.
+
+### Result: `Block` Object Structure
+
+The structure includes all fields from the [`getLastBlocks`](./bc_get-last-blocks#result-block-object-structure) object, plus the following for complete data retrieval:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| ... | ... | *(All fields from `getLastBlocks`)* |
+| `Transactions` | `string (JSON)` | A JSON-encoded array of full `Transaction` objects included in this block. |
+| `Superblock segments` | `string (JSON)` | A JSON-encoded object containing any superblock segment data, if the block is a superblock. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "Block Number": "69442",
+    "Version": "13",
+    "Block Checksum": "5bdbdcf4a661a2da8533a13329d58a457208140696180d1705ad59a3a1fe8eca7472a500631a7b8177d7990578bede0341c2be00c458715059bbed70a92e4cc0",
+    "Last Block Checksum": "f385541f35bd349369ba9f978df872513c44d26303d1ba061283cdc231a67cfbdd8fca3cd781027881ec91ba858af0fcc6f92f8ea37210ee18bccbf4e0746368",
+    "Wallet State Checksum": "4f01fc86208cecc177dffbd5f458a9dc08e160fcfa07a38afebed33e9ad3e1af95384f793c178e9235d7fed93329a2b59d33044f6ccf94ab0b1d8e610674ba47",
+    "Timestamp": "1763058181",
+    "Transaction count": "1",
+    "TX IDs": "[\"stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR\"]",
+    "Transactions": "[{\"id\":\"stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR\",\"version\":7,\"blockHeight\":\"69441\",\"type\":\"2\",\"amount\":\"1000.06798237\",\"applied\":\"69442\",\"from\":{\"1\":\"1000.06798237\"},\"to\":{\"16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo\":\"495.42577190\",\"1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm\":\"504.64221047\"},\"fee\":\"0.00000000\"}]",
+    "Superblock segments": "{}"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the block at the specified `num` cannot be found.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Block not found."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Archive Node Requirement:** The ability to retrieve a full block depends on the node's configuration. If the node is not configured as an archive node (`storeFullHistory` is `false`), it may prune historical transaction data and will only be able to return full data for recent blocks. Older blocks will result in a "Block not found" error.
+*   **Serialized JSON:** The `Transactions` and `Superblock segments` fields contain a string that is itself a serialized JSON object/array. Client applications must parse this string to access the nested data structures.
+*   **Performance:** Requesting a full block is a more resource-intensive operation than requesting block headers or summaries, especially for blocks with a large number of transactions.

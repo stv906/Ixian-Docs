@@ -1,0 +1,29 @@
+---
+title: getRelevantBlockTransactions (49)
+description: Requests transactions that are relevant to a specific set of addresses over a range of blocks.
+status: Planned Upgrade
+---
+
+The `getRelevantBlockTransactions` message is a specialized request designed for light clients. It allows a client to download only the transactions that are relevant to its own wallet addresses, significantly reducing bandwidth and storage requirements.
+
+Relevance is determined by a **Cuckoo Filter**, a compact, probabilistic data structure that contains a representation of the client's wallet addresses.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `fromBlockNum` | `IxiVarUInt` | `1` | | The block number from which to start searching. |
+| `count` | `IxiVarUInt` | `1` | | The number of consecutive blocks to search through. |
+| `cuckooFilter` | `IxiBytes` | | | A serialized Cuckoo Filter containing the wallet addresses the client is interested in. |
+
+## Behavioral Notes
+
+-   This is the primary synchronization message for light clients that do not need the entire blockchain history.
+-   Upon receiving this message, a full node must iterate through the blocks in the requested range (`fromBlockNum` to `fromBlockNum + count`).
+-   For each transaction in each block, the node must check if any of the transaction's output addresses (`toAddress`) are likely contained within the provided `cuckooFilter`.
+-   All matching transactions are then sent back to the requester in one or more `transactionsChunk3` messages.

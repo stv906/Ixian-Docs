@@ -1,0 +1,28 @@
+---
+title: getBlockSignatures2 (14)
+description: Requests all known signatures for a specific block from a peer.
+status: Finalized
+---
+
+The `getBlockSignatures2` message is a request sent by a node to a peer to ask for all the signatures it has collected for a particular block.
+
+This message is essential for the consensus mechanism, as it allows nodes that may have missed signature broadcasts to catch up and reach the required signature threshold to freeze a block.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | `1` | | The block number for which signatures are being requested. |
+| `blockChecksum` | `IxiBytes` | | | The checksum (hash) of the block for which signatures are being requested. |
+
+## Behavioral Notes
+
+-   A node receiving this message should look up the specified block (`blockNum` and `blockChecksum`) in its local database.
+-   If the block is found, the node should gather all valid signatures it has stored for that block.
+-   The collected signatures are then sent back to the requesting peer in one or more `signaturesChunk2` messages.
+-   It is not an error if the receiving node has no signatures for the requested block; it would simply not send any `signaturesChunk2` response.

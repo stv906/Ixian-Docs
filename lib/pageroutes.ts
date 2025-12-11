@@ -6,6 +6,7 @@ export interface PathBase {
 
 export interface PathWithSpacer extends PathBase {
   spacer: true
+  href: string
 }
 
 export interface PathWithoutSpacer extends PathBase {
@@ -39,7 +40,7 @@ function getAllLinks(node: Path): Page[] {
   if (isRoute(node) && node.items) {
     node.items.forEach((subNode) => {
       if (isRoute(subNode)) {
-        const temp = { ...subNode, href: `${node.href}${subNode.href}` }
+        const temp = { ...subNode, href: `${subNode.href}` }
         pages.push(...getAllLinks(temp))
       }
     })

@@ -1,0 +1,118 @@
+---
+title: getLastBlocks
+description: Retrieves up to 10 of the most recent blocks from the blockchain.
+status: Finalized
+---
+
+## Introduction
+
+The `getLastBlocks` method is a quick-access endpoint for retrieving a summary of the most recent blocks processed by the node. It returns an array containing up to 10 blocks, starting with the most recent one.
+
+This method is particularly useful for block explorers, network monitoring tools, and applications that need to display the latest state of the blockchain without querying for specific block numbers.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /getLastBlocks
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getLastBlocks",
+  "params": {},
+  "id": 1
+}```
+
+### Example GET Request
+
+```
+GET /getLastBlocks
+```
+
+---
+
+## Response
+
+The response `result` is an array of `Block` objects, with the most recent block at index `0`. Each object is a dictionary of key-value pairs representing the block's properties.
+
+### Result: `Block` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `Block Number` | `string` | The height of the block in the blockchain. |
+| `Version` | `string` | The block version number. |
+| `Block Checksum` | `string` | The unique checksum (hash) of the entire block. |
+| `Last Block Checksum` | `string` | The checksum of the preceding block, linking the chain. |
+| `Wallet State Checksum` | `string` | A checksum of the wallet state trie after applying this block's transactions. |
+| `RegName State Checksum` | `string` | A checksum of the Ixian Naming System state after applying this block's transactions. |
+| `Sig freeze Checksum` | `string` | The checksum of the signature set for the block that is now "frozen" (5 blocks deep). |
+| `Timestamp` | `string` | The Unix timestamp when the block was created. |
+| `Difficulty` | `string` | The network's proof-of-work difficulty at the time this block was mined. |
+| `Hashrate` | `string` | An estimation of the network's hashrate. |
+| `Signature count` | `string` | The number of signatures collected for this block. |
+| `Required Signature count` | `string` | The adaptive quorum; the minimum number of signatures required for this block to be accepted. |
+| `Transaction count` | `string` | The number of transactions included in this block. |
+| `Transaction amount` | `string` | The total value of all IXI transferred in the block's transactions (excluding fees). |
+| `Total fees` | `string` | The sum of all fees from the transactions included in this block. |
+| `Signatures` | `string (JSON)` | A JSON-encoded array of objects, each representing a signature attesting to the block's validity. |
+| `Frozen Signatures` | `string (JSON)` | A JSON-encoded array of signature objects that have been finalized for this block. |
+| `TX IDs` | `string (JSON)` | A JSON-encoded array of strings, where each string is a transaction ID included in the block. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "Block Number": "69442",
+      "Version": "13",
+      "Block Checksum": "5bdbdcf4a661a2da8533a13329d58a457208140696180d1705ad59a3a1fe8eca7472a500631a7b8177d7990578bede0341c2be00c458715059bbed70a92e4cc0",
+      "Last Block Checksum": "f385541f35bd349369ba9f978df872513c44d26303d1ba061283cdc231a67cfbdd8fca3cd781027881ec91ba858af0fcc6f92f8ea37210ee18bccbf4e0746368",
+      "Wallet State Checksum": "4f01fc86208cecc177dffbd5f458a9dc08e160fcfa07a38afebed33e9ad3e1af95384f793c178e9235d7fed93329a2b59d33044f6ccf94ab0b1d8e610674ba47",
+      "Timestamp": "1763058181",
+      "Difficulty": "11730489520294945089",
+      "Transaction count": "1",
+      "Signatures": "[{\"blockNum\":69442,\"blockHash\":\"...\",\"signature\":\"...\"}]",
+      "TX IDs": "[\"stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR\"]"
+    },
+    {
+      "Block Number": "69441",
+      "Version": "13",
+      "Block Checksum": "f385541f35bd349369ba9f978df872513c44d26303d1ba061283cdc231a67cfbdd8fca3cd781027881ec91ba858af0fcc6f92f8ea37210ee18bccbf4e0746368",
+      "Last Block Checksum": "f055bd95219c3f222abae2b35648650d1896313243e79f5d6deb13cd6a68feccc9621aaaa08b9db503cc44d9ed8821909b0f4f14554c5970ee219630a5278406",
+      "...": "..."
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32603,
+        "message": "An unknown error occurred, while getting one of the last 10 blocks."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Block Count:** The method will always return 10 blocks unless the total number of blocks in the chain is less than 10.
+*   **In-Memory Block:** The block at index `0` of the response array may be a block that the node is currently processing and has not yet fully committed to the persistent blockchain storage. This provides a real-time view of the network's tip.
+*   **Data Format:** Note that several fields, such as `Signatures` and `TX IDs`, contain a string that is itself a serialized JSON array. These will need to be parsed by the client if their contents are to be inspected.

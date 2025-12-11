@@ -1,0 +1,36 @@
+---
+title: getBlockHeaders3 (46)
+description: Requests a sequential range of full block headers from a peer.
+status: Planned Upgrade
+---
+
+The `getBlockHeaders3` message is a request for a continuous sequence of full block headers, starting from a specific block number. This is a fundamental message for the "fast sync" or "headers-first" synchronization strategy, allowing a node to quickly download and validate the chain of block headers before fetching the full block bodies.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `from` | `IxiVarUInt` | `0` | | The block number from which to start fetching headers. |
+| `totalCount` | `IxiVarUInt` | `1` | | The number of consecutive block headers to request. |
+
+## Behavioral Notes
+
+-   A requesting node sends this message to perform fast synchronization by downloading block headers before fetching full block bodies.
+-   The responding peer validates the request and may reject it silently (no response) if:
+    -   `totalCount` is less than 1.
+    -   `from` exceeds the peer's highest available block number.
+    -   After range adjustment, the resulting count would be less than 1.
+    -   The endpoint is disconnected.
+-   If the request is valid, the peer adjusts the range if necessary:
+    -   If `from + totalCount` exceeds available blocks, `totalCount` is reduced to `lastBlockNum - from`.
+    -   `totalCount` is then capped to `CoreConfig.maximumBlockHeadersPerChunk` (default: `1000`).
+-   The peer responds with one or more `blockHeaders3` messages containing the requested headers.
+-   Each response message contains up to `CoreConfig.maximumBlockHeadersPerChunk` headers and is limited by `CoreConfig.maxMessageSize` (default: `50MB`).
+-   If a header cannot be retrieved from storage, the peer stops processing and sends any headers collected up to that point.
+-   For each block header sent, the peer also checks all transactions in that block:
+    -   If the requesting endpoint has subscribed to specific addresses (via `NetworkEvents.Type.transactionFrom` or `transactionTo`), the peer sends matching transactions as individual `transactionData2` messages.
+    -   This allows light clients to receive only transactions relevant to their watched addresses during header synchronization.

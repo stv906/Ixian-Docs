@@ -1,0 +1,30 @@
+---
+title: getSignatures3 (15)
+description: Requests the full data for one or more specific signatures identified by their PoW solution.
+status: Finalized
+---
+
+The `getSignatures3` message is a request sent by a node to a peer to get the complete data for specific signatures. This is typically used when a node learns about the existence of a signature (e.g., from an inventory message) but does not have the full signature object itself.
+
+The request specifies a block number and a list of signature identifiers (the PoW solutions).
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | `1` | | The block number that the requested signatures belong to. |
+| `count` | `IxiVarUInt` | `1` | | The number of signature identifiers that follow in this message. |
+| `solutions`| `IxiBytes[]` | | | An array of `count` signature identifiers (the PoW solutions). |
+
+## Behavioral Notes
+
+-   A node sends this message to "flesh out" a signature inventory.
+-   Upon receiving this message, a peer should look up each signature in the `solutions` list for the given `blockNum`.
+-   For each signature found, the peer should package the full signature data into a `blockSignature2` object.
+-   These full `blockSignature2` objects are then sent back to the requester in one or more `signaturesChunk2` messages.
+-   It is not an error if the receiving node does not have some of the requested signatures; it simply omits them from the response.

@@ -1,0 +1,676 @@
+---
+title: IXI Names Architecture
+description: Decentralized naming system providing human-readable identities mapped to Ixian addresses, network endpoints, and arbitrary metadata.
+---
+
+## Introduction
+
+**IXI Names** (also called RegNames or Registered Names) is Ixian's decentralized naming system, analogous to DNS but without centralized authorities. Users register human-readable names (like `alice` or `mycompany`) that resolve to:
+- Ixian wallet addresses
+- Network endpoints (IP addresses, hostnames)
+- Arbitrary metadata (email, website, public keys, service descriptors)
+
+Names are registered via blockchain transactions, stored in global `RegNameState`, and have time-limited ownership with renewal mechanisms.
+
+**Key Properties**:
+- **Global Uniqueness**: First-come-first-served registration, one owner per name
+- **Time-Bounded Ownership**: Names expire after registration period (renewable)
+- **Recovery Mechanism**: Lost keys can be recovered using pre-designated recovery address
+- **Subname Support**: Name owners can enable subname registration under their names, allowing anyone to register hierarchical subnames (e.g., `sales.mycompany`) with optional fees
+
+---
+
+## Name Structure
+
+### Primary Names
+
+A primary name is an **IDN-encoded string** (Internationalized Domain Names) that gets hashed:
+
+**User-Facing Format**: Human-readable string (e.g., `"alice"`, `"my-company"`)
+
+**Encoding Process** (via `IxiNameUtils.encodeAndHashIxiName()`):
+1. Convert to lowercase
+2. Apply IDN/Punycode encoding via `IdnMapping.GetAscii(name.ToLower())`
+3. Split by `.` and reverse order (TLD-first: `sub.parent` -> `["parent", "sub"]`)
+4. For each section:
+   - Convert to UTF-8 bytes
+   - Prefix with `ConsensusConfig.ixianChecksumLock`
+   - Double SHA3-512 hash: `sha3_512sq(prefix + section)`
+   - Encode with IxiVarInt length prefix
+5. Concatenate all hashed sections
+
+**Stored Format**: Encoded hash bytes (variable length, max 256 bytes after encoding)
+
+**Constraints**:
+- **Input**: Valid IDN string (supports Unicode via punycode)
+- **Case-Insensitive**: `Alice` and `alice` produce same hash (lowercased before encoding)
+- **Length**: Final encoded hash \<= 256 bytes (`rnMaxNameLength`)
+- **Character Set**: Must be valid IDN (RFC 3490)
+
+**Examples**: 
+- `"alice"` -> IDN -> hash -> `[length_prefix][64_hash_bytes]`
+- `"münchen"` -> `"xn--mnchen-3ya"` -> hash -> encoded bytes
+- `"sub.parent"` -> `[hash("parent")][hash("sub")]`
+
+### Subnames (Hierarchical)
+
+Name owners can enable subname creation, allowing:
+```
+mycompany (primary, registered via blockchain)
+  ├─ sales.mycompany (subname, created by mycompany owner)
+  ├─ support.mycompany
+  └─ api.mycompany
+```
+
+**Subname Properties**:
+- Can be registered by **anyone** if primary name owner enables subname registration
+- Primary name owner sets optional registration fee (paid directly to `subnameFeeRecipient` address)
+- Cannot outlive primary name (subname expiration \<= primary name expiration)
+- Have independent ownership (`nextPkHash` and `recoveryHash` controlled by subname registrant)
+- Can have independent metadata
+- **Current limitation**: Only 1 level of subnames supported (`ConsensusConfig.rnMaxSubNameLevels = 1`)
+
+---
+
+## Registration Lifecycle
+
+### Stage 1: Registration
+
+**Transaction Type**: Type 4 (any transaction with `to` address = `125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQb8t25`)
+
+**Registration Transaction**:
+```
+Transaction {
+  type: 4,
+  from: [sender addresses with funds],
+  to: [
+    {
+      address: 125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQb8t25,
+      amount: registration_fee,
+      data: RegNameRegister.toBytes()
+    }
+  ]
+}
+```
+
+**Registration Data Structure (`RegNameRegister` class)**:
+| Field | Type | Description |
+|-------|------|-------------|
+| `instruction` | `byte` | Always `1` (RegNameInstruction.register) |
+| `name` | `IxiBytes` | **Encoded+hashed name bytes** from `IxiNameUtils.encodeAndHashIxiName()` (max 256 bytes) |
+| `registrationTimeInBlocks` | `IxiVarUInt` | Duration in blocks (must be multiple of `rnMonthInBlocks`) |
+| `capacity` | `IxiVarUInt` | Storage capacity in **kilobytes** (min 10 KB) |
+| `recoveryHash` | `IxiBytes` | Address for recovery operations |
+| `nextPkHash` | `IxiBytes` | Address for update/ownership operations |
+
+**Important**: The `name` field is NOT the human-readable string. Users provide `"alice"`, but the transaction contains the encoded hash output.
+
+**Registration Fees**:
+Fee = `(registrationTimeInBlocks / rnMonthInBlocks) * capacity * pricePerUnit`
+
+Where:
+- `rnMonthInBlocks = 86400` (~30 days)
+- `capacity` = storage in **KB** (min `rnMinCapacity = 10` KB)
+- `pricePerUnit` = `rnPricePerUnit` (initially 500 IXI, adjustable)
+- `registrationTimeInBlocks` must be multiple of `rnMonthInBlocks`
+
+**Subname Fees**: Separate second `to` entry paying parent's `subnameFeeRecipient`
+
+**Validation Rules**:
+1. Name not currently registered (or expired for top-level names)
+2. Name length 1-256 bytes (`rnMaxNameLength`)
+3. For subnames: parent exists and has `allowSubnames = true`
+4. Capacity >= `rnMinCapacity` (10 KB)
+5. Registration time: `rnMinRegistrationTimeInBlocks` (518400) to `rnMaxRegistrationTimeInBlocks` (2102400)
+6. Registration time is multiple of `rnMonthInBlocks` (86400)
+7. Sufficient fee in first `to` entry (to `rnRewardPoolAddress`)
+8. For subnames with fee: second `to` entry pays parent owner
+
+### Stage 2: Active Period
+
+Once registered and included in a block, the name enters active state:
+
+**Query Operations** (no transaction needed):
+- Lookup name -> retrieve full record
+- Resolve name -> get specific data record (e.g., "address", "ipAddress")
+- Check availability -> verify name registration status
+
+**Update Operations** (separate transaction types via `RegNameInstruction`):
+- `updateRecord` (2): Add/modify/remove data records
+- `extend` (3): Extend expiration (renewal)
+- `changeCapacity` (4): Increase/decrease capacity
+- `recover` (5): Recover using `recoveryHash` key
+- `toggleAllowSubnames` (6): Enable/configure subname creation
+
+**Update Record Transaction** (example):
+```
+Transaction {
+  type: 4,
+  from: [updater addresses],
+  to: [
+    {
+      address: ConsensusConfig.rnRewardPoolAddress,
+      amount: 0,  // No fee for updateRecord
+      data: RegNameUpdateRecord {
+        instruction: 2,
+        name: name_bytes,
+        sequence: current_sequence + 1,
+        records: [RegisteredNameDataRecord[]],  // Records to add/update/delete
+        nextPkHash: owner_address,
+        signaturePk: owner_public_key,
+        signature: sign(checksum, owner_private_key)
+      }
+    }
+  ]
+}
+```
+
+**Ownership Transfer**: Change `nextPkHash` field in any update operation (extend, changeCapacity, updateRecord, toggleAllowSubnames)
+
+**Public Key Privacy**:
+- `nextPkHash` is an **address** (hash of public key), not the public key itself
+- The actual public key (`signaturePk`) is only revealed when signing a transaction
+- After each operation, `nextPkHash` can be changed to a new address
+- This keeps the public key hidden until it's actually used for signing
+
+**Sequence Number**:
+- Incrementing counter preventing replay attacks
+- Each update must have `sequence = current_sequence + 1`
+- Invalid if sequence mismatch or decrease
+- Stored in `RegisteredNameRecord`, incremented with every operation (extend, changeCapacity, updateRecord, recover, toggleAllowSubnames)
+
+### Stage 3: Expiration
+
+When `current_block_height >= expirationBlockHeight`:
+
+**Expired State**:
+- Name marked as expired at `expirationBlockHeight`
+- Grace period: `rnGracePeriodInBlocks = 129600` blocks (~45 days)
+- During grace period: Original owner can still extend
+- After grace period: Name available for re-registration by anyone
+
+**Renewal Before Expiration**:
+- Owner submits `RegNameExtend` transaction (instruction 3)
+- Extension fee formula: `(extensionTimeInBlocks / rnMonthInBlocks) * capacity * pricePerUnit`
+- Extension time must be multiple of `rnMonthInBlocks`
+- New expiration = current expiration + extension time
+- Name remains active without interruption
+
+### Stage 4: Recovery
+
+If owner loses `nextPkHash` private key:
+
+**Recovery Transaction**:
+```
+Transaction {
+  type: 4,
+  from: [recovery address],
+  to: [
+    {
+      address: ConsensusConfig.rnRewardPoolAddress,
+      amount: 0,  // No fee
+      data: RegNameRecover {
+        instruction: 5,
+        name: name_bytes,
+        sequence: current_sequence + 1,
+        nextPkHash: new_owner_address,
+        nextRecoveryHash: new_recovery_address,  // Can update recovery key too
+        signaturePk: recovery_public_key,
+        signature: sign(checksum, recovery_private_key)
+      }
+    }
+  ]
+}
+```
+
+**Recovery Rules**:
+- Must be signed by key matching current `recoveryHash`
+- Updates both `nextPkHash` (ownership) and optionally `recoveryHash`
+- No fees charged (emergency operation)
+- Sequence number still incremented to prevent replay
+- No waiting period in current implementation
+
+---
+
+## Data Records
+
+Each name can store multiple key-value metadata records:
+
+### Data Record Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `IxiBytes` | **Encoded+hashed** record key via `IxiNameUtils.encodeAndHashIxiNameRecordKey()` |
+| `ttl` | `IxiVarInt` | Time-to-live in seconds (application-defined caching hint) |
+| `data` | `IxiBytes` | **Encrypted** data bytes via `IxiNameUtils.encryptRecord()` |
+| `checksum` | `byte[]` | `SHA3-512sq(name + ttl + data)` - double SHA3-512, variable length |
+
+### Record Encryption
+
+**All data records are encrypted** to provide privacy even though they're stored on public blockchain:
+
+**Encryption Key Generation** (`IxiNameUtils.buildEncryptionKey()`):
+```
+key = sha3_512sqTrunc(unhashed_name + unhashed_record_key, 16 bytes)
+```
+- `unhashed_name`: Original plaintext name string (e.g., `"alice"` UTF-8 bytes)
+- `unhashed_record_key`: Original plaintext record key (e.g., `"email"` UTF-8 bytes)
+- Result: 16-byte AES key
+
+**Record Key Encoding** (`IxiNameUtils.encodeAndHashIxiNameRecordKey()`):
+```
+hashed_record_key = encodeAndHashIxiName(record_key_string)
+combined = encoded_name_hash + hashed_record_key
+name_field = sha3_512sq(combined)
+```
+
+**Data Encryption** (`IxiNameUtils.encryptRecord()`):
+```
+encryption_key = buildEncryptionKey(plaintext_name, plaintext_record_key)
+encrypted_data = AES_encrypt(record_data, encryption_key)
+```
+
+**Decryption** (`IxiNameUtils.decryptRecord()`):
+```
+encryption_key = buildEncryptionKey(plaintext_name, plaintext_record_key)
+plaintext_data = AES_decrypt(encrypted_data, encryption_key)
+```
+
+**Privacy Model**:
+- Anyone can **see** that a name has records (checksums visible)
+- Only those who know **both** the plaintext name AND plaintext record key can decrypt
+- Record key itself is hashed, so you can't tell what type of record it is without knowing the key
+- Example: `"alice"` + `"email"` -> decrypt email record, but attacker doesn't know it's an email record
+
+**Common Record Types** (convention, not enforced - but keys must be known to decrypt):
+- `address`: Ixian wallet address (binary format)
+- `ipAddress`: IPv4/IPv6 address (text or binary)
+- `hostname`: DNS hostname (UTF-8)
+- `email`: Email address (UTF-8)
+- `publicKey`: Additional public key (binary)
+- `description`: Human-readable description (UTF-8)
+- `url`: Website URL (UTF-8)
+- `serviceEndpoint`: Service-specific endpoint descriptor
+
+**Special Record for Subnames**:
+- When `allowSubnames = true`, only record with `name = [@]` (single byte 0x40) can be added
+- This prevents data records on names configured for subname creation
+
+### Data Merkle Root
+
+All data records are organized in a Merkle tree:
+
+```
+dataChecksums = [checksum1, checksum2, ..., checksumN]
+dataMerkleRoot = calculateMerkleRoot(dataChecksums)
+```
+
+**Purpose**:
+- Efficient verification: Clients can verify specific record without downloading all records
+- Compact commitment: Single 32-byte hash in blockchain represents all data
+- SPV-friendly: Lightweight clients can verify name data with Merkle proofs
+
+**Calculation**:
+1. Collect all data record checksums in order (already deterministic from list)
+2. Call `IxiUtils.calculateMerkleRoot(checksums)` - builds binary Merkle tree
+3. Root hash stored in `RegisteredNameRecord.dataMerkleRoot`
+4. Updated via `RegisteredNameRecord.recalculateDataMerkleRoot()` when records change
+
+---
+
+## Blockchain State Integration
+
+### RegNameState Structure
+
+The DLT maintains global `RegNameState` tracking all registered names:
+
+**Storage Organization**:
+- **Key**: Encoded+hashed name bytes (same format as transaction `name` field)
+- **Value**: `RegisteredNameRecord` (full record structure)
+- **Storage Backend**: Pluggable (RocksDB, SQLite, in-memory)
+- **Indexing**: Backend-specific, supports:
+  - Exact name lookup: O(1)
+  - Parent-child relationships for subnames (via name prefix matching)
+  - Expiration queries
+
+**Critical**: Both transaction inputs and storage keys use the **same encoded hash format**. The `RegisteredNameRecord.name` field stores this encoded hash, not the original human-readable string.
+
+**State Checksum** (Block Integration):
+- Each block contains `regNameStateChecksum` (v11+ blocks)
+- Checksum calculation:
+  - **Full checksum**: Hash of all name record checksums (ordered by name hash)
+  - **Delta checksum**: Hash of modified names since last full checkpoint
+- Enables Master Nodes to verify synchronized state without exchanging full name database
+- Calculated via `calculateRegNameStateChecksum(blockNum)` and `calculateRegNameStateDeltaChecksum(transactionId)`
+
+**State Transitions**:
+```
+Block N processes RegName transaction ->
+  Journal system captures change (reversible) ->
+  RegNameState updated via journal entries ->
+  Delta checksum calculated ->
+  Stored in Block N header ->
+  Block finalization: Journal committed, changes permanent
+```
+
+### Transaction Processing
+
+When Master Node processes RegName transaction:
+
+1. **Validation** (via `RegisteredNames.verifyTransaction()`):
+   - Transaction has `to` entry with address = `rnRewardPoolAddress`
+   - Parse instruction from data[0]
+   - Instruction-specific validation (name exists, fees correct, signatures valid, sequence matches)
+   - For register: name length, capacity >= min, time in valid range and multiple of month
+   - For updates: sequence = current + 1, signature from authorized key
+
+2. **State Update** (via `RegisteredNames.applyTransaction()`):
+   - Create journal transaction (reversible changes)
+   - Apply instruction-specific operation (register/extend/updateRecord/etc)
+   - Update `RegisteredNameRecord` fields
+   - Recalculate `dataMerkleRoot` if data records changed
+   - Increment sequence number
+
+3. **Fee Distribution**:
+   - All fees sent to `rnRewardPoolAddress` (reward pool)
+   - Subname fees: Separate `to` entry directly to parent's `subnameFeeRecipient`
+   - No fee distribution to validators from name transactions
+
+4. **Checksum Update**:
+   - Modified names tracked in journal
+   - Delta checksum calculated on demand
+   - Stored in block header for validation
+
+---
+
+## Subname System
+
+### Enabling Subnames
+
+Primary name owner configures subname support via `toggleAllowSubnames` transaction:
+
+```
+RegNameToggleAllowSubnames {
+  instruction: 6,
+  name: name_bytes,
+  allowSubnames: true,
+  subnamePrice: "10.0" IXI,  // Fee per subname registration
+  subnameFeeRecipient: owner_address,  // Where subname fees are sent
+  sequence: current_sequence + 1,
+  nextPkHash: owner_address,
+  signaturePk: owner_public_key,
+  signature: sign(checksum, owner_private_key)
+}
+```
+
+Once enabled:
+- **Anyone** can register subnames under this parent by paying `subnamePrice` to `subnameFeeRecipient`
+- Parent name can only have data record with key `[@]` (0x40) - no other records allowed
+- Toggling off: Set `allowSubnames = false` (disables new subname registrations)
+
+### Registering Subname
+
+Any user can register `sales.mycompany` (not just the owner of `mycompany`):
+
+```
+Transaction {
+  type: 4,
+  from: [requester addresses with funds],
+  to: [
+    {
+      address: ConsensusConfig.rnRewardPoolAddress,
+      amount: base_registration_fee,  // Same formula as primary names
+      data: RegNameRegister {
+        instruction: 1,
+        name: <encoded hash of "sales.mycompany">,  // Result of IxiNameUtils.encodeAndHashIxiName("sales.mycompany")
+        registrationTimeInBlocks: extension_time,
+        capacity: 10,  // KB, minimum
+        recoveryHash: subname_recovery_address,
+        nextPkHash: subname_owner_address
+      }
+    },
+    {
+      address: parent_subnameFeeRecipient,  // From mycompany record
+      amount: parent_subnamePrice  // E.g. 10.0 IXI
+    }
+  ]
+}
+```
+
+**Subname Rules**:
+- Parent name must have `allowSubnames = true`
+- **Any user** can register the subname (not restricted to parent owner)
+- Must be direct child only (1 level): `child.parent` OK, `grandchild.child.parent` NOT allowed
+- Subname expiration calculated same as primary: registration block + time
+- If subname expiration > parent expiration, parent expiration is automatically extended
+- Two payments required: base fee to `rnRewardPoolAddress` + parent's `subnamePrice` to `subnameFeeRecipient`
+- Subname has independent `nextPkHash` and `recoveryHash` controlled by the registrant
+- Parent owner cannot modify or revoke subname after creation
+
+### Hierarchical Resolution
+
+Query `sales.mycompany`:
+1. Encode via `IxiNameUtils.encodeAndHashIxiName("sales.mycompany")`:
+   - Lowercase: `"sales.mycompany"`
+   - IDN encode: `"sales.mycompany"` (already ASCII)
+   - Reverse split: `["mycompany", "sales"]`
+   - Hash each: `[hash("mycompany")][hash("sales")]`
+2. Lookup encoded bytes in `RegNameState`
+3. Return `RegisteredNameRecord` if found
+
+**Current Limitation**: Only 1 subname level supported. Multi-level names like `api.services.mycompany` are NOT supported and will fail validation.
+
+Each name (primary or subname) is stored independently in flat key-value storage, keyed by encoded hash.
+
+---
+
+## Security Considerations
+
+### Name Squatting
+
+**Problem**: Malicious actors register valuable names before legitimate owners
+
+**Mitigation Strategies**:
+- High registration fees for short/valuable names
+- Exponential cost scaling for capacity
+- Community-enforced norms (social layer)
+- Potential future: Auction mechanisms or reserved name lists
+
+### Front-Running
+
+**Problem**: Attacker observes pending registration transaction, submits higher fee to register first
+
+**Mitigation**:
+- Commit-reveal schemes (future enhancement)
+- Transaction privacy (encrypted mempools)
+- First-seen-first-served mempool policies
+
+### Key Loss
+
+**Problem**: Owner loses `nextPkHash` private key, cannot update name
+
+**Solution**: Recovery mechanism using `recoveryHash`
+
+**Best Practices**:
+- Store recovery key in secure, separate location
+- Use multisig for high-value names (future enhancement)
+- Regularly test recovery process
+
+### Expiration Attacks
+
+**Problem**: Attacker waits for name expiration, immediately re-registers to hijack identity
+
+**Mitigation**:
+- Grace period: Original owner has priority renewal window
+- Notification systems: Warn owners of upcoming expiration
+- Monitoring: Automated renewal services
+
+---
+
+## Use Cases
+
+### Personal Identity
+
+```
+Name: alice
+Records:
+  address: 1abc...def (Ixian wallet)
+  email: alice@example.com
+  pgpKey: <public PGP key>
+  socialMedia: @alice_ixian
+```
+
+Anyone can send IXI to "alice" instead of remembering long address.
+
+### Service Discovery
+
+```
+Name: myapi
+Records:
+  endpoint: https://api.example.com/v1
+  ipAddress: 93.184.216.34
+  certificate: <TLS cert fingerprint>
+  version: 2.1.0
+```
+
+Applications discover service endpoints without hardcoding IPs.
+
+### Organizational Naming
+
+```
+Name: company
+Subnames:
+  sales.company -> Sales team contact
+  support.company -> Support ticketing system
+  api.company -> API gateway endpoint
+```
+
+Hierarchical structure mirrors organization.
+
+### Decentralized Websites
+
+```
+Name: mysite
+Records:
+  ipfsHash: Qm... (IPFS content hash)
+  arweaveId: tx... (Arweave transaction)
+  ipAddress: 1.2.3.4 (traditional fallback)
+```
+
+---
+
+## Query Protocol
+
+### Name Lookup
+
+**RPC Method**: `getRegName(name, useAbsoluteId)`
+
+**Parameters**:
+- `name`: Human-readable string (e.g., `"alice"`) OR pre-encoded hash bytes
+- `useAbsoluteId`: `true` = treat name as already encoded; `false` = call `IxiNameUtils.encodeAndHashIxiName()` first
+
+**Returns**: `RegisteredNameRecord` or `null` if not found
+
+**Internal Process**:
+1. If `useAbsoluteId = false`: Encode input via `IxiNameUtils.encodeAndHashIxiName(name)`
+   - Lowercase -> IDN encode -> reverse sections -> hash each section
+2. Lookup encoded bytes in storage backend
+3. Return full `RegisteredNameRecord` (with `name` field containing encoded hash bytes)
+
+**Note**: The returned record's `name` field is NOT human-readable. To display to users, you'd need to store original strings separately or use a reverse lookup mechanism.
+
+**Example**:
+```
+Query: getRegName("alice", true)  // Input string gets encoded+hashed internally
+Response: {
+  version: 1,
+  name: <encoded hash bytes>,  // NOT "alice" string - this is the sha3_512sq output
+  registrationBlockHeight: 100000,
+  capacity: 10,  // KB
+  nextPkHash: "1abc...def",  // Owner address
+  recoveryHash: "1xyz...123",  // Recovery address
+  sequence: 5,
+  allowSubnames: false,
+  subnamePrice: "0",
+  subnameFeeRecipient: null,
+  expirationBlockHeight: 1500000,
+  updatedBlockHeight: 150000,
+  dataRecords: [
+    {name: "address", ttl: 3600, data: <binary address>, checksum: <hash>},
+    {name: "email", ttl: 86400, data: "alice@example.com", checksum: <hash>}
+  ],
+  dataMerkleRoot: <variable-length hash>,
+  signaturePk: <last update signer public key>,
+  signature: <last update signature>
+}
+```
+
+### Bulk Lookup
+
+For resolving multiple names efficiently:
+- Query by prefix (all subnames of "company")
+- Query by expiration range (cleanup operations)
+- Query by updatedBlockHeight (recent changes)
+
+### SPV Verification
+
+Lightweight clients can verify name data without full `RegNameState`:
+
+1. Obtain `regNameStateChecksum` from trusted block header
+2. Request name record + Merkle proof from full node
+3. Verify Merkle proof against `dataMerkleRoot`
+4. Verify `dataMerkleRoot` against `regNameStateChecksum`
+
+This provides cryptographic proof that name data is correct without trusting the full node.
+
+---
+
+## Economics
+
+### Fee Structure
+
+**Registration Fees** (actual formula from `RegisteredNamesTransactions.calculateExpectedRegistrationFee()`):
+```
+fee = (registrationTimeInBlocks / rnMonthInBlocks) * capacity * pricePerUnit
+
+Where:
+  rnMonthInBlocks = 86400 blocks (~30 days)
+  capacity = storage in KB (min 10 KB)
+  pricePerUnit = rnPricePerUnit (initial: 500 IXI)
+  
+Example: 6 months, 10 KB capacity, 500 IXI/unit
+  fee = (518400 / 86400) * 10 * 500 = 6 * 10 * 500 = 30,000 IXI
+```
+
+**Update Fees**:
+- `updateRecord`: 0 IXI (free)
+- `extend`: `(extensionTimeInBlocks / rnMonthInBlocks) * capacity * pricePerUnit`
+- `changeCapacity`: `(capacity_diff) * months_remaining * pricePerUnit` (if increasing)
+- `recover`: 0 IXI (emergency operation)
+- `toggleAllowSubnames`: 0 IXI
+
+**Subname Fees**:
+- Set by parent name owner (`subnamePrice` field in parent's record)
+- Paid directly to parent's `subnameFeeRecipient` address (second `to` entry in transaction)
+- Network also collects standard registration fee (first `to` entry to `rnRewardPoolAddress`)
+- Formula: parent fee + normal registration fee
+  ```
+  total_cost = base_registration_fee + parent_subnamePrice
+  ```
+
+### Incentive Alignment
+
+**Name Owners**:
+- Pay fees proportional to resource consumption (capacity, duration)
+- Encouraged to release unused names (expiration)
+- Can monetize via subname sales
+
+**Network (Master Nodes)**:
+- Registration and extension fees flow to `rnRewardPoolAddress` (centralized reward pool)
+- Fees are gradually distributed to block signers over the registration period, creating sustained network incentives aligned with storage commitment duration
+- Storage costs recovered via capacity fees (in formula: capacity * pricePerUnit)
+- Long-term sustainability via renewals and extensions
+
+**Subname Parents**:
+- Revenue from subname registrations
+- Incentivized to provide valuable namespace

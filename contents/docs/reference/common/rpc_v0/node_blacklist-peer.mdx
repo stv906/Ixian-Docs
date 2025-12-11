@@ -1,0 +1,89 @@
+---
+title: blacklistPeer
+description: Adds a peer's IP/hostname or wallet address to the node's blacklist to prevent future connections.
+status: Finalized
+---
+
+## Introduction
+
+The `blacklistPeer` method is an administrative endpoint that allows a node operator to manually block all network connections to and from a specific peer. This is a security and network management feature used to isolate the node from misbehaving, malicious, or malfunctioning peers.
+
+A peer can be blacklisted in one of two ways:
+1.  By its network `host` (IP address or hostname).
+2.  By its cryptographic `wallet` address.
+
+Once a peer is blacklisted, the node will refuse any incoming connections from it and will not attempt to establish any outbound connections to it.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters. At least one of the two parameters must be provided.
+
+### Parameters
+
+| Name     | Type     | Required                                | Description                                                        |
+| :------- | :------- | :-------------------------------------- | :----------------------------------------------------------------- |
+| `host`   | `string` | No (at least one parameter is required) | The IP address or hostname of the peer to blacklist.               |
+| `wallet` | `string` | No (at least one parameter is required) | The base58-encoded Ixian wallet address of the peer to blacklist. |
+
+### Example POST Request (by Host)
+
+```json
+POST /blacklistPeer
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "blacklistPeer",
+  "params": {
+    "host": "198.51.100.123"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (by Wallet Address)
+
+```
+GET /blacklistPeer?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+If the request is successful, the response `result` is a simple confirmation string.
+
+### Result Fields (on Success)
+
+| Name     | Type     | Description                                |
+| :------- | :------- | :----------------------------------------- |
+| `result` | `string` | The static string `"OK"` on success. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "OK",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error may be returned if the wallet address format is invalid.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid address format."
+    }
+}
+```

@@ -9,6 +9,7 @@ import Feedback from "@/components/navigation/feedback"
 import PageBreadcrumb from "@/components/navigation/pagebreadcrumb"
 import Pagination from "@/components/navigation/pagination"
 import Toc from "@/components/navigation/toc"
+import StatusBadge from "@/components/navigation/status-badge"
 
 type PageProps = {
   params: Promise<{ slug: string[] }>
@@ -28,16 +29,14 @@ export default async function Pages({ params }: PageProps) {
       <div className="flex-[3] pt-10 h-[94.5vh]">
         <PageBreadcrumb paths={slug} />
         <Typography>
-          <h1 className="text-3xl -mt-2">{frontmatter.title}</h1>
-          <p className="-mt-4 text-base text-muted-foreground text-[16.5px]">
-            {frontmatter.description}
-          </p>
+          <h1 className="text-3xl -mt-2">{frontmatter.title}</h1>          
+          <StatusBadge status={frontmatter.status} since={frontmatter.since} />
           <div>{content}</div>
           <Pagination pathname={pathName} />
         </Typography>
       </div>
       {Settings.rightbar && (
-        <div className="hidden xl:flex xl:flex-col sticky gap-3 py-8 min-w-[230px] h-[94.5vh] toc">
+        <div className="hidden xl:flex xl:flex-col sticky gap-3 py-8 min-w-[230px] max-w-[260px] h-[94.5vh] toc">
           {Settings.toc && <Toc tocs={tocs} />}
           {Settings.feedback && (
             <Feedback slug={pathName} title={frontmatter.title} />
@@ -72,6 +71,6 @@ export async function generateMetadata({ params }: PageProps) {
 
 export function generateStaticParams() {
   return PageRoutes.filter((item) => item.href).map((item) => ({
-    slug: item.href.split("/").slice(1),
+    slug: item.href.split("/").slice(1)
   }))
 }

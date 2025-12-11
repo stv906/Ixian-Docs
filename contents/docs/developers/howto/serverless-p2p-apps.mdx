@@ -1,0 +1,651 @@
+---
+title: "Building Truly Serverless P2P Web Apps"
+description: "Create real-time collaborative web applications with zero backend infrastructure, zero hosting costs, and zero servers using Spixi Mini Apps"
+---
+
+## The Problem with "Serverless"
+
+### What "Serverless" Really Means
+
+Cloud providers market "serverless" as "no servers to manage" - but you still need their services:
+
+**For simple static sites:**
+- Hosting - Usually free tier
+
+**For basic interactive apps:**
+- Hosting + serverless functions (AWS Lambda) - Often free tier
+- Database (Firebase/Supabase) - Free tier for low usage
+
+**For real-time collaborative apps** (like the whiteboard we'll build):
+- Hosting - Free tier
+- **Real-time sync** - **$29-49/month minimum** (Ably/Pusher entry tiers)
+- Database - Free tier initially (scales with usage)
+- Authentication - Free tier initially
+- File storage - Free tier initially
+
+### The Real Cost: Real-Time Infrastructure
+
+**The hidden truth:** Simple static sites and basic serverless apps can run on free tiers indefinitely. But the moment you need **real-time collaboration** (like our whiteboard example), costs jump significantly:
+
+- **Ably Standard**: $29/month base + $2.50/million messages + $1.00/million connection-minutes (10k concurrent connections, 2.5k msg/sec)
+- **Pusher Channels Startup**: $49/month (500 concurrent connections, 1M messages/day)
+- **Pusher Channels Pro**: $99/month (2,000 concurrent connections, 4M messages/day)
+- **Custom WebSocket servers**: $5-25/month VPS hosting + significant dev/maintenance time
+
+**For collaborative apps specifically:**
+- **Monthly costs:** $29-49 minimum for real-time sync services (scales to $299-899+ with usage)
+- **Vendor lock-in:** Service changes or shutdowns break your app
+- **Centralization:** All data flows through vendor infrastructure
+- **Complexity:** Coordinate multiple services (hosting, database, auth, real-time sync)
+
+*Note: Prices were obtained in December 2025 and are subject to change. Verify current rates with service providers.*
+
+---
+
+## How Ixian Solves It
+
+**Spixi Mini Apps are truly serverless** - pure HTML/CSS/JavaScript applications distributed as `.zspixiapp` files that run peer-to-peer inside the Spixi messenger. No backend code, no hosting costs, no databases, no authentication services, and no real-time infrastructure to manage.
+
+**Key difference:** Traditional "serverless" still needs cloud providers (AWS Lambda, Firebase, Ably). Spixi Mini Apps need nothing - just distribute a file and users can run your app.
+
+### How It Works
+
+```
+Traditional Web App:
+User A -> Your Server -> Database -> Your Server -> User B
+         (AWS/Vercel)  (Firebase)  (costs $$)
+
+Spixi Mini App:
+User A <--> Ixian Network (P2P) <--> User B
+         (no servers, $0 cost)
+```
+
+---
+
+## Real Example: Collaborative Whiteboard
+
+Let's build a real-time drawing app where multiple users can draw together - **no backend whatsoever**.
+
+**For hobby projects (\<1000 users/month):**
+
+| Requirement | Traditional Solution | Monthly Cost | Ixian Solution | Cost |
+|-------------|---------------------|--------------|----------------|------|
+| Frontend hosting | Vercel/Netlify | $0 (free tier) | .spixi file | $0 |
+| Backend API | AWS Lambda | $0 (free tier) | None needed | $0 |
+| Real-time sync | Ably Standard | $29/mo base | P2P messaging | $0 |
+| Database | Supabase Free | $0 (500MB limit) | Local + P2P sync | $0 |
+| Authentication | Various providers | $0 (free tier) | Ixian identity | $0 |
+| File storage | S3/Cloudinary | $0 (free tier) | P2P transfer | $0 |
+| **Total** | | **$29/mo** | | **$0/mo** |
+
+*Real-time collaboration is the cost driver: Ably Standard starts at $29/month + usage for 10k concurrent connections. Pusher starts at $49/month for 500 connections. Static sites can stay free with traditional hosting.*
+
+**For production apps (10k+ users/month with real-time collaboration):**
+
+| Requirement | Traditional Solution | Monthly Cost | Ixian Solution | Cost |
+|-------------|---------------------|--------------|----------------|------|
+| Frontend hosting | Vercel Pro | $20/mo + usage | .spixi file | $0 |
+| Backend API | AWS Lambda | $20-100 | None needed | $0 |
+| Real-time sync | Ably Pro | $399/mo + usage | P2P messaging | $0 |
+| Database | Supabase Pro | $25/mo + usage | Local + P2P sync | $0 |
+| Authentication | Auth providers | $35-100 | Ixian identity | $0 |
+| File storage | S3/CDN | $10-100 | P2P transfer | $0 |
+| **Total** | | **$509-820+/mo** | | **$0/mo** |
+
+*Traditional costs scale with users. Ixian costs stay at $0 regardless of scale.*
+
+---
+
+## Step-by-Step: Building the Whiteboard
+
+### 1. Project Structure
+
+```
+whiteboard/
+├── appinfo.spixi          # App metadata
+├── icon.png              # 512x512 app icon
+└── app/
+    ├── index.html        # Entry point
+    ├── js/
+    │   ├── spixi-app-sdk.js   # Ixian SDK
+    │   ├── spixi-tools.js     # Utilities
+    │   └── whiteboard.js      # Your app logic
+    └── css/
+        └── styles.css
+```
+
+### 2. Get the SDK Files
+
+Download the required SDK files from the Spixi Mini Apps repository:
+
+- **`spixi-app-sdk.js`** - Core SDK for P2P communication
+- **`spixi-tools.js`** - Utility functions and helpers
+
+**Download from:**
+```
+https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/mini-apps-sdk
+```
+
+Place both files in your `app/js/` directory. These handle communication with Spixi backend.
+
+### 3. Create `appinfo.spixi`
+
+```ini
+caVersion = 0
+id = com.yourname.whiteboard
+publisher = YourName
+name = Collaborative Whiteboard
+version = 1.0.0
+capabilities = multiUser
+minUsers = 2
+maxUsers = 2
+```
+
+**Key:** `capabilities = multiUser` enables P2P sessions between contacts.
+
+### 4. HTML Canvas (`app/index.html`)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Whiteboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="controls">
+        <input type="color" id="colorPicker" value="#000000">
+        <input type="range" id="brushSize" min="1" max="20" value="3">
+        <button id="clearBtn">Clear</button>
+        <div id="users">Users: <span id="userCount">1</span></div>
+    </div>
+    
+    <canvas id="whiteboard"></canvas>
+
+    <!-- Ixian SDK - handles P2P communication -->
+    <script src="js/spixi-app-sdk.js"></script>
+    <script src="js/spixi-tools.js"></script>
+    <script src="js/whiteboard.js"></script>
+</body>
+</html>
+```
+
+### 5. P2P Drawing Logic (`app/js/whiteboard.js`)
+
+```javascript
+// ===== CANVAS SETUP =====
+const canvas = document.getElementById('whiteboard');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight - 60;
+
+let drawing = false;
+let currentColor = '#000000';
+let currentSize = 3;
+let lastX = 0;
+let lastY = 0;
+
+// Optional local tracking (SDK only gives initial list on init)
+let remoteUsers = [];
+
+// ===== SDK LIFECYCLE =====
+SpixiAppSdk.onInit = function(sessionId, userAddresses) {
+    console.log('Session started:', sessionId, 'Users:', userAddresses);
+    remoteUsers = userAddresses;
+    initControls();
+    initCanvasEvents();
+};
+
+SpixiAppSdk.onNetworkData = function(senderAddress, raw) {
+    try {
+        const msg = JSON.parse(raw);
+        if (msg.type === 'clear') {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else if (msg.type === 'draw') {
+            drawLine(msg.x1, msg.y1, msg.x2, msg.y2, msg.color, msg.size);
+        }
+    } catch (e) {
+        console.error('Bad network payload', e);
+    }
+};
+
+window.onload = SpixiAppSdk.fireOnLoad; // MUST be set so Spixi can trigger onInit
+
+// ===== UI & EVENTS =====
+function initControls() {
+    document.getElementById('colorPicker').addEventListener('change', e => currentColor = e.target.value);
+    document.getElementById('brushSize').addEventListener('change', e => currentSize = e.target.value);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        broadcast({ type: 'clear' });
+    });
+}
+
+function initCanvasEvents() {
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', handleTouch, { passive: false });
+    canvas.addEventListener('touchmove', handleTouch, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing);
+}
+
+function startDrawing(e) {
+    drawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+}
+
+function draw(e) {
+    if (!drawing) return;
+    const x = e.offsetX;
+    const y = e.offsetY;
+    drawLine(lastX, lastY, x, y, currentColor, currentSize); // local
+    broadcast({ // remote
+        type: 'draw',
+        x1: lastX,
+        y1: lastY,
+        x2: x,
+        y2: y,
+        color: currentColor,
+        size: currentSize
+    });
+    [lastX, lastY] = [x, y];
+}
+
+function stopDrawing() { drawing = false; }
+
+function drawLine(x1, y1, x2, y2, color, size) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+}
+
+function handleTouch(e) {
+    e.preventDefault();
+    const t = e.touches[0];
+    const simulated = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 'mousemove', {
+        clientX: t.clientX,
+        clientY: t.clientY
+    });
+    canvas.dispatchEvent(simulated);
+}
+
+// ===== NETWORK WRAPPER =====
+function broadcast(obj) {
+    // SDK handles encryption, routing, reliability.
+    SpixiAppSdk.sendNetworkData(JSON.stringify(obj));
+}
+
+// ===== RESIZE PRESERVATION =====
+window.addEventListener('resize', () => {
+    const tmp = document.createElement('canvas');
+    tmp.width = canvas.width; tmp.height = canvas.height;
+    tmp.getContext('2d').drawImage(canvas, 0, 0);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 60;
+    ctx.drawImage(tmp, 0, 0);
+});
+```
+
+### 6. Styling (`app/css/styles.css`)
+
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+}
+
+#controls {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+#colorPicker {
+    width: 50px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#brushSize {
+    width: 120px;
+}
+
+button {
+    padding: 10px 20px;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.1s;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+#users {
+    margin-left: auto;
+    color: white;
+    font-weight: 600;
+}
+
+#whiteboard {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    background: white;
+    cursor: crosshair;
+    touch-action: none;
+}
+```
+
+---
+
+## How P2P Magic Happens
+
+### Behind the Scenes (You Don't Have to Manage This)
+
+1. **User A opens whiteboard with User B**
+   - Spixi establishes encrypted P2P session with post-quantum key exchange
+   - Starling protocol maps addresses to sectors for discovery
+
+2. **User A draws a line**
+   - `broadcast()` calls `SpixiAppSdk.sendNetworkData()`
+   - SDK encrypts and routes via Ixian S2 Protocol
+   - Automatic NAT traversal through relay nodes
+
+3. **User B receives line data**
+   - S2 node delivers encrypted packet
+   - SDK decrypts and calls your `onNetworkData()` function
+   - You draw the line locally
+
+**You write:** 2 lines of P2P code  
+**Ixian handles:** User discovery, post-quantum encryption, routing, NAT traversal, reliability
+
+---
+
+## Testing Your App
+
+### Local Testing (Browser)
+
+```bash
+# Serve locally to test UI
+cd whiteboard/app
+python -m http.server 8080
+# Open http://localhost:8080
+```
+
+### Testing P2P (In Spixi)
+
+1. **Package the app:**
+   
+   Use the Spixi App Packer to bundle your app into a `.zspixiapp` file:
+   
+   **Online Tool:** [https://apps.spixi.io/packer](https://apps.spixi.io/packer)
+   
+   Or run locally from the repository:
+   ```bash
+   cd Spixi-Mini-Apps/app-packer
+   # Follow instructions in the app-packer README
+   ```
+   
+   Then upload the generated `.zspixiapp` directly to the device where Spixi is running.  
+   Alternatively you can upload `.spixi` and `.zspixiapp` files to web hosting or IPFS.
+
+2. **Install in Spixi:**
+   - Open Spixi -> Apps -> Install app
+
+3. **Test multi-user:**
+   - Install on two devices
+   - Add each other as contacts
+   - Open whiteboard together
+   - Draw and watch it sync in real-time!
+
+---
+
+## What Makes This Revolutionary
+
+### No Backend = No Single Point of Failure
+
+**Traditional app:**
+```
+Your server goes down -> Everyone's app breaks
+Your database corrupted -> Everyone loses data
+DDoS attack on your server -> App unusable
+AWS region outage -> Global downtime
+Company shuts down -> App disappears forever
+```
+
+**Spixi Mini App:**
+```
+No central database -> Each user has their data
+DDoS someone's node -> Doesn't affect the network
+Ixian node outage -> Other nodes take over
+Developer stops maintaining -> App still works
+```
+
+### Post-Quantum Secure By Default
+
+Your whiteboard has better security than most banking apps:
+- **Triple key exchange:** RSA-4096 + ECDH (secp521r1) + ML-KEM-1024 (NIST FIPS 203, finalized Aug 2024)
+- **Dual encryption:** AES-256-GCM + ChaCha20-Poly1305 (both must be independently broken)
+- **Hybrid key derivation:** HKDF-SHA3-512 combines entropy from all three algorithms
+
+**You wrote zero crypto code.** It's automatic and battle-tested.
+
+### True Decentralization
+
+**Infrastructure:**
+- No single point of failure - distributed network with automatic routing
+- No vendor dependency - open protocol, multiple independent operators
+- Works offline - P2P functions on local networks without internet
+
+**Scaling & Discovery:**
+- Starling sector-based routing scales to billions
+- IXI Names for human-readable addressing (e.g., 'myapp.ixi')
+- Economic incentives via split-fee model ensure long-term network availability
+
+**Privacy & Freedom:**
+- No data mining - no central server collecting user data
+- Geographic independence - no geofencing or regional restrictions
+- Self-authenticating - no passwords, API keys, or identity providers
+
+**Platform Support:**
+- Multi-platform native - Windows, macOS, Linux, Android, iOS via Spixi
+- Transparent fees - on-chain transaction fees visible upfront
+
+---
+
+## Comparison: Building This the Traditional Way
+
+### Tech Stack You'd Need
+
+```javascript
+// Frontend
+- React/Vue framework
+- WebSocket client library
+- Canvas drawing library
+- State management (Redux)
+
+// Backend
+- Node.js/Express or serverless functions
+- WebSocket server (Socket.io)
+- Authentication middleware (JWT)
+- Database (PostgreSQL/MongoDB)
+- Redis for session management
+- File storage (S3)
+
+// Infrastructure
+- CI/CD pipeline (GitHub Actions)
+- Container orchestration (Docker/K8s)
+- Load balancer
+- CDN (CloudFront)
+- Monitoring (Datadog/New Relic)
+- Logging (ELK stack)
+
+// Maintenance
+- Security patches
+- Scaling management
+- Database backups
+- SSL certificate renewal
+- DDoS protection
+- GDPR compliance infrastructure
+```
+
+**Lines of code:** ~5,000-10,000  
+**Time to production:** weeks to months  
+**Monthly cost:** $100-1000+  
+**Maintenance burden:** Ongoing
+
+### With Ixian
+
+```javascript
+// Your code
+- ~150 lines of JavaScript
+- ~50 lines of HTML
+- ~80 lines of CSS
+
+// Ixian handles
+- Encryption
+- Authentication
+- Real-time sync
+- NAT traversal
+- Scaling
+- Storage
+```
+
+**Lines of code:** ~280  
+**Time to production:** 2-4 hours  
+**Monthly cost:** $0  
+**Maintenance burden:** None
+
+---
+
+## Real-World Use Cases
+
+### What Else Can You Build?
+
+**Collaborative Tools**
+- Document editors (like Google Docs, but P2P)
+- Project management (Trello-style boards)
+- Code pair programming
+- Design collaboration
+
+**Games**
+- Turn-based games (Chess, Checkers)
+- Real-time multiplayer games
+- Trivia/quiz apps
+- Multiplayer puzzles
+
+**Business Apps**
+- Time tracking
+- Expense splitting
+- Invoice generation
+- Inventory management
+- Customer support ticketing
+
+**Social**
+- Polls and surveys
+- Event planning
+- Group voting
+- Shared shopping lists
+
+**All with:**
+- Zero hosting costs
+- No vendor lock-in
+- Post-quantum security
+
+---
+
+## Limitations & Considerations
+
+### What Spixi Mini Apps Are NOT
+
+**Not for public websites** - Users need Spixi messenger installed  
+**Not for huge files** - P2P works best for \<10MB transfers per message  
+**Not for massive concurrent sessions** - Optimized for small group collaboration (2-20 users typical, scaling possible with multiple sessions)  
+**Not for SEO** - No Google indexing (private by design, requires Spixi to access)
+
+### Best For
+
+**Private collaboration** - Teams, friends, small groups  
+**Real-time interaction** - Chat-based workflows  
+**Privacy-focused apps** - Healthcare, legal, sensitive data  
+**Zero-budget projects** - Side projects, experiments  
+**IoT control interfaces** - Device management UIs
+
+---
+
+## Next Steps
+
+### Extend the Whiteboard
+
+Add features using only P2P:
+- **Save/load drawings** - Use `localStorage` + share via P2P
+- **Drawing history** - Undo/redo with P2P sync
+- **Image import** - Share images P2P
+- **Layers** - Advanced canvas with P2P layer sync
+
+### Explore More Examples
+
+- **Tic-Tac-Toe** - Turn-based game logic
+- **Gate Control** - IoT device control via QuIXI
+- **Auth App** - QR code authentication
+- **Video Test** - Media streaming P2P
+
+[View all examples ->](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/apps)
+
+### Learn More
+
+- [Spixi Mini Apps Quickstart](../quickstart/spixi-mini-app)
+- [Full SDK Reference](https://github.com/ixian-platform/Spixi-Mini-Apps/blob/master/mini-apps-sdk/spixi-app-sdk.js)
+- [App Packer Tool](https://apps.spixi.io/packer)
+- [Ixian Discord](https://discord.gg/pdJNVhv)
+- [Telegram](https://t.me/ixian_official_ENG)
+
+---
+
+## The Bottom Line
+
+**Traditional "serverless":** Still requires servers (just hidden)  
+**Ixian serverless:** Actually no servers
+
+**Traditional P2P:** Complex, insecure, hard to build  
+**Ixian P2P:** Simple, post-quantum secure, handles everything
+
+**Traditional collaboration:** Expensive infrastructure, vendor lock-in, ongoing maintenance  
+**Ixian collaboration:** HTML + JavaScript + $0 + zero maintenance
+
+**You write the UI. Ixian handles everything else.**
+
+Ready to build decentralized apps that are secure by design? Start with the whiteboard example above and deploy your first truly serverless app in the next hour.

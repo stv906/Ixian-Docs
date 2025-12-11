@@ -1,0 +1,31 @@
+---
+title: getSectorNodes (18)
+description: Requests relay presence records for a specific sector prefix.
+status: Finalized
+---
+
+The `getSectorNodes` message requests presence records (relay-capable nodes) responsible for a given network "sector".
+
+Sectors enable sharded routing. A sector is identified by a 10‑byte `sectorPrefix`, derived from a wallet address: first 10 bytes of `SHA3-512(addressNoChecksum)`. This request lets a node discover appropriate relays for an address without probing the whole network.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sectorPrefix` | `IxiBytes` | `10` | `10` | 10-byte sector identifier (first 10 bytes of SHA3-512 of the wallet address without checksum). |
+| `maxNodes` | `IxiVarUInt` | `1` | (capped at 20 by responders) | Requested upper bound on returned relay presences. Values >20 are treated as 20. |
+
+## Behavioral Notes
+
+- Sent to discover relay-capable peers for a sector (used prior to targeted S2 / streaming routing).
+- Broadcast typically toward master/high-capacity nodes; relay nodes must be excluded from the broadcast set if local node is already a relay/master.
+- Receiving node parses prefix + desired count. If it has cached data for the sector it immediately answers; otherwise it may forward the request upstream (rebroadcast).
+- Responders cap `maxNodes` at 20.
+- Response (`sectorNodes`) payload: `sectorPrefix` (IxiBytes), `nodeCount` (IxiVarUInt), then `nodeCount` presence records each as `IxiBytes` (length-prefixed serialized Presence including endpoints and signatures).
+- Returned presences are relay nodes whose wallet sector prefix matches the requested prefix; receivers may add them to relay sector caches and optionally initiate connections.
+

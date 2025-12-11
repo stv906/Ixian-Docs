@@ -1,0 +1,95 @@
+---
+title: Addresses
+description: Technical specification for Ixian address formats and derivation.
+status: Planned Upgrade
+---
+
+An Ixian Address is a unique, versioned identifier used to send and receive transactions on the DLT network. It is derived from a user's public key and can be represented in both binary and a human-readable Base58 format.
+
+The system supports multiple address versions, each with different lengths and derivation algorithms. Addresses can be derived hierarchically using a `nonce`, allowing a single public key to generate a virtually unlimited number of unique addresses.
+
+**All current address versions (v0, v1, v2) are derived from an RSA-4096 public key.** The address versioning system is designed to support different cryptographic algorithms in the future.
+
+### Binary Structure
+
+An address in its raw binary form is composed of a version byte followed by a payload, which is a truncated hash of a public key.
+
+| Part | Size (Bytes) | Description |
+| :--- | :--- | :--- |
+| **Version** | 1 | A single byte identifying the address format and derivation rules (`0`, `1`, or `2`). |
+| **Payload** | 32 or 44 | The core address data, derived from a public key hash. |
+
+### Checksum and Textual Representation
+
+For error checking and user-facing representation, a checksum is appended to the binary structure, and the result is Base58 encoded.
+
+1.  **Checksum Calculation:** 
+    - **v0/v1**: First 3 bytes of `sha512sqTrunc(version || payload, 64)`
+    - **v2**: First 3 bytes of `sha3_512sqTrunc(version || payload, 64)`
+2.  **Appending:** The 3-byte checksum is appended to the binary address.
+3.  **Base58 Encoding:** The entire sequence (version + payload + checksum) is encoded using Base58 to produce the final, human-readable address string.
+
+---
+
+## Address Versions
+
+### Version 0 (Legacy)
+
+Version 0 is the original address format.
+
+*   **Underlying Cryptography:** RSA-4096
+*   **Total Length:** 33 bytes (36 with checksum)
+*   **Base Address Derivation:** `0x00` + `sha512quTrunc(RSA-4096 publicKey, 32)`
+*   **Nonce-based Derivation:** 
+    ```
+    baseAddress_v0 = 0x00 + sha512quTrunc(pubKey, 32)
+    baseChecksum = sha512sqTrunc(baseAddress_v0, 3)
+    newPayload = sha512quTrunc(baseAddress_v0 + baseChecksum + nonce, 32)
+    derivedAddress = 0x00 + newPayload
+    ```
+
+### Version 1
+
+Version 1 introduced a longer address format.
+
+*   **Underlying Cryptography:** RSA-4096
+*   **Total Length:** 45 bytes (48 with checksum)
+*   **Base Address Derivation:** `0x01` + `sha512sqTrunc(RSA-4096 publicKey, 44)`
+*   **Nonce-based Derivation:** 
+    ```
+    baseAddress_v1 = 0x01 + sha512sqTrunc(pubKey, 44)
+    baseChecksum = sha512sqTrunc(baseAddress_v1, 3)
+    newPayload = sha512sqTrunc(baseAddress_v1 + baseChecksum + nonce, 44)
+    derivedAddress = 0x01 + newPayload
+    ```
+
+### Version 2 (Current)
+
+Version 2 improves the derivation algorithm for nonced addresses by simplifying the hashing process. **This is the recommended version for all new address generation.**
+
+*   **Underlying Cryptography:** RSA-4096
+*   **Total Length:** 45 bytes (48 with checksum)
+*   **Base Address Derivation:** `0x02` + `sha3_512sqTrunc(RSA-4096 publicKey, 44)`
+*   **Nonce-based Derivation:** 
+    ```
+    baseAddress_v2 = 0x02 + sha3_512sqTrunc(pubKey, 44)
+    newPayload = sha3_512sqTrunc(baseAddress_v2 + nonce, 44)
+    derivedAddress = 0x02 + newPayload
+    ```
+    Note: The checksum is NOT included in the nonce derivation for v2, providing cleaner hierarchical relationships.
+
+---
+
+## Cryptographic Agility & Future Versions
+
+The address versioning system is designed to be crypto-agile. The version byte explicitly defines the cryptographic algorithm and derivation rules used. This allows the network to evolve and adopt new signature schemes without breaking backward compatibility.
+
+Future address versions are planned to support post-quantum and other modern signature schemes, such as **FN-DSA**.
+
+---
+
+## Sector Prefix
+
+Every address has an associated **Sector Prefix**, which is a 10-byte identifier used for network-level routing or sharding. It is deterministically derived from the address itself.
+
+*   **Derivation:** `sectorPrefix = sha3_512Trunc(addressNoChecksum, 10)`

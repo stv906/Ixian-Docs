@@ -23,7 +23,7 @@ export function Footer() {
               The official documentation pages for the Ixian Platform.
             </TextElement>
             <TextElement className={classes.grayText} type={"label-md"}>
-              Managed by Ixian.
+              Managed by IXI Labs.
             </TextElement>
           </div>
         </div>

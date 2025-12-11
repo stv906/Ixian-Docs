@@ -1,0 +1,23 @@
+---
+title: leaveConfirmed (38)
+description: Confirmation that the leave request was processed.
+---
+
+The `leaveConfirmed` message is a simple acknowledgment sent by a bot to a user in response to a `leave` message. It confirms that the bot has processed the request and removed the user from the group.
+
+### Core Data Types
+
+This message has no payload.
+
+## Payload Structure
+
+The `leaveConfirmed` message is defined by its type code and does not carry a payload.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| *N/A* | *N/A* | 0 | 0 | The payload is always empty. |
+
+## Behavioral Notes
+
+*   **Sender:** This message is only ever sent by a bot.
+*   **Recipient Action:** When a user's client receives `leaveConfirmed`, it can safely complete the leave process.

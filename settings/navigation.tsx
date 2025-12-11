@@ -1,5 +1,3 @@
-import { PageRoutes } from "@/lib/pageroutes"
-
 export interface Navigation {
   title: string
   href: string
@@ -8,20 +6,20 @@ export interface Navigation {
 
 export const Navigations: Navigation[] = [
   {
-    title: "Technical Docs",
-    href: `/docs${PageRoutes[0].href}`,
+    title: "Operators",
+    href: `/docs/operators`,
   },
   {
-    title: "API Docs",
-    href: `/docs${PageRoutes[8].href}`,
+    title: "Developers",
+    href: `/docs/developers`,
   },
   {
-    title: "Demos",
-    href: `/docs${PageRoutes[72].href}`,
+    title: "Architecture",
+    href: `/docs/architecture`,
   },
   {
-    title: "Guides",
-    href: `/docs${PageRoutes[75].href}`,
+    title: "Reference",
+    href: `/docs/reference`,
   },
 ]
 

@@ -1,0 +1,45 @@
+---
+title: getBlock3 (55)
+description: Requests a full block from a peer with options to include transactions and header types.
+status: Planned Upgrade
+---
+
+## Introduction
+
+The `getBlock3` message is a flexible request for a single, complete block by its block number. It includes options that allow the requester to specify whether they need the full list of transactions or just the block header.
+
+This is the primary message used by full nodes during the "block download" phase of synchronization, after they have already obtained the headers. The request provides fine-grained control over the response format, allowing nodes to optimize bandwidth by requesting only the data they need.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`uint8`**: A single byte.
+*   **`bool`**: A single byte, `0x00` for `false` and `0x01` for `true`.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | `1` | | The block number of the block being requested. |
+| `includeTxs` | `uint8` | `0` | `2` | A flag indicating whether to include the transaction data. See table below for valid values. |
+| `fullHeader` | `bool` | | | A flag indicating the desired header type. `true` for a full header, `false` for a compact header. Only used when `includeTxs` is `0`. |
+
+### `includeTxs` Flag Options
+
+The `includeTxs` field acts as a flag to control the inclusion of the block's body and transaction data.
+
+| Value | Meaning |
+| :--- | :--- |
+| `0` | **Exclude Transactions:** The response should only contain the block header. No transaction data will be sent. |
+| `1` | **Include Applied Transactions:** The response includes a full `blockData2` message with the block header, plus a separate `transactionsChunk3` message containing only the transactions that are already applied to the blockchain. This is used for blocks that are confirmed and finalized. |
+| `2` | **Include All Transactions:** The response includes a full `blockData2` message with the block header, plus a `transactionsChunk3` message containing **all** transactions associated with the block, including both applied and unapplied transactions. This is typically used during initial sync or when requesting recent blocks. |
+
+## Behavioral Notes
+
+-   A node sends this message to download the full contents of a block it has already validated via its header.
+-   Upon receiving this message, a peer should fetch the specified block from its local storage.
+-   **Response Format**:
+    -   If `includeTxs` is `0`: A `blockData2` containing just the block header.
+    -   If `includeTxs` is `1` or `2`: A `blockData2` message with the block data, followed by a separate `transactionsChunk3` message containing the transactions.
+-   **Signature Optimization**: For blocks that are within 5 blocks of the current chain height, all signatures are included. For older blocks, only "frozen" signatures (those that contributed to the signature freeze) are included to reduce bandwidth.
+-   The `fullHeader` flag specifies whether to return a complete superblock header with all segments.

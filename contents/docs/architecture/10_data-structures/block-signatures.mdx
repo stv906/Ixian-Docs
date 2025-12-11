@@ -1,0 +1,87 @@
+---
+title: Block Signatures
+description: Structure and semantics of block signatures in the Ixian consensus protocol.
+status: Finalized
+---
+
+Block signatures attest that a node validated a candidate block and authorizes it to be considered for acceptance. In v10+ the signature is accompanied by the signer’s PoCW eligibility solution for a recent reference block.
+
+This page specifies only the on-wire structures used inside blocks and on the network. It does not prescribe implementation details.
+
+## Concepts
+
+- Signers must first obtain eligibility via a PoCW solution for a recent reference block.
+- For v10+, the RSA signature covers the digest `sha3_512sq(blockChecksum || powSolution.solution)`. This binds the specific PoCW solution (nonce) to the signed block.
+- Signatures included in a block are encoded in a compact header form to conserve space. The RSA signature bytes are omitted and the signing public key may be replaced by its 64-byte hash. The full form (including RSA signature) is used with recent blocks.
+
+---
+
+## Data Types
+
+- `IxiVarInt` / `IxiVarUInt`: variable-length integers.
+- `IxiBytes`: length-prefixed byte array.
+
+---
+
+## Signature Structure (in Block Header, v10+)
+
+When included in a block's Signatures section, each entry is encoded in a compact form to minimize header size. The RSA signature bytes are omitted, and the public key may be hashed.
+
+| Field | Type | Notes |
+| :--- | :--- | :--- |
+| `signer` | `IxiBytes` | Signer identifier. In compacted headers this is the address without checksum (or an address-derived identifier). |
+| `powSolution` | `IxiBytes` | Encoded PoCW solution (see below). May contain a hash of the signing public key instead of the full key in compacted form. |
+
+If the block is later compacted by a superblock, the entire signatures list can be replaced by:
+- `compactedSignatureCount: IxiVarUInt`
+- `totalSignerDifficultyBits: IxiVarUInt` (aggregate difficulty encoded in bits)
+
+### PoCW Solution (v10+)
+
+Encodes the signer's eligibility proof parameters:
+
+| Field | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | | Reference block height used for the challenge. |
+| `solution` | `IxiBytes` | 1-64 bytes | Nonce that satisfies the target difficulty for the challenge. |
+| `signingPubKey` | `IxiBytes` | \<= 300 bytes (header may use 64-byte hash) | Public key used to sign the block (or its hash in compacted form). |
+
+PoCW challenge hash (little-endian where applicable):
+
+```
+sha3_512sq( IxiVarUInt(blockNum) || blockChecksum(blockNum) || recipientAddressNoChecksum || hashOrBytes(signingPubKey) || solution )
+```
+
+- `blockChecksum(blockNum)` is the checksum of the reference block at height `blockNum`.
+- `recipientAddressNoChecksum` is the binary address (without its 3-byte checksum) of the signer.
+- `hashOrBytes(signingPubKey)` equals `sha3_512sq(signingPubKey)` if the key is longer than 64 bytes, otherwise the raw bytes.
+- Difficulty is derived from this hash; aggregate difficulty may be compacted into bits for storage.
+
+---
+
+## Signature Structure (network broadcast)
+
+When signatures are broadcast as standalone messages, the full form is sent:
+
+| Field | Type | Notes |
+| :--- | :--- | :--- |
+| `blockNum` | `IxiVarUInt` | Target block number being signed. |
+| `blockHash` | `IxiBytes` | Target block checksum. |
+| `signer` | `IxiBytes` | Signer identifier (address or public key). |
+| `powSolution` | `IxiBytes` | Full PoCW solution with public key. |
+| `signature` | `IxiBytes` | RSA signature over `sha3_512sq(blockHash || powSolution.solution)`. |
+
+---
+
+## Verification checklist (receiver)
+
+For each received signature (header entry or broadcast message):
+
+1. Validate PoCW solution window and minimum difficulty per consensus parameters.
+2. Recompute the PoCW challenge hash from `blockNum`, reference `blockChecksum(blockNum)`, signer address, `signingPubKey` (or its hash), and `solution`.
+3. Verify the RSA `signature` over `sha3_512sq(blockHash || powSolution.solution)` using the included `signingPubKey` (or the resolved public key).
+4. Ensure the signer is eligible and has not already signed the block (per-block uniqueness).
+
+Notes:
+- Header-embedded entries omit the RSA `signature` and may carry a hashed `signingPubKey`; full verification requires fetching the broadcast form if not otherwise known.
+- In compacted blocks, `totalSignerDifficultyBits` preserves aggregate difficulty for historical accounting.

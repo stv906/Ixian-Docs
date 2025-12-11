@@ -1,0 +1,24 @@
+---
+title: fileData (10)
+description: A chunk of a file's binary data.
+---
+
+The `fileData` message contains an actual chunk of a file's binary content. It is sent by the file sender in direct response to a `requestFileData` message from the recipient.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is a custom binary structure containing the transfer ID, the chunk index, and the raw data for that chunk. The exact serialization is handled by the `TransferManager` class.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `transferData` | `IxiBytes` | * | * | A serialized byte array containing the transfer UID, the packet number, and the raw file chunk data. |
+
+## Behavioral Notes
+
+*   **Response Message:** This message is only ever sent in response to a `requestFileData` message.
+*   **Recipient Action:** Upon receiving a `fileData` message, the recipient's client extracts the packet number and the file chunk data. It then writes the data to the appropriate offset in the destination file being assembled on disk. The client keeps track of which chunks have been received.
+*   **No Confirmation:** The `StreamMessage` carrying `fileData` should have `requireRcvConfirmation` set to `false`. The reliability is managed at the application layer through the request/response flow of `requestFileData` and `fileData`.

@@ -1,0 +1,374 @@
+---
+title: Blocks
+description: The core data structure of the Ixian DLT, containing transactions, state checksums, and consensus signatures.
+status: Planned Upgrade
+---
+
+## Introduction
+
+An Ixian `Block` is the fundamental data structure of the Distributed Ledger Technology (DLT). Blocks are chained together sequentially to form the blockchain, creating an immutable, verifiable history of all state changes from the genesis block to the present.
+
+Each block serves as a container for a set of transactions, checksums that validate the integrity of the blockchain's state, and the cryptographic signatures from Master Nodes that form the basis of the Ixian consensus algorithm.
+
+**On-Wire Format:** All block versions are serialized for network transport using the latest **v10+** structure. Parsers should be implemented according to the v10+ specification detailed below, as legacy formats are no longer used for peer-to-peer communication.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: Variable-length unsigned integer. See **[IxiVarInt Encoding](./ixi-varint)**.
+*   **`IxiBytes`**: A byte array prefixed by its length as an `IxiVarUInt`. See **[IxiBytes Encoding](./ixi-bytes)**.
+*   **`IxiNumber`**: A variable-length integer used for token values. See **[IxiNumber Encoding](./ixi-number)**.
+*   **`uint64`**: A fixed-size 8-byte unsigned integer, always serialized in Little-Endian byte order.
+
+---
+
+## Block Structure (Version 10+)
+
+The full binary structure of a block is divided into three logical sections: the Header, the Signatures, and the Transaction IDs. The `blockChecksum` is calculated *only* from the Header section, ensuring that signatures can be added without invalidating the block's primary identifier.
+
+### Section 1: Block Header
+
+This section contains the core metadata and state checksums of the block. The `blockChecksum` is the `sha3_512sq` hash of this entire section.
+
+| Field                   | Data Type     | Description                                                                                             |
+| :---------------------- | :------------ | :------------------------------------------------------------------------------------------------------ |
+| `version`               | `IxiVarUInt` | The version of the block structure. Must be `>= 10`.                                                    |
+| `blockNum`              | `IxiVarUInt` | The sequential height of the block in the blockchain. The Genesis Block is `1`.                         |
+| `lastBlockChecksum`     | `IxiBytes`   | The `blockChecksum` of the preceding block (`blockNum - 1`).                                            |
+| `signatureFreezeChecksum` | `IxiBytes`   | A checksum of the final, sorted signature list for block `blockNum - 5`, locking it from changes.         |
+| `txCount`               | `IxiVarUInt` | The total number of transactions included in this block.                                                |
+| `pitChecksum`           | `IxiBytes`   | The root hash of the Prefix Inclusion Tree (PIT) containing all transaction IDs in this block.          |
+| `timestamp`             | `IxiVarUInt` | The Unix Epoch timestamp (in seconds) when the block was created.                                       |
+| `difficulty`            | `IxiVarUInt` | The Proof-of-Work difficulty for optional mining rewards.                                               |
+| `signerBits`            | `uint64`      | **Conditional (Genesis/Superblock):** The PoW difficulty target for block signers. Present only in block #1 or superblocks. |
+| `lastSuperBlockNum`     | `IxiVarUInt` | **Conditional (Superblock):** The block number of the previous superblock.                              |
+| `lastSuperBlockChecksum`| `IxiBytes`   | **Conditional (Superblock):** The `blockChecksum` of the previous superblock.                           |
+| `superBlockSegmentCount`| `IxiVarUInt` | **Conditional (Superblock):** The number of block checksums that follow in this superblock segment.     |
+| `segmentChecksums`      | `IxiBytes[]` | **Conditional (Superblock):** A list of block checksums, repeated `superBlockSegmentCount` times.        |
+| `walletStateChecksum`   | `IxiBytes`   | The checksum of the entire Wallet State after applying all transactions in this block.                  |
+| `regNameStateChecksum`  | `IxiBytes`   | **Conditional (v11+):** The checksum of the Ixian Names state after applying all transactions. Present only in v11+ blocks. |
+| `totalFee`              | `IxiNumber`   | **Conditional (v11+):** The sum of all transaction fees collected in this block. Present only in v11+ blocks. |
+
+**Superblocks:** Fields marked as **Conditional (Superblock)** are only present if `blockNum` is a multiple of the `superblockInterval` (and not block 1).
+
+### Section 2: Signatures
+
+This section contains the cryptographic signatures from Master Nodes that validate the block. It follows immediately after the Block Header.
+
+| Field                       | Data Type     | Description                                                                                                              |
+| :-------------------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------- |
+| `signatureCount`            | `IxiVarUInt` | The number of `BlockSignature` structures that follow. If `0`, indicates a compacted signature format.                 |
+| *If `signatureCount` is `0`:* | | |
+| `compactedSignatureCount`   | `IxiVarUInt` | The original number of signatures before compaction.                                                                     |
+| `totalSignerDifficultyBits` | `IxiVarUInt` | The sum of all signer difficulties, encoded into a compact "bits" format.                                                |
+| *If `signatureCount` is `> 0`:* | | |
+| `signatures`                | `IxiBytes[]` | A list of `BlockSignature` structures, repeated `signatureCount` times. The internal format of a `BlockSignature` is documented separately. |
+
+### Section 3: Transaction IDs
+
+This section lists the identifiers of all transactions included in the block. It follows immediately after the Signatures section.
+
+| Field           | Data Type     | Description                                                              |
+| :-------------- | :------------ | :----------------------------------------------------------------------- |
+| `transactionId` | `IxiBytes[]` | A list of transaction IDs, repeated `txCount` times (from the header). |
+
+---
+
+## Checksum Calculation
+
+The `blockChecksum` is the primary identifier of a block. The calculation method has evolved over different block versions to enhance security and efficiency.
+
+### Version 10+
+*   **Algorithm:** `sha3_512sq`
+*   **Data:** The serialized bytes of the **Block Header** section only (as defined above). The signature and transaction ID sections are explicitly excluded from this hash.
+
+### Version 7, 8, 9
+*   **Algorithm:** `sha512sqTrunc` (A truncated, single-pass SHA-512 hash)
+*   **Data:** A concatenation of the following fields in order:
+    1.  `ixianChecksumLock` (A constant byte prefix)
+    2.  `version` (`int32`, Little-Endian)
+    3.  `blockNum` (`uint64`, Little-Endian)
+    4.  `pitChecksum` (raw bytes)
+    5.  `lastBlockChecksum` (raw bytes, if present)
+    6.  `walletStateChecksum` (raw bytes, if present)
+    7.  `signatureFreezeChecksum` (raw bytes, if present)
+    8.  `difficulty` (`uint64`, Little-Endian)
+    9.  `merged_segments` (Concatenated `uint64` block number + `byte[]` checksum for each superblock segment, ordered by block number)
+    10. `lastSuperBlockNum` (`uint64`, Little-Endian, if `lastSuperBlockChecksum` is present)
+    11. `lastSuperBlockChecksum` (raw bytes, if present)
+    12. `timestamp` (`int64`, Little-Endian, **v7+ only**)
+    13. `blockProposer` (raw bytes, **v9 only**)
+
+### Version 6
+*   **Algorithm:** `sha512sqTrunc`
+*   **Data:** Same as v7-9, but without the `timestamp` and `blockProposer` fields.
+
+### Version 3, 4, 5
+*   **Algorithm:** `sha512sqTrunc`
+*   **Data:** Same as v6, but instead of the `pitChecksum`, it uses a single UTF-8 encoded string formed by concatenating all transaction ID strings.
+
+### Version 0, 1, 2
+*   **Algorithm:** `sha512quTrunc` (A truncated, quad-pass SHA-512 hash)
+*   **Data:** Same as v3-5.
+
+---
+
+## Behavioral Notes
+
+*   **Signature Freezing:** The `signatureFreezeChecksum` field plays a crucial role in consensus. It is the cryptographic commitment to the final, sorted list of signatures for the block five levels deep in the chain (`blockNum - 5`). This prevents malicious alterations to the historical list of block signers, which is tied to Master Node rewards.
+
+    **Signature Freeze Calculation:**
+    ```
+    For block N at depth 5 (when processing block N+5):
+      sortedSignatures = all signatures on block N (in order received)
+      mergedData = blockNum || sig1Bytes || sig2Bytes || ... || sigNBytes
+      signatureFreezeChecksum = SHA3-512(SHA3-512(mergedData))
+    ```
+    
+    This checksum is stored in block N+5's header. Once frozen, the signature set for block N is immutable. Any attempt to modify historical signatures will be detected when validating the freeze checksum in block N+5.
+
+*   **Prefix Inclusion Tree (PIT):** The `pitChecksum` is the root hash of a Merkle-like tree that contains all transaction IDs. This allows for efficient Transaction Inclusion Verification (TIV), where a client can prove a transaction is in a block without needing to download the entire transaction list.
+
+*   **Block Compaction:** To conserve storage space, older blocks can be "compacted". During this process, the full lists of signatures and transactions are discarded and replaced by a simple count (`txCount` in the header, and `compactedSignatureCount` in the signature section). The `totalSignerDifficultyBits` is stored to preserve the consensus weight of the compacted signatures. Once a block is compacted, new transactions or signatures cannot be added.
+
+---
+
+## State Checksums in Blocks
+
+Blocks include cryptographic proofs of the global state after applying all transactions.
+
+### Wallet State Checksum
+
+The `walletStateChecksum` field validates the complete Wallet State after block application.
+
+**Calculation Method:**
+- **Superblocks** (when `blockNum % superblockInterval == 0`): Full state checksum including all wallets
+- **Regular blocks**: Delta checksum including only wallets modified in this block
+
+See **[Wallets State](./01_wallets-state)** for detailed checksum algorithms.
+
+**Purpose:**
+- Enables Master Nodes to verify they have identical state without exchanging full wallet data
+- Allows new nodes to synchronize state from superblock snapshots
+- Detects any state divergence immediately
+
+### RegName State Checksum (v11+)
+
+The `regNameStateChecksum` field validates the Ixian Names registry state.
+
+**Included in:**
+- Block version 11 and above only
+- Computed using Merkle root of all registered name checksums
+
+**Calculation Method:**
+- **Superblocks**: Full state Merkle root of all names
+- **Regular blocks**: Delta Merkle root of only modified names
+
+See **[Names State](./01_names-state)** for detailed checksum algorithms.
+
+**Purpose:**
+- Validates registered name ownership and data
+- Enables trustless name resolution verification
+- Supports state synchronization at superblock boundaries
+
+### Total Fee (v11+)
+
+The `totalFee` field sums all transaction fees collected in the block.
+
+**Purpose:**
+- Transparent accounting of network fees
+- Used for Master Node reward calculation
+- Enables fee market analysis
+
+---
+
+## Superblocks
+
+Superblocks are special blocks occurring at regular intervals (defined by `superblockInterval`, typically 1000 blocks) that contain additional data for efficient synchronization.
+
+### Purpose
+
+1. **State Snapshots**: Superblocks contain full state checksums rather than deltas
+2. **Chain Compression**: Reference previous superblock for faster history validation
+3. **Sync Acceleration**: New nodes can sync from the nearest superblock
+
+### Additional Superblock Fields
+
+Superblocks include these extra fields in the header:
+
+- `signerBits`: PoW difficulty for block signers (also in block #1)
+- `lastSuperBlockNum`: Height of previous superblock
+- `lastSuperBlockChecksum`: Checksum of previous superblock
+- `superBlockSegmentCount`: Number of block checksums in segment
+- `segmentChecksums`: Array of block checksums between superblocks
+
+### Superblock Segments
+
+The segment checksums list includes the `blockChecksum` of every block between the previous superblock and this one (exclusive).
+
+**Example:**
+```
+Superblock at height 2000 (superblockInterval = 1000)
+lastSuperBlockNum: 1000
+lastSuperBlockChecksum: <checksum of block 1000>
+superBlockSegmentCount: 999
+segmentChecksums: [
+  <checksum of block 1001>,
+  <checksum of block 1002>,
+  ...
+  <checksum of block 1999>
+]
+```
+
+This enables efficient validation of the entire chain segment without downloading all intermediate blocks.
+
+---
+
+## Block Validation
+
+Master Nodes validate blocks through multiple verification steps:
+
+### 1. Structural Validation
+
+- Version is supported and appropriate for block height
+- All required fields are present for the version
+- Field sizes are within acceptable limits
+- Conditional fields (superblock, v11+) are present when expected
+
+### 2. Checksum Validation
+
+- `blockChecksum` matches hash of serialized header
+- `lastBlockChecksum` matches the actual previous block
+- `pitChecksum` matches Merkle root of transaction IDs
+- `signatureFreezeChecksum` matches frozen signatures (when applicable)
+
+### 3. State Validation
+
+- Apply all transactions to previous state
+- Verify `walletStateChecksum` matches resulting Wallet State
+- Verify `regNameStateChecksum` matches resulting Names State (v11+)
+- Verify `totalFee` equals sum of transaction fees (v11+)
+
+### 4. Transaction Validation
+
+- All transaction IDs are valid and exist
+- All transactions pass individual validation
+- No double-spending occurs
+- Transaction order is deterministic
+
+### 5. Signature Validation
+
+- Signatures are from valid Master Nodes
+- Signatures verify against `blockChecksum`
+- Sufficient signing weight for consensus
+- No duplicate signatures
+
+### 6. Consensus Validation
+
+- Block meets consensus requirements
+- Signing difficulty requirements met
+- Timestamp within acceptable range
+- Difficulty adjustment is correct
+
+---
+
+## Block Size Limits
+
+Block size limits have evolved over versions:
+
+**Block Version < 6:**
+- Maximum: 49 MB
+
+**Block Version 6-9:**
+- Maximum: ~10 MB
+
+**Block Version 10+:**
+- No hard limit, but limited by:
+  - Network bandwidth constraints
+  - Transaction pool size
+  - Block generation time target
+
+---
+
+## Block Generation Process
+
+Master Nodes generate blocks through this process:
+
+1. **Collect Transactions**: Gather valid transactions from the transaction pool
+2. **Apply Transactions**: Apply transactions to current state in deterministic order
+3. **Calculate State Checksums**: Compute `walletStateChecksum`, `regNameStateChecksum`
+4. **Calculate PIT Checksum**: Build Prefix Inclusion Tree from transaction IDs
+5. **Set Metadata**: Timestamp, difficulty, version, etc.
+6. **Calculate Block Checksum**: Hash the complete header
+7. **Sign Block**: Generate signature with node's key
+8. **Broadcast**: Send to network for additional signatures
+
+---
+
+## Block Propagation
+
+Blocks are transmitted over the network in optimized formats:
+
+### Full Block Transmission
+
+When a node needs complete block data:
+- Header section (with all metadata)
+- Signatures section (or compacted format)
+- Transaction IDs section
+
+### Optimized Transmission (v10+)
+
+Blocks can be split into three separately-transmitted parts:
+1. **Block Header**: Fixed-size metadata and checksums
+2. **Signatures**: Can be requested separately
+3. **Transaction IDs**: Can be requested if not already known
+
+This enables:
+- Faster block propagation
+- Reduced bandwidth for known transactions
+- Parallel processing of block components
+
+---
+
+## Block Storage
+
+### Storage Formats
+
+**Active Blockchain:**
+- Full blocks with all transactions and signatures
+- Stored in sequential block files
+- Indexed by block height and checksum
+
+**Compacted Blockchain:**
+- Headers and checksums only
+- Transactions and signatures replaced by counts
+- Dramatically reduced storage requirements
+
+### Storage Optimization
+
+1. **Recent Blocks** (last ~1000): Full data, uncompacted
+2. **Mid-Range Blocks** (1000-10000 back): Signature compaction
+3. **Historical Blocks** (>10000 back): Full compaction
+4. **Superblock Snapshots**: State snapshots at superblock boundaries
+
+---
+
+## Block Versioning
+
+Block versions enable protocol upgrades:
+
+| Version | Description |
+|:--------|:------------|
+| v0-v2 | Legacy formats, quad-pass hashing |
+| v3-v5 | Double-pass hashing, improved efficiency |
+| v6 | Size limits, structural improvements |
+| v7-v9 | Timestamp in checksum, block proposer |
+| v10 | Omega lock-in, new serialization format |
+| v11 | Omega full activation, Names State checksum, total fee |
+| v12-v13 | Omega tuning |
+| v14 | Future upgrades (planned) |
+
+**Upgrade Process:**
+1. New version defined in consensus rules
+2. Activation at specified block height
+3. All nodes must upgrade before activation
+4. Legacy blocks remain valid with old rules

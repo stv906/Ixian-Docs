@@ -1,0 +1,125 @@
+---
+title: addContact
+description: Adds a contact to the local friend list and sends a connection request over the network.
+status: Finalized
+---
+
+## Introduction
+
+The `addContact` method is the primary way to initiate a connection with another user on the Ixian S2 network. This application-level endpoint performs two key actions:
+
+1.  It adds the specified Ixian address to the node's local contact list with an initial "Request Sent" status.
+2.  It sends a "Contact Request" message over the network to the specified address, inviting them to connect.
+
+This is the first step in a two-way handshake process required to establish a secure communication channel.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the user you wish to add as a contact. |
+
+### Example POST Request
+
+```json
+POST /addContact
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "addContact",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /addContact?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+If successful, the `result` is the newly created `Contact` object, reflecting its initial state.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation. Key initial fields will be:
+
+*   **`approved`**: `false` (until the recipient approves the request).
+*   **`handshakeStatus`**: An initial state, such as `1` or `2`, indicating a request has been sent but not yet finalized.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "publicKey": "AQAAAAAAAgAAu5h4A...",
+    "nickname": "Viper",
+    "online": false,
+    "addedTimestamp": 1763060000,
+    "handshakeStatus": 2,
+    "approved": false,
+    "metaData": { ... },
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If the contact already exists:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact already added"
+    }
+}
+```
+
+If the `address` parameter is missing:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "address parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Asynchronous Handshake:** A successful response only confirms that the contact has been added locally and the request has been dispatched to the network. The contact will not become fully active until the recipient approves the request on their end.
+*   **Local Storage:** The contact is immediately saved to the node's local "friend list" database.
+*   **Network Action:** This command triggers an outbound `contactRequest` message on the S2 streaming network, sent to the target address.
+*   **Default Nickname:** Upon initial addition, the contact's `nickname` is typically set to their full wallet address. This can be updated by the user later.
+*   **Idempotency:** Attempting to add a contact that already exists in the list will result in an error.

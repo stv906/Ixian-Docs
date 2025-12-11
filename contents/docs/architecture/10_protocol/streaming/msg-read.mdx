@@ -1,0 +1,26 @@
+---
+title: msgRead (8)
+description: Confirmation that a message has been read.
+---
+
+The `msgRead` message is an application-level acknowledgment indicating that the recipient has actively viewed a message (e.g., by opening the chat window). This provides the "read" or "seen" status in a chat interface.
+
+Unlike `msgReceived`, this message is triggered by user action, not by the protocol stack itself.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains the unique ID of the message that has been read by the user.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `readMessageId` | `IxiBytes` | 16 | 64 | The unique ID (`StreamMessage.id`) of the message that has been read. |
+
+## Behavioral Notes
+
+*   **User-Triggered:** This message is sent only when the user interface confirms that the corresponding message content has been displayed to the user.
+*   **Sender's Action:** Upon receiving a `msgRead` confirmation, the sender's client should update the status of the original message to "read" or "seen".
+*   **Pending Queue:** Receiving a `msgRead` also implicitly confirms delivery, so the client should remove the original message from the pending queue if it hasn't already received a `msgReceived` confirmation for it.

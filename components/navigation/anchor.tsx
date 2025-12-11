@@ -25,7 +25,7 @@ export default function Anchor({
     ? props.href.toString().split("/")[1] == path.split("/")[1]
     : path === props.href
 
-  if (props.href.toString().includes("http")) isMatch = false
+  if (props.href.toString().startsWith("http")) isMatch = false
 
   if (disabled)
     return <div className={cn(className, "cursor-not-allowed")}>{children}</div>

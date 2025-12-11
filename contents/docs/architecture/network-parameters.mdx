@@ -1,0 +1,135 @@
+---
+title: Network Parameters
+description: A detailed list of the core consensus parameters and constants for the Ixian DLT on Mainnet, Testnet, and Regtest.
+---
+
+## Current Network Capacity (Mainnet)
+
+**Proven Production Throughput:**
+
+| Metric | Value | Notes |
+| :--- | :--- | :--- |
+| DLT Transaction Throughput | **2,340 TPS** | Soft-limited by single Master node hardware. Unbounded scaling through distributed node architecture (node clustering across multiple machines). |
+| Block Generation Interval | 30 seconds | Target block time with 30s minimum difference. |
+| Transactions Per Block (Max) | 307,020 | Theoretical maximum; typical blocks carry fewer based on network load. |
+| Daily Transaction Capacity | ~202 million | 2,340 TPS × 86,400 seconds/day. |
+| Annual Transaction Capacity | ~74 billion | At sustained 2,340 TPS. |
+| Network Status | **Live (Mainnet)** | Active consensus participants and relay nodes. |
+
+---
+
+## Overview
+
+The Ixian network operates with a set of core parameters that are defined at the consensus level. These constants govern everything from block timing and transaction fees to reward structures and security thresholds. While many parameters are shared across all network types, some have unique values for Mainnet, Testnet, and the local Regression Test (Regtest) network.
+
+This document provides a comprehensive reference for all key parameters defined in the `ConsensusConfig`.
+
+## Network Identification
+
+These parameters ensure that transactions and blocks from one network are not valid on another.
+
+| Parameter | Mainnet Value | Testnet Value | Regtest Value | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `ixianChecksumLock` | `Ixian` | `IxiTest` | `IxiReg` | The initial seed value for the transaction checksum generator, unique to each network. |
+
+---
+
+## Mainnet Parameters
+
+The following tables detail the parameters for the Mainnet, the primary public Ixian network. Unless specified otherwise, these values are also the default for Testnet and Regtest.
+
+### Block Timing & Structure
+
+These parameters define the rhythm and size of the Ixian blockchain.
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `blockGenerationInterval` | 30 seconds | The target time interval between consecutive blocks. |
+| `minBlockTimeDifference` | 30 seconds | The minimum time that must pass since the previous block to create a new one. |
+| `maxBlockNetworkTimeDifference` | 60 seconds | A new block's timestamp cannot be more than 60 seconds ahead of the network's median time. |
+| `superblockInterval` | 1000 blocks | Superblocks, which condense blockchain data, are generated every 1000 blocks. |
+| `redactedWindowSize` | Dynamic (see below) | The number of recent blocks that nodes must keep. Older blocks can be discarded. |
+| `maximumBlockSize` | ~4.2 MB + Tx data | The maximum size of a block in bytes. |
+| `maximumTransactionsPerBlock` | 307,020 | The maximum number of transactions that can be included in a single block. |
+
+**Redacted Window Size (`getRedactedWindowSize`):**
+The redacted window size has evolved with block versions to optimize storage requirements:
+- **Block Version < 2:** `43200` blocks (~15 days)
+- **Block Version < 10:** `20000` blocks (~7 days)
+- **Block Version >= 10:** `10000` blocks (~3.5 days)
+
+### Consensus & Security
+
+These values are critical for network security, node agreement, and wallet generation.
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `networkSignerConsensusRatio` | 75% | The minimum percentage of master nodes that must agree on a block for it to be accepted. |
+| `networkSignerDifficultyConsensusRatio` | 23.4% | The minimum percentage of the total network difficulty that the consenting signers must represent. |
+| `maximumBlockSigners` | 1000 | The maximum number of signatures that can be included in a block. |
+| `minimumMasterNodeFunds` | `0 IXI` | The minimum funds required to operate a Master Node. |
+| `defaultRsaKeySize` | 4096 bits | The default security level for generated RSA wallet keys. |
+| `rewardMaturity` | 960 blocks | The number of blocks before mining and signing rewards become spendable. |
+
+### Difficulty & Proof-of-Work
+
+These parameters govern the block signing difficulty and the legacy Proof-of-Work system.
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `minBlockSignerPowDifficulty` | `10,000,000` | The initial minimum Proof-of-Work difficulty a block signer must meet. |
+| `blocksToUseForAverageDifficultyCalculation` | 40,320 blocks | The number of past blocks used to calculate the average network difficulty. |
+| `difficultyAdjustmentTimeInterval` | 14 days | The real-world time interval over which the difficulty is evaluated for adjustment. |
+| `difficultyAdjustmentExpectedBlockCount` | 40,000 blocks | The number of blocks expected to be produced in the adjustment interval. |
+| `miningExpirationBlockHeight`| 105,120,000 | The block height at which traditional Argon2 PoW mining reward transactions cease. |
+
+### Signer Mining (PoCW)
+
+Parameters for the Pooled Signer mining algorithm.
+
+| Parameter Function | Value (BlockVer < 12) | Value (BlockVer >= 12) | Description |
+| :--- | :--- | :--- | :--- |
+| `getPlPowBlocksValidity` | 120 blocks (~1 hr) | 30 blocks (~15 min) | How long a PL-PoW solution remains valid. |
+| `getPlPowMinCalculationBlockTime` | 20 blocks (~10 min) | 10 blocks (~5 min) | Minimum number of blocks the PL-PoW is calculated for. |
+| `getPlPowCalculationInterval` | 15 blocks (~7.5 min) | 15 blocks (~7.5 min) | How often to recalculate the PL-PoW since the last solution. |
+
+### Transactions & Fees
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `transactionPrice` | Dynamic (see below) | The required fee per kilobyte of transaction data. |
+| `transactionDustLimit` | `0.01 IXI` | The minimum amount for a transaction output to prevent network spam. |
+| `ixianInfiniMineAddress` | `1ixianinfinimine234234234234234234234234234242HP` | A null address used as the source for newly generated coins (e.g., in reward transactions). |
+
+**Transaction Price (`transactionPrice`):**
+The fee is determined by the block version:
+- **Block Version < 10:** `0.00005 IXI` per kB
+- **Block Version >= 10:** `0.005 IXI` per kB
+
+### Ixian Name Service (IXI Names)
+
+Constants related to the registration and management of human-readable names on the Ixian network.
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `rnMonthInBlocks` | 86,400 blocks | The block equivalent of a 30-day month for registration calculations. |
+| `rnMinRegistrationTimeInBlocks` | 518,400 blocks (~6 months) | The minimum duration for a name registration. |
+| `rnMaxRegistrationTimeInBlocks` | 2,102,400 blocks (~2 years) | The maximum duration for a name registration. |
+| `rnGracePeriodInBlocks` | 129,600 blocks (~45 days) | The period after expiration during which a name can be renewed by its owner. |
+| `rnMinCapacity` | 10 kB | The minimum data capacity that can be associated with a name registration. |
+| `rnPricePerUnit` | `500 IXI` | The price per unit (months * kB) for registering a name. |
+| `rnMinPricePerUnit` | `10 IXI` | The minimum price per unit allowed. |
+| `rnRewardPoolAddress` | `1ixiannames234234234234234234234234234234234` | The address where IXI Names transaction fees are sent. |
+| `rnMaxNameLength` | 256 characters | The maximum length of a registered name. |
+| `rnMaxRecordKeyLength` | 256 characters | The maximum length for a key in a name's data record. |
+| `rnMaxSubNameLevels` | 1 | The maximum depth of sub-names (e.g., `sub.name.ixi`). |
+
+### Network Health & Recovery
+
+Parameters for a recovery mode designed to restart a stalled blockchain.
+
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| `blockChainRecoveryTimeout` | 7200 seconds (2 hours) | The time the network must be stalled before recovery mode can be initiated. |
+| `blockChainRecoveryMissingRequiredSignerRatio`| 100 | A ratio used in recovery calculations. |
+| `blockChainRecoveryMissingSignerMultiplier`| 7 | A multiplier used in recovery calculations. |

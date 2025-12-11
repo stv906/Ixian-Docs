@@ -1,0 +1,94 @@
+---
+title: generateNewAddress
+description: Generates a new, unused address derived from an existing address within a specified wallet.
+status: Finalized
+---
+
+## Introduction
+
+The `generateNewAddress` method creates a new, unique receiving address within a wallet managed by the node. This allows users and applications to generate fresh addresses for each transaction, which is a recommended practice for enhancing privacy.
+
+Ixian wallets are hierarchical, meaning new addresses are cryptographically derived from a parent or "base" address. This endpoint allows you to either specify a base address or default to the wallet's primary address for the derivation.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                                                           |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded address of the wallet to use. If omitted, it defaults to the node's primary wallet.                                  |
+| `address`| `string` | No       | The base58-encoded "base address" from which to derive the new address. If omitted, the new address is derived from the wallet's primary address. |
+
+### Example POST Request
+
+```json
+POST /generateNewAddress
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "generateNewAddress",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /generateNewAddress?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a single string containing the newly generated base58-encoded address.
+
+### Result Fields
+
+| Name     | Type     | Description                           |
+| :------- | :------- | :------------------------------------ |
+| `result` | `string` | The newly generated Ixian address. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "17f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error is returned if the address generation process fails internally.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32000,
+        "message": "Error occurred while generating a new address"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Hierarchical Derivation:** This method does not create a random, standalone key pair. Instead, it derives a new address from an existing one within the wallet's deterministic structure. This ensures that the wallet's single seed can recover all generated addresses.
+*   **Default Base Address:** If the `address` parameter is omitted, the derivation will use the wallet's primary address as its base.
+*   **Wallet Scope:** The `wallet` parameter is used to select the correct wallet *instance* on a node that might be managing multiple wallets. The new address is generated and stored within that specific wallet.
+*   **Ready to Use:** Once generated, the address is immediately ready to receive funds, and any transactions sent to it will be correctly credited to the associated wallet.

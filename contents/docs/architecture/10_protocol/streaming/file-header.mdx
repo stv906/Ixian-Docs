@@ -1,0 +1,27 @@
+---
+title: fileHeader (12)
+description: Contains metadata about a file being sent.
+---
+
+The `fileHeader` message initiates a file transfer by sending metadata about the file to the recipient. This allows the recipient's client to display a prompt to the user, asking them if they wish to accept or decline the incoming file.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string, prefixed with its length.
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+
+## Payload Structure
+
+The payload is a serialized object containing all the necessary information for the recipient to identify the file transfer.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `uid` | `string` | * | * | A unique identifier for this specific file transfer session. |
+| `fileName` | `string` | 1 | * | The original name of the file, including its extension. |
+| `fileSize` | `IxiVarUInt` | 1 | * | The total size of the file in bytes. |
+
+## Behavioral Notes
+
+*   **Sending:** A user initiates a file transfer by selecting a file. Their client generates a unique `uid`, constructs the `fileHeader` payload with the file's metadata, and sends it to the intended recipient.
+*   **Receiving:** Upon receiving a `fileHeader`, the recipient's client should display a notification to the user showing the `fileName` and `fileSize` and asking for confirmation to download. The client stores the `uid` to manage the transfer session.
+*   **User Action:** If the user accepts the transfer, their client responds with an `acceptFile` message, including the `uid` from this header. If they decline, no response is sent.

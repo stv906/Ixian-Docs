@@ -1,0 +1,131 @@
+---
+title: getRegNameDataRecords
+description: Retrieves all data records associated with a specific registered name from the Ixian Name System (IXI-NS).
+status: Finalized
+---
+
+## Introduction
+
+The `getRegNameDataRecords` method is a read-only endpoint that allows you to query the Ixian Name System (IXI-NS) for the specific data records stored within a registered name. While `getRegName` returns the entire name object, this method provides a direct way to access just the list of key-value records.
+
+This is the primary method for resolving a name to its underlying data, such as IP addresses, wallet addresses, or other service information. The records can be returned as structured JSON objects or as raw byte strings.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Conditionally | The plain-text name to look up. Required if `id` is not provided. |
+| `id` | `string` | Conditionally | The hex-encoded, hashed identifier of the name. Required if `name` is not provided. |
+| `asBytes` | `boolean` | No | If `true`, each record in the response array will be a raw, hex-encoded string instead of a JSON object. Defaults to `false`. |
+| `useAbsoluteId`| `boolean` | No | A technical parameter for the lookup mechanism. In nearly all cases, this should be omitted to use the default of `true`. |
+
+### Example POST Request (by name)
+
+```json
+POST /getRegNameDataRecords
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getRegNameDataRecords",
+  "params": {
+    "name": "my-cool-name"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (by ID, as bytes)
+
+```
+GET /getRegNameDataRecords?id=a1b2c3...&asBytes=true
+```
+
+---
+
+## Response
+
+The response format depends on the `asBytes` parameter. The `result` is always a JSON array.
+
+### Result 1: Array of `RegisteredNameDataRecord` Objects (default)
+
+If `asBytes` is `false` or omitted, the `result` is a JSON array where each element is an object representing a single data record.
+
+#### `RegisteredNameDataRecord` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `key` | `string` | The hashed key of the data record, Base64-encoded. |
+| `type` | `integer` | The record type identifier. |
+| `value` | `string` | The encrypted value of the record, Base64-encoded. |
+
+#### Example Success Response (JSON)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "key": "hashed_key_for_ip...",
+      "type": 1,
+      "value": "encrypted_value_for_ip..."
+    },
+    {
+      "key": "hashed_key_for_email...",
+      "type": 2,
+      "value": "encrypted_value_for_email..."
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Result 2: Array of Hex-Encoded Strings
+
+If `asBytes` is `true`, the `result` is a JSON array where each element is a string containing the raw, serialized data of one record.
+
+#### Example Success Response (Bytes)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": [
+    "0141409be670f2...",
+    "0241409be670f2..."
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Name with 'id' a1b2c3... does not exist."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local State Query:** This endpoint queries the node's local Registered Name State database. The data is only as current as the node's synchronization height.
+*   **Encrypted and Hashed Data:** The data returned is in its raw, on-chain format.
+    *   The `key` is a hash of the plain-text key.
+    *   The `value` is encrypted.
+    *   To decrypt a `value`, a client application needs to know both the plain-text name and the plain-text key for the specific record.
+*   **Name vs. ID:** You must provide either `name` or `id`. If `name` is provided, the node hashes it internally to perform the lookup. Providing the `id` directly is slightly more efficient.

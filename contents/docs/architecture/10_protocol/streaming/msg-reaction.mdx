@@ -1,0 +1,26 @@
+---
+title: msgReaction (34)
+description: Adds a reaction to a specific message.
+---
+
+The `msgReaction` message is used to apply a reaction (typically an emoji) to a previously sent message. It allows for richer, non-verbal communication within a chat conversation.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`string`**: A standard UTF-8 encoded string, prefixed with its length.
+
+## Payload Structure
+
+The payload is a composite object containing the ID of the message to react to and the reaction content itself.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `targetMessageId` | `IxiBytes` | 16 | 64 | The unique ID of the message to which the reaction is being applied. |
+| `reaction` | `string` | 1 | * | The reaction content, typically a single UTF-8 emoji character. An empty string can signify removing a reaction. |
+
+## Behavioral Notes
+
+*   **Associativity:** The sender of the reaction is identified by the sender address of the `StreamMessage` envelope. The recipient client uses this address to associate the reaction with the correct user.
+*   **UI Update:** When a client receives this message, it should update the chat interface to display the `reaction` on the message identified by `targetMessageId`.
+*   **Removing Reactions:** Sending a `msgReaction` with the same `targetMessageId` and an empty `reaction` string can be used as a signal to remove a previously added reaction.

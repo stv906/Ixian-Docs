@@ -1,0 +1,39 @@
+---
+title: transactionsChunk3 (60)
+description: Responds to a transaction request with a chunk of full transaction objects.
+status: Planned Upgrade
+---
+
+The `transactionsChunk3` message is the response to various transaction requests, including `getTransactions2` and `getRelevantBlockTransactions`. It contains a batch of complete, serialized transaction objects.
+
+If the total number of transactions to be sent is large, they will be split across multiple `transactionsChunk3` messages to respect the network's maximum message size.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB`| The total size of the message payload must not exceed the global maximum. |
+| `messageID` | `IxiVarInt` | | | An identifier linking this chunk to a specific request. Often a block number with negative prefix (e.g. -1234). |
+| `totalTxCount`| `IxiVarUInt` | `0` | | The total number of transactions in the logical set (e.g., in the block), not just this chunk. |
+| `transactions`| `Transaction[]`| `0` | `5000`*| An array of full transaction entries. |
+
+\* The maximum number of transactions per chunk is determined by the node configuration (`CoreConfig.maximumTransactionsPerChunk`), which defaults to `5000`.
+
+### Transaction Entry Structure
+
+Each entry in the `transactions` array is a complete, serialized `Transaction` object.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `transactionData` | `IxiBytes` | The full binary representation of a single `Transaction` object. The internal structure is defined in the **[`Transactions`](../../10_data-structures/transactions)** documentation. |
+
+## Behavioral Notes
+
+-   A node receiving this message should parse each `Transaction` entry, validate it, and process it. This may involve adding it to a block being constructed or adding it to a light client's wallet.
+-   The `messageID` is used to associate this chunk with a specific request, especially important when multiple requests are in flight. For block-related requests, this is often the negative of the block number (e.g., `-50123` for block 50123).
+

@@ -1,0 +1,202 @@
+---
+title: status
+description: Retrieves a comprehensive status report on the node's health, network state, and synchronization progress.
+status: Finalized
+---
+
+## Introduction
+
+The `status` method is the primary diagnostic endpoint for querying the overall state and health of an Ixian DLT node. It provides a detailed snapshot of critical information, including software versions, network connectivity, blockchain synchronization status, and connection lists.
+
+The endpoint supports an optional `verbose` mode, which includes additional, fine-grained metrics about internal message queues and the presence list, useful for in-depth debugging and performance monitoring.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name      | Type      | Required | Description                                                                                    |
+| :-------- | :-------- | :------- | :--------------------------------------------------------------------------------------------- |
+| `verbose` | `boolean` | No       | If present (e.g., `"true"`), the response will include additional diagnostic information. Defaults to `false`. |
+
+### Example POST Request (Standard)
+
+```json
+POST /status
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "status",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request (Verbose)
+
+```
+GET /status?verbose=true
+```
+
+---
+
+## Response
+
+The response `result` is a single JSON object containing a detailed status report. The fields included in the response depend on the `verbose` parameter.
+
+### Response Object: Standard Fields
+
+These fields are always present in the response.
+
+#### Section 1: Version & Configuration
+
+| Field            | Type      | Description                                                                 |
+| :--------------- | :-------- | :-------------------------------------------------------------------------- |
+| `Core Version`   | `string`  | The version of the underlying Ixian Core library.                           |
+| `Node Version`   | `string`  | The specific version of the DLT node software.                              |
+| `Network type`   | `string`  | The network the node is connected to. See `NetworkType` enum below.         |
+| `Node Type`      | `string`  | The role of this node in the network. See `NodeType` enum below.            |
+
+#### Section 2: Time & Connectivity
+
+| Field                       | Type      | Description                                                                 |
+| :-------------------------- | :-------- | :-------------------------------------------------------------------------- |
+| `My time`                   | `integer` | The node's current Unix Epoch timestamp.                                    |
+| `Network time difference`   | `integer` | The calculated time difference (in seconds) between the node and the network. |
+| `Real network time difference` | `integer`| An alternative time difference calculation.                                |
+| `My External IP`            | `string`  | The node's publicly detected IP address.                                    |
+| `My Listening Port`         | `integer` | The port the node is listening on for inbound connections.                  |
+| `Connectable`               | `boolean` | Indicates if the node is reachable from the public internet.                |
+
+#### Section 3: Blockchain Status
+
+| Field                  | Type      | Description                                                                 |
+| :--------------------- | :-------- | :-------------------------------------------------------------------------- |
+| `Core Status`          | `integer` | An enum value representing the node's current operational state. See `NodeStatus` enum. |
+| `Block Height`         | `integer` | The block number of the latest block the node has processed.                |
+| `Block Version`        | `integer` | The version of the latest block in the local chain.                         |
+| `Network Block Height` | `integer` | The highest block number known to the node from its peers.                  |
+
+#### Section 4: Connections
+
+| Field            | Type       | Description                                                                 |
+| :--------------- | :--------- | :-------------------------------------------------------------------------- |
+| `Network Clients`| `string[]` | A list of inbound DLT connections (peers connected *to* this node).         |
+| `Network Servers`| `string[]` | A list of outbound DLT connections (peers *this node is connected to*).     |
+| `Stream Servers` | `string[]` | A list of outbound S2 stream connections.                                   |
+
+### Response Object: Verbose Fields
+
+These fields are included **in addition** to the standard fields when `verbose=true`.
+
+#### Section 5: Queue Depths
+
+| Field                  | Type      | Description                                                                 |
+| :--------------------- | :-------- | :-------------------------------------------------------------------------- |
+| `Queues`               | `object`  | A nested object containing the number of items in various processing queues. |
+| `Queues.RcvLow`        | `integer` | Number of messages in the low-priority receive queue.                       |
+| `Queues.RcvMedium`     | `integer` | Number of messages in the medium-priority receive queue.                    |
+| `Queues.RcvHigh`       | `integer` | Number of messages in the high-priority receive queue.                      |
+| `Queues.SendClients`   | `integer` | Number of queued messages to be sent to inbound clients.                    |
+| `Queues.SendServers`   | `integer` | Number of queued messages to be sent to outbound servers.                   |
+| `Queues.Logging`       | `integer` | Number of pending log statements.                                           |
+| `Queues.Pending Transactions` | `integer` | Number of transactions in the mempool.                                |
+
+#### Section 6: Presence List Metrics
+
+| Field       | Type      | Description                                                                 |
+| :---------- | :-------- | :-------------------------------------------------------------------------- |
+| `Presences` | `integer` | The total number of presences (nodes of all types) known to this node.      |
+| `Masters`   | `integer` | The count of known Master Node ('M') presences.                             |
+| `Relays`    | `integer` | The count of known Relay Node ('R') presences.                              |
+| `Clients`   | `integer` | The count of known Client ('C') presences.                                  |
+
+### Example Verbose Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "Core Version": "xcore-0.9.7a",
+    "Node Version": "xsbc-0.6.2-PR1",
+    "Network type": "main",
+    "My time": 1763043741,
+    "Network time difference": 0,
+    "Real network time difference": 0,
+    "My External IP": "193.95.221.67",
+    "My Listening Port": 15235,
+    "Core Status": 1,
+    "Block Height": 5487181,
+    "Block Version": 13,
+    "Network Block Height": 5487181,
+    "Node Type": "C",
+    "Connectable": true,
+    "Queues": {
+      "RcvLow": 0,
+      "RcvMedium": 0,
+      "RcvHigh": 0,
+      "SendClients": 0,
+      "SendServers": 0,
+      "Logging": 0,
+      "Pending Transactions": 0
+    },
+    "Presences": 12,
+    "Masters": 0,
+    "Relays": 10,
+    "Clients": 2,
+    "Network Clients": ["46.34.228.29:1872"],
+    "Network Servers": ["179.61.232.164:10234", "167.235.2.158:10235"],
+    "Stream Servers": []
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Enumerations
+
+### `NodeStatus`
+
+The `Core Status` field returns an integer representing the node's state.
+
+| Value | Name        | Description                                                              |
+| :---- | :---------- | :----------------------------------------------------------------------- |
+| `0`   | Warm Up     | The node is synchronizing with the network.                              |
+| `1`   | Ready       | The node is fully synchronized and operational.                          |
+| `2`   | Stalled     | The node hasn't received a new block for a while.                        |
+| `3`   | Stopping    | The node is stopping.                                                    |
+| `4`   | Stopped     | The node is stopped.                                                     |
+
+### `NodeType`
+
+The `Node Type` field returns a single character representing the node's role.
+
+| Value | Name         | Description                                                          |
+| :---- | :----------- | :------------------------------------------------------------------- |
+| `M`   | Master       | A DLT Master Node that participates in consensus.                    |
+| `H`   | History      | A full history DLT Master Node that participates in consensus.       |
+| `R`   | Relay        | An S2 Relay Node that handles streaming and data relay.              |
+| `C`   | Client       | A client-type node, typically a light wallet or application backend. |
+
+### `NetworkType`
+
+The `Node Type` field returns a single character representing the node's role.
+
+| Value | Name           | Description                                                         |
+| :----- | :------------ | :------------------------------------------------------------------ |
+| `main` | Main Network  | Main Ixian Platform Network.                                        |
+| `test` | Test Network  | Public Test Network                                                 |
+| `reg`  | Reg Network   | Local/Test Network                                                  |
+
+---
+
+## Behavioral Notes
+
+*   **Sync Status:** The primary indicator of whether a node is synchronized with the network is a comparison between `Block Height` and `Network Block Height`. If these values are equal (and greater than 0), the node is considered fully synced.
+*   **Health Checks:** This endpoint is ideal for use in automated health checks and monitoring scripts. A `Core Status` of `1` and `Connectable` being `true` are good indicators of a healthy node.

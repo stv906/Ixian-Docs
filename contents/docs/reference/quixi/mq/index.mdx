@@ -1,0 +1,1128 @@
+---
+title: QuIXI Message Queue Topics
+description: An overview of the QuIXI Bridge Message Queue Topics for MQTT and RabbitMQ integration.
+---
+
+QuIXI acts as a bridge between the Ixian P2P network and traditional message queue systems (MQTT, RabbitMQ). When QuIXI receives Ixian protocol messages, it publishes them to specific topics that external applications can subscribe to.
+
+This allows IoT devices, AI agents, and legacy systems to interact with the Ixian network without implementing the full P2P protocol.
+
+## Message Format
+
+All messages published to MQ topics are `StreamMessage` objects serialized according to the Ixian protocol. The message contains:
+
+- **`sender`**: The Ixian wallet address of the sender
+- **`recipient`**: The Ixian wallet address of the recipient (QuIXI's address)
+- **`data`**: The `SpixiMessage` payload (nested protocol message)
+- **`timestamp`**: When the message was sent
+- **`id`**: Unique message identifier
+
+## Topic Categories
+
+Topics are organized into three categories:
+
+### Protocol Messages
+Streaming protocol messages received from Ixian peers. These correspond to `SpixiMessage` types.
+
+### Misc Messages
+Internal QuIXI events not directly tied to incoming protocol messages (e.g., friend status updates, transaction confirmations).
+
+### Raw Out
+Low-level topics for debugging and advanced integrations.
+
+## Protocol Message Topics
+
+### Chat & Messaging
+
+#### `Chat`
+**Message Code:** `1` (SpixiMessageCode.chat)
+
+Receives text chat messages from contacts.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 1,
+    "channel": 0,
+    "data": "UTF-8 encoded chat message"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.type` field corresponds to the SpixiMessageCode (1 for chat). The outer `type` field (2) indicates this is a StreamMessageCode message.
+
+**Use Case:** Build chat bots, log conversations, implement chatbot responses.
+
+---
+
+#### `Nick`
+**Message Code:** `2` (SpixiMessageCode.nick)
+
+Receives nickname updates from contacts.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 2,
+    "channel": 0,
+    "data": "UTF-8 encoded nickname"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Use Case:** Track contact name changes, update local directories.
+
+---
+
+#### `MsgRead`
+**Message Code:** `8` (SpixiMessageCode.msgRead)
+
+Notification that a message has been read by the recipient.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 8,
+    "channel": 0,
+    "data": "base64_message_id"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the base64-encoded message ID that was read.
+
+**Use Case:** Implement read receipts, message delivery tracking.
+
+---
+
+#### `MsgReceived`
+**Message Code:** `9` (SpixiMessageCode.msgReceived)
+
+Notification that a message has been received (but not necessarily read).
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 9,
+    "channel": 0,
+    "data": "base64_message_id"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the base64-encoded ID of the message that was received.
+
+**Use Case:** Delivery confirmation, message status updates.
+
+---
+
+#### `MsgDelete`
+**Message Code:** `33` (SpixiMessageCode.msgDelete)
+
+Notification that a message has been deleted by the sender.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 33,
+    "channel": 0,
+    "data": "base64_message_id"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the base64-encoded ID of the message to delete.
+
+**Use Case:** Synchronize message deletions across systems.
+
+---
+
+#### `MsgReaction`
+**Message Code:** `34` (SpixiMessageCode.msgReaction)
+
+Receives emoji reactions to messages.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 34,
+    "channel": 0,
+    "data": {
+      "msgId": "base64_message_id",
+      "reaction": "emoji_string"
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as a `ReactionMessage` object containing `msgId` (base64) and `reaction` (string).
+
+**Use Case:** Display reactions, track engagement.
+
+---
+
+#### `MsgTyping`
+**Message Code:** `35` (SpixiMessageCode.msgTyping)
+
+Notification that a contact is typing.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 35,
+    "channel": 0,
+    "data": "AQ=="
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": false,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is typically a single byte indicator (base64-encoded). Non-zero means typing, zero means stopped typing.
+
+**Use Case:** Real-time typing indicators in chat UIs.
+
+---
+
+### Contact Management
+
+#### `RequestAdd2`
+**Message Code:** `40` (SpixiMessageCode.requestAdd2, SpixiMessageCode.requestAdd)
+
+Receives incoming contact requests.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 40,
+    "channel": 0,
+    "data": {
+      "maxProtocolVersion": 2,
+      "pubKey": "base64_public_key"
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as a `RequestAdd2Message` object. For `requestAdd` (code 3), the data is raw bytes.
+
+**Use Case:** Auto-accept contacts, implement contact approval workflows.
+
+---
+
+#### `AcceptAdd2`
+**Message Code:** `41` (SpixiMessageCode.acceptAdd2, SpixiMessageCode.acceptAdd)
+
+Receives contact acceptance confirmations.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 41,
+    "channel": 0,
+    "data": {
+      "version": 2,
+      "rsaPubKey": "base64_rsa_public_key",
+      "ecdhPubKey": "base64_ecdh_public_key",
+      "mlkemPubKey": "base64_kyber_public_key",
+      "aesSalt": "base64_aes_salt",
+      "capabilities": 15
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as an `AcceptAdd2Message` object containing cryptographic keys for establishing a secure channel. The `capabilities` field is a bitfield: 1=Incoming, 2=Outgoing, 4=IPN, 8=Apps.
+
+**Use Case:** Complete contact exchange, establish encrypted channels.
+
+---
+
+#### `LeaveConfirmed`
+**Message Code:** `38` (SpixiMessageCode.leaveConfirmed)
+
+Notification that a contact has removed you or left a conversation.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 38,
+    "channel": 0,
+    "data": ""
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is empty (raw bytes).
+
+**Use Case:** Clean up contact lists, handle contact removals.
+
+---
+
+#### `Avatar`
+**Message Code:** `24` (SpixiMessageCode.avatar)
+
+Receives avatar/profile picture updates (< 500KB).
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 24,
+    "channel": 0,
+    "data": "base64_image_bytes"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the raw image bytes (base64-encoded). QuIXI only publishes this message if the avatar is smaller than 500KB.
+
+**Use Case:** Display profile pictures, sync contact avatars.
+
+---
+
+### Financial Transactions
+
+#### `SentFunds`
+**Message Code:** `5` (SpixiMessageCode.sentFunds)
+
+Notification that someone has sent you IXI tokens.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 5,
+    "channel": 0,
+    "data": "base64_transaction_id"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the raw transaction ID bytes (base64-encoded). QuIXI automatically broadcasts a getTransaction request to verify the transaction on the blockchain.
+
+**Use Case:** Payment processing, automatic fund acknowledgment, invoice tracking.
+
+---
+
+#### `RequestFunds`
+**Message Code:** `6` (SpixiMessageCode.requestFunds)
+
+Receives payment requests from contacts.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 6,
+    "channel": 0,
+    "data": "amount_in_ixi_string"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is a UTF-8 string representing the amount in IXI (e.g., "10.5").
+
+**Use Case:** Payment reminders, invoice systems, automated payment approvals.
+
+---
+
+#### `RequestFundsResponse`
+**Message Code:** `18` (SpixiMessageCode.requestFundsResponse)
+
+Response to a payment request (accept/decline).
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 18,
+    "channel": 0,
+    "data": "base64_response_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes. The application should parse this based on the specific response format.
+
+**Use Case:** Payment confirmation tracking, accounting systems.
+
+---
+
+### File Transfers
+
+#### `FileHeader`
+**Message Code:** `12` (SpixiMessageCode.fileHeader)
+
+Initial file transfer metadata.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 12,
+    "channel": 0,
+    "data": "base64_file_header_bytes"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract file UID, name, size, and hash.
+
+**Use Case:** Receive file offers, implement file filtering.
+
+---
+
+#### `AcceptFile`
+**Message Code:** `13` (SpixiMessageCode.acceptFile)
+
+Notification that a file offer was accepted.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 13,
+    "channel": 0,
+    "data": "base64_file_uid"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the file UID bytes (base64-encoded).
+
+**Use Case:** Start file transfer, allocate storage.
+
+---
+
+#### `RequestFileData`
+**Message Code:** `11` (SpixiMessageCode.requestFileData)
+
+Request for specific file chunks.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 11,
+    "channel": 0,
+    "data": "base64_request_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract file UID and chunk number.
+
+**Use Case:** Resume file transfers, implement chunk-based delivery.
+
+---
+
+#### `FileData`
+**Message Code:** `10` (SpixiMessageCode.fileData)
+
+Receives file data chunks.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 10,
+    "channel": 0,
+    "data": "base64_file_chunk_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract file UID, chunk number, and actual chunk data.
+
+**Use Case:** Reconstruct files, stream data to storage.
+
+---
+
+#### `FileFullyReceived`
+**Message Code:** `23` (SpixiMessageCode.fileFullyReceived)
+
+Notification that a file transfer completed successfully.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 23,
+    "channel": 0,
+    "data": "base64_file_uid"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains the file UID bytes (base64-encoded).
+
+**Use Case:** Verify file completeness, trigger post-processing.
+
+---
+
+### Mini-Apps
+
+#### `AppRequest`
+**Message Code:** `22` (SpixiMessageCode.appRequest)
+
+Invitation to start a Mini-App session.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 22,
+    "channel": 0,
+    "data": "base64_app_request_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract session ID, app ID, and initialization data.
+
+**Use Case:** Launch apps, accept/reject app invitations, bot integrations.
+
+---
+
+#### `AppRequestAccept`
+**Message Code:** `28` (SpixiMessageCode.appRequestAccept)
+
+Acceptance of an app session invitation.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 28,
+    "channel": 0,
+    "data": "base64_accept_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract session ID and optional response data.
+
+**Use Case:** Begin app session, exchange initial state.
+
+---
+
+#### `AppRequestReject`
+**Message Code:** `29` (SpixiMessageCode.appRequestReject)
+
+Rejection of an app session invitation.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 29,
+    "channel": 0,
+    "data": "base64_reject_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract session ID and optional reason.
+
+**Use Case:** Handle declined invitations, clean up resources.
+
+---
+
+#### `AppRequestError`
+**Message Code:** `30` (SpixiMessageCode.appRequestError)
+
+Error during app session initialization.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 30,
+    "channel": 0,
+    "data": "base64_error_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract session ID, error code, and error message.
+
+**Use Case:** Error handling, diagnostics, app availability checks.
+
+---
+
+#### `AppData`
+**Message Code:** `21` (SpixiMessageCode.appData)
+
+Application-specific data for active sessions.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 21,
+    "channel": 0,
+    "data": {
+      "sessionId": "base64_session_id",
+      "data": "base64_app_payload",
+      "appId": "com.company.appname"
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as an `AppDataMessage` object containing session ID, payload data, and optionally an app ID.
+
+**Use Case:** Real-time app communication, game state updates, collaborative editing.
+
+---
+
+#### `AppEndSession`
+**Message Code:** `31` (SpixiMessageCode.appEndSession)
+
+Notification that an app session has ended.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 31,
+    "channel": 0,
+    "data": "base64_end_session_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract session ID and optional final data.
+
+**Use Case:** Clean up session resources, save final state.
+
+---
+
+#### `GetAppProtocols`
+**Message Code:** `43` (SpixiMessageCode.getAppProtocols)
+
+Request for supported app protocols.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 43,
+    "channel": 0,
+    "data": ""
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is empty (raw bytes).
+
+**Use Case:** Capability discovery, protocol negotiation.
+
+---
+
+#### `AppProtocols`
+**Message Code:** `44` (SpixiMessageCode.appProtocols)
+
+List of supported app protocols.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 44,
+    "channel": 0,
+    "data": {
+      "protocolIds": ["base64_protocol_id_1", "base64_protocol_id_2"]
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as an `AppProtocolsMessage` object containing a list of protocol IDs (each base64-encoded).
+
+**Use Case:** Feature negotiation, compatibility checks.
+
+---
+
+#### `AppProtocolData`
+**Message Code:** `45` (SpixiMessageCode.appProtocolData)
+
+Advanced protocol-specific app data.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 45,
+    "channel": 0,
+    "data": {
+      "sessionId": "base64_session_id",
+      "data": "base64_protocol_payload",
+      "appId": "com.company.appname"
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as an `AppDataMessage` object (same structure as AppData).
+
+**Use Case:** Advanced Mini-App features, protocol extensions.
+
+---
+
+### Bots
+
+#### `AcceptAddBot`
+**Message Code:** `19` (SpixiMessageCode.acceptAddBot)
+
+Acceptance of a bot contact request.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 19,
+    "channel": 0,
+    "data": "base64_bot_data"
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field contains raw bytes that need to be parsed to extract bot-specific information.
+
+**Use Case:** Bot onboarding, service registration.
+
+---
+
+#### `BotAction`
+**Message Code:** `32` (SpixiMessageCode.botAction)
+
+Bot-specific commands or actions.
+
+**StreamMessage Structure:**
+```json
+{
+  "type": 2,
+  "sender": "base58_sender_address",
+  "recipient": "base58_recipient_address",
+  "data": {
+    "type": 32,
+    "channel": 0,
+    "data": {
+      "action": 0,
+      "data": "base64_action_data"
+    }
+  },
+  "encryptionType": 4,
+  "id": "message_id_base64",
+  "timestamp": 1234567890,
+  "requireRcvConfirmation": true,
+  "version": 1
+}
+```
+
+**Note:** The `data.data` field is deserialized as a `SpixiBotAction` object. The `action` field is a `SpixiBotActionCode` enum (0=getInfo, 1=info, 2=getChannels, 3=channel, 4=getUsers, 5=user, etc.).
+
+**Use Case:** Bot commands, automated workflows, service invocation.
+
+---
+
+## Misc Message Topics
+
+### `FriendStatusUpdate`
+Internal QuIXI event when a contact's online status changes.
+
+**Data Structure:**
+```json
+{
+  "address": "base58_address",
+  "online": true,
+  "lastSeen": 1234567890
+}
+```
+
+**Use Case:** Presence indicators, availability tracking.
+
+---
+
+### `MessageSent`
+Internal QuIXI event confirming a message was successfully sent.
+
+**Data Structure:**
+```json
+{
+  "messageId": "sent_message_id",
+  "recipient": "base58_address",
+  "timestamp": 1234567890
+}
+```
+
+**Use Case:** Delivery confirmation, message logging.
+
+---
+
+### `MessageExpired`
+Internal QuIXI event when a message fails to deliver within the TTL.
+
+**Data Structure:**
+```json
+{
+  "messageId": "expired_message_id",
+  "recipient": "base58_address",
+  "reason": "timeout"
+}
+```
+
+**Use Case:** Retry logic, failure notifications.
+
+---
+
+### `TransactionStatusUpdate`
+Internal QuIXI event when a blockchain transaction status changes.
+
+**Data Structure:**
+```json
+{
+  "txId": "transaction_id",
+  "status": "confirmed",
+  "blockHeight": 123456
+}
+```
+
+**Use Case:** Payment confirmation, transaction tracking.
+
+---
+
+## Configuration
+
+To enable message queue integration in QuIXI, configure `ixian.cfg`:
+
+```ini
+# Message queue driver: mqtt or rabbitmq
+mqDriver = mqtt
+
+# MQTT settings
+mqHost = localhost
+mqPort = 1883
+
+# Client nickname
+name = My QuIXI
+```
+
+## Example: MQTT Subscription
+
+```python
+import paho.mqtt.client as mqtt
+import json
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected to QuIXI MQTT broker")
+    # Subscribe to chat messages
+    client.subscribe("Chat")
+    # Subscribe to payment notifications
+    client.subscribe("SentFunds")
+
+def on_message(client, userdata, msg):
+    message = json.loads(msg.payload)
+    print(f"Received on {msg.topic}: {message}")
+    
+    if msg.topic == "Chat":
+        sender = message['sender']
+        text = message['data']
+        print(f"Chat from {sender}: {text}")
+    
+    elif msg.topic == "SentFunds":
+        sender = message['sender']
+        tx_id = message['data']
+        print(f"Payment received from {sender}: {tx_id}")
+
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+
+client.connect("localhost", 1883, 60)
+client.loop_forever()
+```
+
+## Example: RabbitMQ Subscription
+
+```javascript
+const amqp = require('amqplib');
+
+async function subscribeToQuIXI() {
+    const connection = await amqp.connect('amqp://localhost');
+    const channel = await connection.createChannel();
+    
+    // Subscribe to app requests
+    await channel.assertQueue('AppRequest');
+    channel.consume('AppRequest', (msg) => {
+        const message = JSON.parse(msg.content.toString());
+        console.log('App Request:', message);
+        
+        // Process app request
+        const { sender, data } = message;
+        const { sessionId, appId } = data;
+        console.log(`App ${appId} requested by ${sender}`);
+        
+        channel.ack(msg);
+    });
+}
+
+subscribeToQuIXI().catch(console.error);
+```
+
+## Best Practices
+
+1. **Topic Filtering**: Only subscribe to topics your application needs to reduce overhead
+2. **Message Validation**: Always validate sender addresses and message signatures
+3. **Idempotency**: Messages may be delivered multiple times; implement idempotent handling
+4. **Error Handling**: Gracefully handle malformed messages or missing fields
+5. **Rate Limiting**: Implement rate limits on message processing to prevent abuse
+6. **Replay Position**: Use appropriate replay strategies (FromLast, FromBeginning, FromSpecific) based on your use case
+
+## See Also
+
+- [QuIXI Configuration](./config)
+- [QuIXI REST API](./rpc_v0)
+- [Streaming Protocol Messages](../../architecture/10_protocol/streaming)

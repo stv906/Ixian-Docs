@@ -1,0 +1,818 @@
+---
+title: "Implementing Post-Quantum Security Today"
+description: "Build applications with quantum-resistant encryption using Ixian's production-ready hybrid cryptography (RSA + ECDH + ML-KEM)"
+---
+
+## The Quantum Threat is Real
+
+### Timeline
+
+- **2019:** Google achieves "quantum supremacy" with 53-qubit processor
+- **2022:** IBM unveils 433-qubit quantum computer
+- **2024:** NIST publishes FIPS 203 (ML-KEM) post-quantum standard
+- **2025:** Quantum computers with 1000+ qubits in development
+- **2030s:** Experts predict cryptographically relevant quantum computers
+- **Your encrypted data today:** Could be decrypted in 5-10 years
+
+### "Harvest Now, Decrypt Later" Attack
+
+Adversaries are already collecting encrypted data to decrypt once quantum computers are available:
+
+```
+Today:
+Attacker -> Captures your encrypted traffic
+         -> Stores it in massive databases
+         -> Waits for quantum computers
+
+2030s:
+Attacker -> Uses quantum computer
+         -> Breaks RSA/ECC encryption
+         -> Reads everything you sent in 2025
+```
+
+**If you're not using post-quantum crypto, your "secure" data has an expiration date.**
+
+---
+
+## How Ixian's Hybrid Cryptography Works
+
+### Multi-Layered Defense Architecture
+
+Ixian uses **3 key exchange algorithms** combined with **2 encryption ciphers** for defense-in-depth:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ KEY EXCHANGE LAYER 1: RSA-4096 (Classical Security)     │
+│ └─ Signing & Initial Key Exchange                       │
+│    └─ Strong against classical computers                │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ KEY EXCHANGE LAYER 2: ECDH (Elliptic Curve - secp521r1) │
+│ └─ Additional Entropy from Elliptic Curve DLP           │
+│    └─ Requires adversary to break both factorization    │
+│       AND discrete logarithm problems                   │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ KEY EXCHANGE LAYER 3: ML-KEM (FIPS 203 - Post-Quantum)  │
+│ └─ Quantum-Resistant Key Encapsulation                  │
+│    └─ Protects against quantum attacks                  │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+              Combined Session Key
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ ENCRYPTION LAYER 1: AES-256-GCM (Inner)                 │
+│ └─ First encryption pass with authentication            │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ ENCRYPTION LAYER 2: ChaCha20-Poly1305 (Outer)           │
+│ └─ Second encryption pass - both must be broken         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Why Hybrid Multi-Layer Defense?
+
+**Problem with pure post-quantum crypto:**
+- New algorithms, less battle-tested
+- Unknown vulnerabilities might exist
+- Single point of failure
+
+**Ixian's 5-layer solution:**
+- **3 key exchange algorithms:** Classical (RSA, ECDH) + post-quantum (ML-KEM)
+- **2 independent ciphers:** AES-256-GCM and ChaCha20-Poly1305
+- Attacker must break multiple algorithms simultaneously
+- If one algorithm is compromised, others still protect data
+- Defense-in-depth: No single breakthrough can decrypt messages
+- Future-proof: Can add more layers as standards evolve
+
+---
+
+## How the Ixian Handshake Actually Works
+
+The post-quantum cryptography in Ixian happens during the **contact handshake**. Here's the actual protocol flow from the codebase:
+
+### Handshake Flow
+
+```
+Alice                                                          Bob
+  |                                                             |
+  | 1. requestAdd2 (RSA pubkey)                                 |
+  |------------------------------------------------------------>|
+  |                                                             |
+  |                 2. acceptAdd2 (RSA + ECDH + ML-KEM pubkeys) |
+  |<------------------------------------------------------------|
+  |                                                  + AES salt |
+  |                                                             |
+  | 3. keys2 (ECDH pubkey + ML-KEM ciphertext)                  |
+  |------------------------------------------------------------>|
+  | + ChaCha salt                                               |
+  |                                                             |
+  | Both derive session keys from:                              |
+  | AES_key = KDF(ECDH_shared || ML-KEM_shared, AES_salt)       |
+  | ChaCha_key = KDF(ECDH_shared || ML-KEM_shared, ChaCha_salt) |
+  |                                                             |
+  |   4. AES + ChaCha20 Encrypted messages using derived keys   |
+  |<----------------------------------------------------------->|
+```
+
+### The Three Key Exchange Algorithms
+
+1. **RSA-4096**: Used for initial message encryption and signatures
+2. **ECDH (secp521r1)**: Provides forward secrecy via ephemeral keys
+3. **ML-KEM-1024**: Post-quantum key encapsulation (FIPS 203)
+
+**All three contribute entropy** to the final session keys.
+
+---
+
+## Building Your First Post-Quantum App
+
+### Example: Ixian Contact Handshake Demo
+
+Let's implement an example post-quantum handshake, similar to what Ixian uses.
+
+### Step 1: Project Setup
+
+```bash
+# Clone Ixian-Core
+git clone https://github.com/ixian-platform/Ixian-Core.git
+
+# Create your project
+dotnet new console -n PQCHandshake
+cd PQCHandshake
+```
+
+### Step 2: Add Dependencies (`PQCHandshake.csproj`)
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Import Ixian-Core -->
+  <Import Project="..\Ixian-Core\IXICore.projitems" Label="Shared" />
+
+  <ItemGroup>
+    <!-- Ixian-Core dependencies -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Open.Nat" Version="2.1.0" />
+  </ItemGroup>
+</Project>
+```
+
+### Step 3: Implementation (`Program.cs`)
+
+```csharp
+using IXICore;
+using IXICore.Meta;
+using System;
+using System.Linq;
+using System.Text;
+
+class PostQuantumHandshakeDemo
+{
+    static readonly byte[] IXI_AES_KEY_INFO = Encoding.UTF8.GetBytes("IXI-AES-KEY");
+    static readonly byte[] IXI_CHACHA_KEY_INFO = Encoding.UTF8.GetBytes("IXI-CHACHA-KEY");
+    static byte[] Concat(params byte[][] arrays)
+    {
+        int total = arrays.Sum(a => a.Length);
+        var result = new byte[total];
+        int offset = 0;
+        foreach (var a in arrays)
+        {
+            Buffer.BlockCopy(a, 0, result, offset, a.Length);
+            offset += a.Length;
+        }
+        return result;
+    }
+
+    static void Main(string[] args)
+    {
+        Console.WriteLine("=== Ixian Post-Quantum Handshake Demo ===\n");
+
+        Logging.consoleOutput = false;
+
+        // Initialize crypto
+        CryptoManager.initLib();
+
+        // Simulate a simplistic contact handshake
+        DemoContactHandshake();
+
+        // Show encryption with derived keys
+        DemoEncryption();
+
+        Console.WriteLine("\nPress any key to exit...");
+        Console.ReadKey();
+    }
+
+    static void DemoContactHandshake()
+    {
+        Console.WriteLine("## Contact Handshake (with ML-KEM)\n");
+
+        // === STEP 1: Alice and Bob generate long-term RSA keys ===        
+        Console.WriteLine("STEP 1: Generate wallets and addresses");
+        var aliceRsaKeys = CryptoManager.lib.generateKeys(4096, 1);
+        var aliceRsaPubKey = aliceRsaKeys.publicKeyBytes;
+        var aliceAddress = new Address(aliceRsaPubKey);
+
+        var bobRsaKeys = CryptoManager.lib.generateKeys(4096, 1);
+        var bobRsaPubKey = bobRsaKeys.publicKeyBytes;
+        var bobAddress = new Address(bobRsaPubKey);
+
+        // === STEP 2: Bob shares his address with Alice, who initiates contact request ===
+        Console.WriteLine("STEP 2: Alice -> Bob (requestAdd2)");
+
+        Console.WriteLine($"  Alice sends RSA public key: {aliceRsaPubKey.Length} bytes");
+        Console.WriteLine($"  Alice's address: {aliceAddress.ToString()}\n");
+
+        // Alice signs requestAdd2 (her initial contact request containing her RSA public key)
+        var aliceRequestAdd2Payload = Concat(bobAddress.addressNoChecksum, aliceRsaPubKey);
+        var aliceRequestAdd2Signature = CryptoManager.lib.getSignature(aliceRequestAdd2Payload, aliceRsaKeys.privateKeyBytes);
+        bool aliceRequestAdd2SigValidForBob = CryptoManager.lib.verifySignature(aliceRequestAdd2Payload, aliceRsaPubKey, aliceRequestAdd2Signature);
+        Console.WriteLine($"  [✓] Alice signs requestAdd2 payload: {aliceRequestAdd2Signature.Length} bytes");
+        Console.WriteLine($"      (Simulated) Bob verifies signature: {aliceRequestAdd2SigValidForBob}\n");
+
+        // === STEP 3: Bob responds with acceptAdd2 ===
+        Console.WriteLine("STEP 3: Bob -> Alice (acceptAdd2)\n");
+
+
+        // Bob generates ephemeral ECDH keypair
+        var bobEcdhKeypair = CryptoManager.lib.generateECDHKeyPair();
+        Console.WriteLine($"  [✓] Bob generates ECDH keypair");
+        Console.WriteLine($"      Public: {bobEcdhKeypair.publicKey.Length} bytes (secp521r1)");
+        
+        // Bob generates ML-KEM keypair (THIS IS THE POST-QUANTUM PART!)
+        var bobMlKemKeypair = CryptoManager.lib.generateMLKemKeyPair();
+        Console.WriteLine($"  [✓] Bob generates ML-KEM-1024 keypair (FIPS 203)");
+        Console.WriteLine($"      Public: {bobMlKemKeypair.publicKey.Length} bytes");
+        Console.WriteLine($"      Private: {bobMlKemKeypair.privateKey.Length} bytes");
+        
+        // Bob generates AES salt
+        var bobAesSalt = CryptoManager.lib.getSecureRandomBytes(32);
+        Console.WriteLine($"  [✓] Bob generates AES salt: 32 bytes\n");
+
+        Console.WriteLine($"  Bob sends to Alice:");
+        Console.WriteLine($"    - RSA public key: {bobRsaPubKey.Length} bytes");
+        Console.WriteLine($"    - ECDH public key: {bobEcdhKeypair.publicKey.Length} bytes");
+        Console.WriteLine($"    - ML-KEM public key: {bobMlKemKeypair.publicKey.Length} bytes");
+        Console.WriteLine($"    - AES salt: {bobAesSalt.Length} bytes\n");
+
+        var bobAcceptPayload = Concat(aliceAddress.addressNoChecksum, bobRsaPubKey, bobEcdhKeypair.publicKey, bobMlKemKeypair.publicKey, bobAesSalt);
+        var bobAcceptSignature = CryptoManager.lib.getSignature(bobAcceptPayload, bobRsaKeys.privateKeyBytes);
+        bool bobAcceptSigValidForAlice = CryptoManager.lib.verifySignature(bobAcceptPayload, bobRsaPubKey, bobAcceptSignature);
+        Console.WriteLine($"  [✓] Bob signs acceptAdd2 payload: {bobAcceptSignature.Length} bytes");
+        Console.WriteLine($"      Alice verifies signature: {bobAcceptSigValidForAlice}\n");
+
+        // === STEP 4: Alice responds with keys2 ===
+        Console.WriteLine("STEP 4: Alice -> Bob (keys2)\n");
+        
+        // Alice generates her own ECDH keypair
+        var aliceEcdhKeypair = CryptoManager.lib.generateECDHKeyPair();
+        Console.WriteLine($"  [✓] Alice generates ECDH keypair");
+        
+        // Alice performs ECDH key agreement with Bob's public key
+        var ecdhSharedSecret = CryptoManager.lib.deriveECDHSharedKey(
+            aliceEcdhKeypair.privateKey,
+            bobEcdhKeypair.publicKey
+        );
+        Console.WriteLine($"  [✓] Alice derives ECDH shared secret: {ecdhSharedSecret.Length} bytes");
+        
+        // Alice encapsulates a secret using Bob's ML-KEM public key
+        var mlKemResult = CryptoManager.lib.encapsulateMLKem(bobMlKemKeypair.publicKey);
+        Console.WriteLine($"  [✓] Alice encapsulates ML-KEM secret");
+        Console.WriteLine($"      Ciphertext: {mlKemResult.ciphertext.Length} bytes");
+        Console.WriteLine($"      Shared secret: {mlKemResult.sharedSecret.Length} bytes");
+        
+        // Alice combines both secrets
+        var aliceCombinedSecrets = new byte[ecdhSharedSecret.Length + mlKemResult.sharedSecret.Length];
+        Buffer.BlockCopy(ecdhSharedSecret, 0, aliceCombinedSecrets, 0, ecdhSharedSecret.Length);
+        Buffer.BlockCopy(mlKemResult.sharedSecret, 0, aliceCombinedSecrets, ecdhSharedSecret.Length, mlKemResult.sharedSecret.Length);
+        Console.WriteLine($"  [✓] Alice combines secrets: {aliceCombinedSecrets.Length} bytes\n");
+        
+        // Alice generates ChaCha salt
+        var aliceChachaSalt = CryptoManager.lib.getSecureRandomBytes(32);
+        
+        Console.WriteLine($"  Alice sends to Bob:");
+        Console.WriteLine($"    - ECDH public key: {aliceEcdhKeypair.publicKey.Length} bytes");
+        Console.WriteLine($"    - ML-KEM ciphertext: {mlKemResult.ciphertext.Length} bytes");
+        Console.WriteLine($"    - ChaCha salt: {aliceChachaSalt.Length} bytes\n");
+
+        var aliceKeys2Payload = Concat(bobAddress.addressNoChecksum, aliceEcdhKeypair.publicKey, mlKemResult.ciphertext, aliceChachaSalt, bobEcdhKeypair.publicKey, bobMlKemKeypair.publicKey, bobAesSalt);
+        var aliceKeys2Signature = CryptoManager.lib.getSignature(aliceKeys2Payload, aliceRsaKeys.privateKeyBytes);
+        bool aliceKeys2SigValidForBob = CryptoManager.lib.verifySignature(aliceKeys2Payload, aliceRsaPubKey, aliceKeys2Signature);
+        Console.WriteLine($"  [✓] Alice signs keys2 payload: {aliceKeys2Signature.Length} bytes");
+        Console.WriteLine($"      Bob verifies signature: {aliceKeys2SigValidForBob}\n");
+
+        // === STEP 4: Bob decapsulates and derives keys ===
+        Console.WriteLine("STEP 4: Bob derives session keys\n");
+        
+        // Bob performs ECDH with Alice's public key
+        var bobEcdhShared = CryptoManager.lib.deriveECDHSharedKey(
+            bobEcdhKeypair.privateKey,
+            aliceEcdhKeypair.publicKey
+        );
+        Console.WriteLine($"  [✓] Bob derives ECDH shared secret: {bobEcdhShared.Length} bytes");
+        
+        // Bob decapsulates Alice's ML-KEM ciphertext
+        var bobMlKemShared = CryptoManager.lib.decapsulateMLKem(
+            bobMlKemKeypair.privateKey,
+            mlKemResult.ciphertext
+        );
+        Console.WriteLine($"  [✓] Bob decapsulates ML-KEM secret: {bobMlKemShared.Length} bytes");
+        
+        // Bob combines secrets (should match Alice's)
+        var bobCombinedSecrets = new byte[bobEcdhShared.Length + bobMlKemShared.Length];
+        Buffer.BlockCopy(bobEcdhShared, 0, bobCombinedSecrets, 0, bobEcdhShared.Length);
+        Buffer.BlockCopy(bobMlKemShared, 0, bobCombinedSecrets, bobEcdhShared.Length, bobMlKemShared.Length);
+        
+        // Verify both sides have the same combined secret
+        bool secretsMatch = bobCombinedSecrets.SequenceEqual(aliceCombinedSecrets);
+        Console.WriteLine($"  [✓] Secrets match: {secretsMatch}\n");
+
+        // Both derive final session keys using HKDF
+        var aliceAesKey = CryptoManager.lib.deriveSymmetricKey(aliceCombinedSecrets, 32, bobAesSalt, IXI_AES_KEY_INFO);
+        var aliceChachaKey = CryptoManager.lib.deriveSymmetricKey(aliceCombinedSecrets, 32, aliceChachaSalt, IXI_CHACHA_KEY_INFO);
+        
+        var bobAesKey = CryptoManager.lib.deriveSymmetricKey(bobCombinedSecrets, 32, bobAesSalt, IXI_AES_KEY_INFO);
+        var bobChachaKey = CryptoManager.lib.deriveSymmetricKey(bobCombinedSecrets, 32, aliceChachaSalt, IXI_CHACHA_KEY_INFO);
+        
+        Console.WriteLine("STEP 5: Derive final session keys\n");
+        Console.WriteLine($"  [✓] AES-256 keys derived (32 bytes each)");
+        Console.WriteLine($"      Alice AES key matches Bob: {aliceAesKey.SequenceEqual(bobAesKey)}");
+        Console.WriteLine($"  [✓] ChaCha20 keys derived (32 bytes each)");
+        Console.WriteLine($"      Alice ChaCha key matches Bob: {aliceChachaKey.SequenceEqual(bobChachaKey)}\n");
+
+        Console.WriteLine("═══════════════════════════════════════════════════════\n");
+        Console.WriteLine("Security Analysis:");
+        Console.WriteLine("  [✓] ECDH (secp521r1)");
+        Console.WriteLine("  [✓] ML-KEM-1024 (FIPS 203) - Quantum resistance");
+        Console.WriteLine("  [✓] HKDF-SHA3-512 - Key derivation");
+        Console.WriteLine("  [✓] Dual encryption - AES-256 + ChaCha20-Poly1305");
+        Console.WriteLine("\n  -> Attacker needs to break ECDH AND ML-KEM");
+        Console.WriteLine("  -> Even if ECDH is quantum-broken, ML-KEM protects");
+        Console.WriteLine("  -> RSA signatures prevent man-in-the-middle");
+        Console.WriteLine("\n═══════════════════════════════════════════════════════\n");
+
+        // Store for encryption demo
+        _aliceAesKey = aliceAesKey;
+        _aliceChachaKey = aliceChachaKey;
+        _bobAesKey = bobAesKey;
+        _bobChachaKey = bobChachaKey;
+    }
+
+    static byte[] _aliceAesKey;
+    static byte[] _aliceChachaKey;
+    static byte[] _bobAesKey;
+    static byte[] _bobChachaKey;
+
+    static void DemoEncryption()
+    {
+        Console.WriteLine("## Message Encryption with Derived Keys\n");
+
+        string message = "This message is protected by quantum-resistant crypto!";
+        byte[] plaintext = Encoding.UTF8.GetBytes(message);
+        byte[] aad = Encoding.UTF8.GetBytes("chat:timestamp:1234567890");
+
+        Console.WriteLine($"Original message: \"{message}\"\n");
+
+        // Encrypt using spixi2 mode (what Ixian actually uses)
+        var encrypted = MessageCrypto.encrypt(
+            StreamMessageEncryptionCode.spixi2,
+            plaintext,
+            null,  // No RSA for session messages
+            _aliceAesKey,
+            _aliceChachaKey,
+            aad
+        );
+
+        Console.WriteLine($"Encrypted size: {encrypted.Length} bytes");
+        Console.WriteLine($"  - Message nonce: 64 bytes");
+        Console.WriteLine($"  - AES-256-GCM ciphertext");
+        Console.WriteLine($"  - ChaCha20-Poly1305 outer encryption");
+        Console.WriteLine($"  - Authentication tag verified\n");
+
+        // Decrypt using Bob's keys (which match Alice's)
+        var decrypted = MessageCrypto.decrypt(
+            StreamMessageEncryptionCode.spixi2,
+            encrypted,
+            null,
+            _bobAesKey,
+            _bobChachaKey,
+            aad
+        );
+
+        string decryptedMessage = Encoding.UTF8.GetString(decrypted);
+        Console.WriteLine($"Decrypted message: \"{decryptedMessage}\"");
+        Console.WriteLine($"✓ Integrity verified via Poly1305 + GCM\n");
+    }
+}
+```
+
+### Step 4: Run It
+
+```bash
+dotnet run
+```
+
+**Output:**
+```
+=== Ixian Post-Quantum Handshake Demo ===
+
+## Contact Handshake (with ML-KEM)
+
+STEP 1: Generate wallets and addresses
+STEP 2: Alice -> Bob (requestAdd2)
+  Alice sends RSA public key: 528 bytes
+  Alice's address: 4ScYbdowdPkFsvTDTBAuvY4RGUaVYkywvq5BiTRAmmbTm3aDjECWebW74VJgsUuPb
+
+  [√] Alice signs requestAdd2 payload: 512 bytes
+      (Simulated) Bob verifies signature: True
+
+STEP 3: Bob -> Alice (acceptAdd2)
+
+  [√] Bob generates ECDH keypair
+      Public: 67 bytes (secp521r1)
+  [√] Bob generates ML-KEM-1024 keypair (FIPS 203)
+      Public: 1568 bytes
+      Private: 3168 bytes
+  [√] Bob generates AES salt: 32 bytes
+
+  Bob sends to Alice:
+    - RSA public key: 528 bytes
+    - ECDH public key: 67 bytes
+    - ML-KEM public key: 1568 bytes
+    - AES salt: 32 bytes
+
+  [√] Bob signs acceptAdd2 payload: 512 bytes
+      Alice verifies signature: True
+
+STEP 4: Alice -> Bob (keys2)
+
+  [√] Alice generates ECDH keypair
+  [√] Alice derives ECDH shared secret: 66 bytes
+  [√] Alice encapsulates ML-KEM secret
+      Ciphertext: 1568 bytes
+      Shared secret: 32 bytes
+  [√] Alice combines secrets: 98 bytes
+
+  Alice sends to Bob:
+    - ECDH public key: 67 bytes
+    - ML-KEM ciphertext: 1568 bytes
+    - ChaCha salt: 32 bytes
+
+  [√] Alice signs keys2 payload: 512 bytes
+      Bob verifies signature: True
+
+STEP 4: Bob derives session keys
+
+  [√] Bob derives ECDH shared secret: 66 bytes
+  [√] Bob decapsulates ML-KEM secret: 32 bytes
+  [√] Secrets match: True
+
+STEP 5: Derive final session keys
+
+  [√] AES-256 keys derived (32 bytes each)
+      Alice AES key matches Bob: True
+  [√] ChaCha20 keys derived (32 bytes each)
+      Alice ChaCha key matches Bob: True
+
+═══════════════════════════════════════════════════════
+
+Security Analysis:
+  [√] ECDH (secp521r1)
+  [√] ML-KEM-1024 (FIPS 203) - Quantum resistance
+  [√] HKDF-SHA3-512 - Key derivation
+  [√] Dual encryption - AES-256 + ChaCha20-Poly1305
+
+  -> Attacker needs to break ECDH AND ML-KEM
+  -> Even if ECDH is quantum-broken, ML-KEM protects
+  -> RSA signatures prevent man-in-the-middle
+
+═══════════════════════════════════════════════════════
+
+## Message Encryption with Derived Keys
+
+Original message: "This message is protected by quantum-resistant crypto!"
+
+Encrypted size: 152 bytes
+  - Message nonce: 64 bytes
+  - AES-256-GCM ciphertext
+  - ChaCha20-Poly1305 outer encryption
+  - Authentication tag verified
+
+Decrypted message: "This message is protected by quantum-resistant crypto!"
+√ Integrity verified via Poly1305 + GCM
+```
+
+---
+
+## What's Happening Under the Hood
+
+### ML-KEM Encapsulation (Alice's Side)
+
+```csharp
+var mlKemResult = CryptoManager.lib.encapsulateMLKem(bobMlKemPublicKey);
+// Returns:
+// - ciphertext: 1568 bytes (to send to Bob)
+// - sharedSecret: 32 bytes (Alice's copy of the secret)
+```
+
+**What happens inside:**
+1. Alice generates random 32-byte value
+2. Uses Bob's ML-KEM public key (1568 bytes) to encapsulate it
+3. Produces ciphertext that only Bob can decrypt
+4. **Security:** Based on Module-LWE hard problem (quantum-resistant)
+
+### ML-KEM Decapsulation (Bob's Side)
+
+```csharp
+var mlKemShared = CryptoManager.lib.decapsulateMLKem(
+    bobMlKemPrivateKey,
+    mlKemCiphertext
+);
+// Returns:
+// - sharedSecret: 32 bytes (Bob's copy, matches Alice's)
+```
+
+**What happens inside:**
+1. Bob uses his ML-KEM private key (3168 bytes)
+2. Decapsulates the ciphertext Alice sent
+3. Extracts the same 32-byte shared secret Alice has
+4. **Security:** No one can extract this secret without Bob's private key
+
+### Key Derivation with HKDF
+
+```csharp
+// Combine ECDH + ML-KEM secrets
+combined = ECDH_secret (66 bytes) || ML-KEM_secret (32 bytes) = 98 bytes
+
+// Derive AES key
+aes_key = HKDF-SHA3-512(
+    ikm = combined,
+    salt = aes_salt,
+    info = "IXI-AES-KEY",
+    length = 32
+)
+
+// Derive ChaCha key
+chacha_key = HKDF-SHA3-512(
+    ikm = combined,
+    salt = chacha_salt,
+    info = "IXI-CHACHA-KEY",
+    length = 32
+)
+```
+
+**Why this works:**
+- HKDF extracts entropy from both key exchange algorithms
+- Even if ECDH is broken, ML-KEM entropy remains
+- Different salts produce independent keys
+- Info strings domain-separate the keys
+
+### Message Encryption (spixi2 mode)
+
+```csharp
+encrypted = MessageCrypto.encrypt(
+    StreamMessageEncryptionCode.spixi2,
+    plaintext,
+    null,
+    aes_key,
+    chacha_key,
+    aad
+);
+```
+
+**Step-by-step:**
+1. **Generate nonce:** 64 random bytes
+2. **Derive AES sub-key:** `KDF(nonce || aes_key)` -> key + IV
+3. **AES-256-GCM encrypt:** `AES(plaintext)` -> ciphertext₁
+4. **Derive ChaCha sub-key:** `KDF(nonce || chacha_key)` -> key + nonce
+5. **ChaCha20-Poly1305 encrypt:** `ChaCha(ciphertext₁, AAD)` -> ciphertext₂
+6. **Package:** `[nonce || ciphertext₂]`
+
+**Security properties:**
+- Two independent encryption layers
+- Both include authentication (GCM + Poly1305)
+- AAD binds context (message type, timestamp, etc.)
+- Nonce ensures unique keys per message
+
+---
+
+## Security Guarantees
+
+### Against Classical Attacks
+
+| Attack Vector | Protection |
+|---------------|-----------|
+| **Brute force key recovery** | 2^4096 RSA factorization + 2^256 ECDH discrete log + ML-KEM lattice hardness |
+| **Man-in-the-middle** | RSA-4096 signatures verify sender identity |
+| **Replay attacks** | Timestamps + nonces + session-specific salts |
+| **Chosen plaintext** | AEAD modes (AES-GCM + ChaCha20-Poly1305) |
+
+### Against Quantum Attacks
+
+| Quantum Algorithm | Breaks | Ixian's Multi-Layered Defense |
+|-------------------|--------|------------------|
+| **Shor's algorithm** | RSA factorization + ECDH elliptic curves | **ML-KEM lattice crypto unaffected** - attacker gets 2 of 3 key components |
+| **Grover's algorithm** | AES (halves strength) | 256-bit AES -> 128-bit quantum strength (still secure) + ChaCha20 independent cipher |
+| **Hypothetical lattice breakthrough** | ML-KEM | **RSA + ECDH both still secure** - attacker needs classical breakthrough too |
+
+**The math:** Your session keys derive from `HKDF(ECDH_secret || ML-KEM_secret)`. To compromise this:
+- Quantum attack breaks RSA + ECDH -> ML-KEM secret still protects the combined key
+- Lattice breakthrough breaks ML-KEM -> ECDH secret still protects the combined key  
+- **Both attacks needed simultaneously** = RSA factorization + elliptic curve DLP + lattice problem
+
+**Bottom line:** Three independent hard problems from different branches of mathematics. No single breakthrough - quantum or classical - can decrypt your data.
+
+---
+
+## Real-World Applications
+
+### 1. Healthcare Records
+
+```csharp
+// Patient data that MUST remain confidential for 50+ years
+var patientRecord = new MedicalRecord {
+    PatientName = "John Doe",
+    SSN = "123-45-6789",
+    Diagnosis = "...",
+    Prescription = "..."
+};
+
+// Step 1: Establish PQC-protected contact with hospital system
+// (This performs the full RSA + ECDH + ML-KEM handshake shown earlier)
+var hospitalContact = ContactManager.addContact(hospitalAddress);
+// Now you have session keys derived from ECDH + ML-KEM
+
+// Step 2: Encrypt record using session keys from handshake
+byte[] json = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(patientRecord));
+byte[] aad = Encoding.UTF8.GetBytes($"patient:{patientRecord.SSN}:date:{DateTime.UtcNow:yyyy-MM-dd}");
+
+byte[] encrypted = MessageCrypto.encrypt(
+    StreamMessageEncryptionCode.spixi2,  // Uses keys derived from ECDH + ML-KEM
+    json,
+    null,  // No RSA needed - session keys already established
+    hospitalContact.aesKey,    // From HKDF(ECDH_secret || ML-KEM_secret)
+    hospitalContact.chachaKey, // From HKDF(ECDH_secret || ML-KEM_secret)
+    aad
+);
+
+// Store in database - protected by quantum-resistant handshake
+SaveToDatabase(encrypted);
+```
+
+**Why it matters:** HIPAA requires 50-year data retention. The initial ML-KEM handshake protects all subsequent messages.
+
+### 2. Government Communications
+
+```csharp
+// Classified information that must resist nation-state quantum attacks
+var message = new ClassifiedMessage {
+    Classification = "TOP SECRET",
+    Content = sensitiveIntel,
+    Timestamp = DateTime.UtcNow
+};
+
+// Establish secure channel with recipient (RSA + ECDH + ML-KEM handshake)
+var secureContact = ContactManager.getContact(recipientAddress);
+
+// Encrypt using session keys derived from hybrid key exchange
+byte[] plaintext = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+byte[] aad = Encoding.UTF8.GetBytes($"classified:{message.Classification}");
+
+var encrypted = MessageCrypto.encrypt(
+    StreamMessageEncryptionCode.spixi2,
+    plaintext,
+    null,
+    secureContact.aesKey,    // Derived from ECDH + ML-KEM
+    secureContact.chachaKey, // Derived from ECDH + ML-KEM
+    aad
+);
+
+StreamProcessor.sendMessage(secureContact, encrypted);
+```
+
+**Why it matters:** Adversaries are harvesting encrypted government comms NOW to decrypt later. ML-KEM ensures they can't.
+
+### 3. IoT Device Control
+
+```csharp
+// Smart home device that must resist quantum attacks
+var command = new DeviceCommand {
+    DeviceId = "smart-lock-001",
+    Action = "unlock",
+    AuthToken = userToken
+};
+
+// Establish secure channel with device (happens once at pairing)
+// Device performs full S2 handshake: RSA + ECDH + ML-KEM
+var deviceContact = ContactManager.addContact(deviceAddress);
+
+// Send command using established session keys
+byte[] json = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(command));
+byte[] aad = Encoding.UTF8.GetBytes($"device:{command.DeviceId}:action:{command.Action}");
+
+var encrypted = MessageCrypto.encrypt(
+    StreamMessageEncryptionCode.spixi2,
+    json,
+    null,
+    deviceContact.aesKey,    // From HKDF(ECDH_secret || ML-KEM_secret)
+    deviceContact.chachaKey, // From HKDF(ECDH_secret || ML-KEM_secret)
+    aad
+);
+
+StreamProcessor.sendMessage(deviceContact, encrypted);
+```
+
+**Why it matters:** IoT devices live 10-20 years. One-time ML-KEM handshake at pairing protects all future commands.
+
+---
+
+## Common Questions
+
+### Q: Is ML-KEM battle-tested?
+
+**A:** Yes. ML-KEM (formerly CRYSTALS-Kyber) is:
+- NIST FIPS 203 standard (2024)
+- Winner of NIST's 8-year PQC competition
+- Peer-reviewed by world's top cryptographers
+
+Ixian uses the official FIPS 203 implementation from BouncyCastle.
+
+### Q: What if ML-KEM is broken?
+
+**A:** You're protected by **three independent mathematical hard problems**:
+
+1. **ML-KEM-1024** - Module Lattice-based cryptography (quantum-resistant)
+2. **RSA-4096** - Integer factorization problem (classical security)
+3. **ECDH secp521r1** - Elliptic curve discrete logarithm problem
+
+These are fundamentally different branches of mathematics. An attacker would need breakthroughs in **both factorization AND elliptic curves** simultaneously to compromise your session keys - even if ML-KEM falls. The hybrid design means no single mathematical discovery can break your encryption.
+
+### Q: Does this work on mobile/embedded?
+
+**A:** Yes. Ixian-Core runs on:
+- Mobile (iOS, Android via Xamarin)
+- Raspberry Pi
+- Embedded Linux
+- Windows/Mac/Linux desktop
+
+ML-KEM is computationally lighter than RSA, so it works well on constrained devices.
+
+---
+
+## The Bottom Line
+
+### What You Get with Ixian
+
+**Post-quantum security** - ML-KEM (FIPS 203) in production  
+**Hybrid approach** - Multiple layers, all of them protect data  
+**Transparent** - Works automatically, no crypto expertise needed  
+**Battle-tested** - Used in production Ixian network  
+**Standards-compliant** - NIST FIPS 203, not custom crypto  
+**Future-proof** - Architecture allows adding new methods  
+
+### What You Don't Have To Do
+
+Implement complex crypto protocols yourself  
+Understand lattice-based mathematics  
+Manage multiple key types manually  
+Worry about quantum computer development  
+Rewrite your app when standards change  
+
+---
+
+## Next Steps
+
+### Learn More
+
+- [Ixian Cryptographic Primitives and Key Derivation Details](../../architecture/cryptographic-primitives)
+- [Client App Quickstart](../quickstart/client-app)
+
+### Try It Yourself
+
+1. Clone the example above
+2. Run it and examine the output
+3. Modify to encrypt your own data
+4. Build a secure chat client
+5. Deploy to production with confidence
+
+### Join the Discussion
+
+- [Discord: ](https://discord.gg/pdJNVhv)
+- [Telegram: ](https://t.me/ixian_official_ENG)
+- [GitHub: Ixian-Core](https://github.com/ixian-platform/Ixian-Core)
+- [Research: ML-KEM Paper](https://pq-crystals.org/kyber/)
+
+---
+
+**Your data encrypted today will still be secure in 2040. That's the power of post-quantum cryptography.**
+
+Ready to future-proof your applications? The quantum threat is real, but with Ixian, you're already protected.

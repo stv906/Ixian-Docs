@@ -1,0 +1,79 @@
+---
+title: reconnect
+description: Forces the Ixian node to disconnect and reconnect to the network.
+status: Finalized
+---
+
+## Introduction
+
+The `reconnect` method is an administrative endpoint used to troubleshoot network connectivity issues. It forces the node to drop all its current peer connections and re-initiate the discovery and connection process without requiring a full restart of the node software.
+
+This can be useful if the node appears to be stuck, has poor peer connections, or is failing to synchronize. An optional parameter allows for clearing pending network messages, which can resolve issues related to a stalled network queue.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `resetNetworkQueue` | `boolean` | No | If `true`, the node will clear its outbound network message queue before reconnecting. Defaults to `false`. |
+
+### Example POST Request
+
+```json
+POST /reconnect
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "reconnect",
+  "params": {
+    "resetNetworkQueue": true
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /reconnect?resetNetworkQueue=true
+```
+
+---
+
+## Response
+
+The response is a simple confirmation that the reconnection process has been initiated.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Reconnecting node to network now.". |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "Reconnecting node to network now.",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Process:** When called, the node's networking module will gracefully close all active peer-to-peer connections and then restart its connection logic, which includes peer discovery and establishing new sessions.
+*   **Less Disruptive Than Restart:** This command is less disruptive than a full `shutdown` as the core services and loaded wallets remain in memory. It only affects the network communication layer.
+*   **`resetNetworkQueue` Option:**
+    *   If `false` (default), the node will attempt to send any pending outbound messages after new connections are established.
+    *   If `true`, all messages currently waiting in the outbound queue are discarded. This can be useful for clearing a backlog of old or stuck messages that may be hindering network performance.
+*   **Security:** As this command can disrupt network activity, access to this RPC endpoint should be restricted to trusted users, typically by binding the RPC server to a local interface (`localhost`) or using a firewall.

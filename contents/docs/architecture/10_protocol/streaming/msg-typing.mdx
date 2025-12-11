@@ -1,0 +1,27 @@
+---
+title: msgTyping (35)
+description: Indicates that the user is currently typing a message.
+---
+
+The `msgTyping` message is a transient, real-time notification used to signal that a user is actively composing a message. Its purpose is to improve user experience by displaying a "typing..." indicator in the chat interface.
+
+This message is ephemeral and does not require a confirmation of receipt.
+
+### Core Data Types
+
+This message has no payload.
+
+## Payload Structure
+
+The `msgTyping` message is defined by its type code alone and carries no data in its payload.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| *N/A* | *N/A* | 0 | 0 | The payload is always empty. |
+
+## Behavioral Notes
+
+*   **Sending:** A client should send this message when the user begins typing in the input field for a specific contact. To prevent network flooding, the client MUST rate-limit these messages (e.g., sending one only after a brief moment of continuous typing and waiting several seconds before sending another).
+*   **Receiving:** Upon receiving `msgTyping`, a client should display a "typing" indicator for the sender. This indicator should automatically hide after a short timeout (e.g., 5 seconds) to account for the sender pausing or closing the application without sending another notification.
+*   **Reliability:** The `StreamMessage` envelope for this message should set `requireRcvConfirmation` to `false`. It is a non-critical hint, and its loss is acceptable.
+*   **Bot Interaction:** This message is generally ignored if received from a bot address, as bots do not "type" in a conventional sense.

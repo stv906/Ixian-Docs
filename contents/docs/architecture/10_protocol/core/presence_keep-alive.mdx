@@ -1,0 +1,21 @@
+---
+title: keepAlivePresence (34)
+description: Technical specification for the KeepAlive data structure, a lightweight, signed presence assertion.
+status: Planned Upgrade
+---
+
+A `KeepAlive` is a compact, signed data structure that serves as a lightweight proof that a peer is online and active. It is the fundamental component of the presence gossip protocol, periodically broadcasted by peers to maintain their entry in the network's `PresenceLists`.
+
+It contains the essential, frequently-updated information from a `PresenceAddress` object, such as the timestamp and IP address, and is signed to prove its authenticity.
+
+### Core Data Types
+
+*   **`IxiVarInt` / `IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`string`**: See **[Global Serialization Rules](..)**.
+
+## Serialization Structure
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `keepAliveData` | `IxiBytes` | The full binary representation of a single `KeepAlive` object. The internal structure of this object is defined in the **[KeepAlives Data Structure](../../10_data-structures/keepalives)** document. |

@@ -1,0 +1,39 @@
+---
+title: keepAlivesChunk (7)
+description: Responds to a `getKeepAlives` request with a chunk of presence data.
+status: Planned Upgrade
+---
+
+The `keepAlivesChunk` message is the direct response to a `getKeepAlives` request. It contains the full data for the requested presence records that the sending node has in its local database.
+
+A single `getKeepAlives` request may be answered with multiple `keepAlivesChunk` messages if the response data is large, with each message respecting the global maximum message size limit.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload consists of a count followed by a repeating series of `KeepAlive` entries.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB` | The total size of the message payload must not exceed the global maximum. |
+| `count` | `IxiVarUInt` | `0` | `5000`* | The number of `KeepAlive` entries that follow in this message. |
+| `keepAlives` | `KeepAlive[]` | | | An array of `count` serialized `KeepAlive` data structures. |
+
+\* The maximum value for `count` is determined by the node configuration (`CoreConfig.maximumKeepAlivesPerChunk`), which defaults to `5000`.
+
+### KeepAlive Entry Structure
+
+Each entry in the `keepAlives` array is a single, length-prefixed byte array containing a complete, serialized `KeepAlive` object.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `keepAliveData` | `IxiBytes` | The full binary representation of a single `KeepAlive` object. The internal structure of this object is defined in the **[KeepAlives Data Structure](../../10_data-structures/keepalives)** document. |
+
+## Behavioral Notes
+
+-   A node receiving this message should parse the `KeepAlive` entries and update its local presence database with the fresh data.
+-   The recipient should expect to receive multiple `keepAlivesChunk` messages in response to a single large `getKeepAlives` request.

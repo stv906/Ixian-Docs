@@ -1,0 +1,23 @@
+---
+title: appRequestReject (29)
+description: Rejects an appRequest.
+---
+
+The `appRequestReject` message is the negative response to an `appRequest`. It indicates that the user has declined the invitation to start a Mini-App session.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier from the original `appRequest` message, indicating which session is being rejected. |
+| `data` | `IxiBytes` | 0 | * | Optional. Application-specific data explaining the rejection reason or providing additional context. |
+
+## Behavioral Notes
+
+*   **Trigger:** This message is sent when a user declines an incoming Mini-App request.
+*   **Session Termination:** Upon receiving `appRequestReject`, the original requester knows the session will not be established. No further `appData` messages should be sent for this session ID.
+*   **User Decision:** Unlike `appRequestError` (which signals technical problems), this represents a deliberate user choice to decline participation.

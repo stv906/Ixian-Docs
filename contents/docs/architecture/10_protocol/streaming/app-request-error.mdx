@@ -1,0 +1,26 @@
+---
+title: appRequestError (30)
+description: Signals an error occurred during an appRequest.
+status: Draft
+---
+
+The `appRequestError` message is sent to signal a problem during the handling of a Mini-App request that prevents the session from starting. This is for errors beyond a simple user rejection, such as the app not being installed or a parameter being invalid.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`IxiVarInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`string`**: A standard UTF-8 encoded string.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier from the original `appRequest` message. |
+| `errorCode` | `IxiVarInt` | 0 | * | An application-defined integer code for the error. |
+| `errorMessage` | `string` | 0 | * | Optional. A human-readable description of the error. |
+
+## Behavioral Notes
+
+*   **Usage:** A client sends this if it receives an `appRequest` but cannot proceed for a technical reason (e.g., requested app is not installed, initial `data` payload is malformed).
+*   **Session Termination:** Like `appRequestReject`, this message definitively terminates the session setup process.

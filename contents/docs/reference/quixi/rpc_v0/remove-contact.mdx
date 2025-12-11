@@ -1,0 +1,112 @@
+---
+title: removeContact
+description: Removes a contact from the node's local friend list, effectively severing the communication link.
+status: Finalized
+---
+
+## Introduction
+
+The `removeContact` method is an administrative endpoint for managing the node's address book. It allows for the complete removal of a contact from the local friend list.
+
+This is a **purely local operation**. It deletes the contact's data, including their address, public key, and message history, from the node's storage. It does not send any notification to the contact who is being removed. From their perspective, you will simply appear to be permanently offline.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the contact you wish to remove. |
+
+### Example POST Request
+
+```json
+POST /removeContact
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "removeContact",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /removeContact?address=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+If successful, the `result` is the full `Contact` object of the user who was just removed. This allows for confirmation of which contact was deleted.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "nickname": "Viper",
+    "approved": true,
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If the contact you are trying to remove does not exist in your friend list:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}
+```
+
+If the `address` parameter is missing:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "address parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Operation Only:** This is a critical point. Removing a contact only affects your node's local database. It **does not** send a "remove" or "block" message to the other user. They will still see you on their contact list but will be unable to send you messages.
+*   **Irreversible:** This action permanently deletes the contact's entry and associated data from your local storage. To communicate with this user again, you would need to re-add them using the `addContact` method and go through the full handshake process again.
+*   **Use Case:** This method is used for managing the address book, pruning old contacts, or as a privacy measure to stop receiving communications from a specific user.

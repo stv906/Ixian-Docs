@@ -1,0 +1,91 @@
+---
+title: Streaming Protocol
+description: An index of messages for the Ixian S2 Streaming Protocol.
+---
+
+The Ixian Streaming Protocol (S2) is a secure, peer-to-peer communication layer built on top of the DLT Master Node network. It enables end-to-end encrypted, direct messaging between any two Ixian addresses.
+
+Communication is layered. A `StreamMessage` acts as the secure, routable envelope, while an inner `SpixiMessage` contains the actual application-level command or data.
+
+## Protocol Layers
+
+| Layer | File | Description |
+| :--- | :--- | :--- |
+| **Envelope** | [StreamMessage](./streaming/aa_stream-message) | The outer, secure wrapper that handles S2 network routing, encryption, and signing. |
+| **Application**| [SpixiMessage](./streaming/ab_spixi-message) | The inner, decrypted payload that defines the application-level command (e.g., chat, file transfer). |
+
+---
+
+## Application-Layer Messages (`SpixiMessageCode`)
+
+The following messages are carried within the `SpixiMessage` payload.
+
+### Contact & Group Management
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [requestAdd2](./streaming/contact_request-add-2) | `40` | A request to add a user as a contact. |
+| [acceptAdd2](./streaming/contact_accept-add-2) | `41` | Accepts a contact request. |
+| [keys2](./streaming/contact_keys-2) | `42` | Exchanges session keys for end-to-end encryption. |
+| [leave](./streaming/contact_leave) | `37` | A notification that a user is leaving a group chat. |
+| [leaveConfirmed](./streaming/contact_leave-confirmed)| `38`| Confirmation that the leave request was processed. |
+| [getPubKey](./streaming/contact_get-pub-key)| `26` | Requests the public key of a contact. |
+| [pubKey](./streaming/contact_pub-key) | `27` | Provides a public key in response to a request. |
+| [getNick](./streaming/contact_get-nick) | `1` | Requests the nickname of a contact. |
+| [nick](./streaming/contact_nick) | `2` | Provides the nickname of a contact. |
+| [avatar](./streaming/contact_avatar) | `24` | Sends an avatar image. |
+| [getAvatar](./streaming/contact_get-avatar) | `25` | Requests the avatar for a contact. |
+
+### Messaging Status & Reactions
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [chat](./streaming/msg-chat) | `0` | A standard text chat message. |
+| [msgRead](./streaming/msg-read) | `8` | Confirmation that a message has been read. |
+| [msgReceived](./streaming/msg-received)| `9` | Confirmation that a message has been delivered. |
+| [msgDelete](./streaming/msg-delete)| `33`| A request to delete a previously sent message. |
+| [msgReaction](./streaming/msg-reaction)| `34`| Adds a reaction to a specific message. |
+| [msgError](./streaming/msg-error) | `36` | Reports an error in processing a previous message. |
+| [msgReport](./streaming/msg-report) | `39` | Reports a message for moderation or abuse. |
+| [msgTyping](./streaming/msg-typing) | `35` | Indicates that the user is currently typing a message. |
+
+### Funds
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [sentFunds](./streaming/sent-funds) | `5` | A notification that funds have been sent. |
+| [requestFunds](./streaming/request-funds)| `6` | A request for a payment from a contact. |
+| [requestFundsResponse](./streaming/request-funds-response)| `18` | The response to a `requestFunds` message. |
+
+### File Transfer
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [fileData](./streaming/file-data) | `10` | A chunk of a file's binary data. |
+| [requestFileData](./streaming/file-request-file-data)| `11`| Requests a specific chunk of a file. |
+| [fileHeader](./streaming/file-header) | `12` | Contains metadata about a file being sent. |
+| [acceptFile](./streaming/file-accept-file) | `13` | The recipient agrees to accept an incoming file transfer. |
+| [fileFullyReceived](./streaming/file-fully-received)| `23`| Confirmation that all chunks of a file have been received. |
+
+### Calls
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [requestCall](./streaming/call-request-call) | `14` | Initiates a voice or video call. |
+| [acceptCall](./streaming/call-accept-call) | `15` | Accepts an incoming call request. |
+| [rejectCall](./streaming/call-reject-call) | `16` | Rejects an incoming call request. |
+| [callData](./streaming/call-data) | `17` | A chunk of real-time audio or video data. |
+
+### Mini-Apps
+
+| Name | Code | Description |
+| :--- | :--- | :--- |
+| [appData](./streaming/app-data) | `21` | Generic data for a mini-app or service. |
+| [appRequest](./streaming/app-request)| `22` | A generic request to a mini-app or service. |
+| [appRequestAccept](./streaming/app-request-accept)| `28` | Accepts an `appRequest`. |
+| [appRequestReject](./streaming/app-request-reject)| `29` | Rejects an `appRequest`. |
+| [appRequestError](./streaming/app-request-error)| `30` | Signals an error occurred during an `appRequest`. |
+| [appEndSession](./streaming/app-end-session)| `31` | Terminates a session with a mini-app. |
+| [getAppProtocols](./streaming/app-get-app-protocols)| `43` | Requests the list of app protocols supported by the peer. |
+| [appProtocols](./streaming/app-protocols) | `44` | Provides the list of supported app protocols. |
+| [appProtocolData](./streaming/app-protocol-data)| `45` | Generic data for a specific, named app protocol. |

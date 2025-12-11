@@ -1,4 +1,5 @@
 import { createReadStream, promises as fs } from "fs"
+import fsSync from "fs"
 import path from "path"
 import { GitHubLink } from "@/settings/navigation"
 import { Element, Text } from "hast"
@@ -26,6 +27,8 @@ type BaseMdxFrontmatter = {
   title: string
   description: string
   keywords: string
+  status: "Finalized" | "Draft" | "Deprecated"| "Planned Upgrade"
+  since: string
 }
 
 async function parseMdx<Frontmatter>(rawMdx: string) {
@@ -51,9 +54,15 @@ async function parseMdx<Frontmatter>(rawMdx: string) {
 }
 
 const computeDocumentPath = (slug: string) => {
-  return Settings.gitload
-    ? `${GitHubLink.href}/raw/main/contents/docs/${slug}/index.mdx`
-    : path.join(process.cwd(), "/contents/docs/", `${slug}/index.mdx`)
+  if (Settings.gitload) {
+    return `${GitHubLink.href}/raw/main/contents/docs/${slug}`;
+  }
+  let fullPath = path.join(process.cwd(), "/contents/docs/", `${slug}/index.mdx`);
+  if (!fsSync.existsSync(fullPath))
+  {
+    fullPath = path.join(process.cwd(), "/contents/docs/", `${slug}.mdx`);
+  }
+  return fullPath;
 }
 
 const getDocumentPath = (() => {
@@ -115,7 +124,7 @@ export async function getTable(
   let rawMdx = ""
 
   if (Settings.gitload) {
-    const contentPath = `${GitHubLink.href}/raw/main/contents/docs/${slug}/index.mdx`
+    const contentPath = getDocumentPath(slug)
     try {
       const response = await fetch(contentPath)
       if (!response.ok) {
@@ -129,11 +138,7 @@ export async function getTable(
       return []
     }
   } else {
-    const contentPath = path.join(
-      process.cwd(),
-      "/contents/docs/",
-      `${slug}/index.mdx`
-    )
+    const contentPath = getDocumentPath(slug)
     try {
       const stream = createReadStream(contentPath, { encoding: "utf-8" })
       for await (const chunk of stream) {

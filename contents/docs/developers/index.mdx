@@ -1,0 +1,313 @@
+---
+title: "Developer Documentation"
+description: "Build decentralized applications with post-quantum security, zero cloud costs, and true peer-to-peer architecture on the Ixian Platform"
+---
+
+## Welcome to Ixian Development
+
+Build applications that don't just claim to be decentralized - they actually are. No hidden servers, no "serverless" that still needs AWS, no quantum-vulnerable encryption waiting to be cracked.
+
+The Ixian Platform gives you:
+
+- **True P2P Communication** - Peer-to-peer architecture with no central servers
+- **Post-Quantum Security** - Production ML-KEM (FIPS 203) today, not tomorrow
+- **Zero Infrastructure Costs** - No monthly bills, no vendor lock-in, ever
+- **Battle-Tested** - Running in production with thousands of active users
+- **Multiple Integration Paths** - Choose the right tool for your use case
+
+---
+
+## Start Here
+
+### Brand New to Ixian?
+
+**[Docker Sandbox - Get Started in 5 Minutes ->](./developers/quickstart/docker-sandbox)**
+
+Run a complete local Ixian test network (DLT + S2 nodes) in Docker. Perfect for:
+- **First exploration** - See transactions, blocks, and APIs in action
+- **Learning without risk** - No testnet tokens needed
+- **Development testing** - Full network control for CI/CD
+
+No compilation, no configuration, just `./sandbox up` and you're running.
+
+### Ready to Build?
+
+**[Quickstart Guides ->](./developers/quickstart)**
+
+Choose your path based on your background and use case:
+- **Complete Beginners**: Start with Docker Sandbox (get a local network first)
+- **Web Developers**: Spixi Mini Apps (HTML/CSS/JavaScript)
+- **Backend Developers**: QuIXI Bridge (REST/MQTT integration)
+- **Systems Developers**: Client Apps (full Ixian-Core integration)
+
+Each quickstart takes 30-60 minutes and gets you building something real.
+
+### Want to See What's Possible?
+
+**[How-To Guides ->](./developers/howto)**
+
+Focused guides showcasing Ixian's unique capabilities:
+- **Local Development Workflows** - Professional testing with Docker Sandbox
+- **Truly Serverless Apps** - Build without cloud accounts or backend ops
+- **Post-Quantum Security** - Implement quantum-resistant encryption today
+- **IoT Without Cloud** - Build devices with zero AWS/Azure bills
+- **Decentralized AI Chatbots** - Run local LLMs with privacy and control
+
+Each guide includes working code and comparisons to alternatives.
+
+### Need to Look Up a Term?
+
+**[Glossary ->](./glossary)**
+
+Comprehensive definitions of technical terms, acronyms, and concepts: PoCW, Starling, ML-KEM, S2, and 70+ more.
+
+---
+
+## Development Paths
+
+### Frontend / Web Developers
+
+**Build P2P web applications without backend infrastructure**
+
+#### Spixi Mini Apps
+Create collaborative apps (games, tools, utilities) that run inside Spixi messenger with zero servers.
+
+**Perfect for:**
+- Collaborative tools (whiteboards, document editors)
+- Multiplayer games (chess, tic-tac-toe)
+- Business utilities (time tracking, expense splitting)
+- Privacy-focused applications
+
+**Tech stack:** HTML, CSS, JavaScript  
+**Monthly cost:** $0  
+**Learning curve:** Easy (familiar web tech)
+
+[Start building Mini Apps ->](./developers/quickstart/spixi-mini-app)
+
+---
+
+### IoT / Integration Developers
+
+**Bridge traditional systems to Ixian P2P network**
+
+#### QuIXI Gateway
+Connect devices, legacy systems, and traditional apps to Ixian without implementing the full P2P protocol.
+
+**Perfect for:**
+- IoT devices (Raspberry Pi, sensors, controllers)
+- Existing applications (add P2P features via REST API)
+- Message queue integrations (MQTT, RabbitMQ)
+- Rapid prototyping
+
+**Tech stack:** REST API, MQTT, any language  
+**Monthly cost:** $0  
+**Learning curve:** Easy (REST/MQTT patterns)
+
+[Start with QuIXI ->](./developers/quickstart/quixi-bridge)
+
+---
+
+### Systems / Blockchain Developers
+
+**Build native Ixian applications with full control**
+
+#### Client Applications (Ixian-Core)
+Implement the complete Ixian protocol for maximum power and flexibility.
+
+**Perfect for:**
+- Wallets and financial applications
+- Custom consensus participation
+- Protocol-level innovations
+- High-performance requirements
+
+**Tech stack:** C# / .NET, Ixian-Core SDK  
+**Monthly cost:** $0  
+**Learning curve:** Medium (blockchain concepts)
+
+[Start with Client Apps ->](./developers/quickstart/client-app)
+
+---
+
+## What Makes Ixian Different
+
+### Not Another Blockchain
+
+Ixian isn't trying to be Ethereum or Bitcoin. It's a complete platform for decentralized communication and value transfer:
+
+| Feature | Traditional Blockchain | Ixian Platform |
+|---------|----------------------|----------------|
+| **Primary Use** | Financial transactions | Communication + transactions |
+| **Client Discovery** | IP/DNS lookup | Cryptographic presence system |
+| **Client Authentication** | CA Infrastructure | Self-authentication using cryptographic address |
+| **Key Exchange** | TLS/Traditional PKI | Hybrid RSA+ECDH+ML-KEM (PQC) |
+| **Encryption** | TLS | Dual Encryption using AES-256 and ChaCha20 |
+| **Scalability** | Limited (on-chain logic) | Massive (Starling sectors) |
+| **Real-time** | Slow block times | Sub-second P2P messaging |
+| **Cost Model** | Gas fees per operation | Transaction fees only |
+
+### Not "Serverless" Marketing
+
+When cloud providers say "serverless," they mean "servers you don't manage." You still pay for Lambda, API Gateway, databases, etc.
+
+When Ixian says **truly serverless**, we mean:
+- No cloud accounts needed
+- No monthly infrastructure costs
+- No vendor to discontinue services
+- Applications survive company shutdowns
+
+### Not "Coming Soon" Crypto
+
+Most platforms are "researching" post-quantum cryptography. Ixian shipped it:
+- **ML-KEM (FIPS 203)** in production
+- **Hybrid approach** combining classical + PQC
+- **Transparent** - developers get it automatically
+- **Battle-tested** on live network
+
+---
+
+## Core Concepts
+
+Before diving in, understand these key Ixian concepts:
+
+### Cryptographic Addresses
+Every user, device, and node has a self-generated address derived from public keys. No registration, no usernames - just cryptography.
+
+### Presence System
+Discover and connect to users by cryptographic address, not IP or DNS. Presence packets are signed, time-limited, and route through sector-based relay networks (Starling).
+
+### S2 Network
+The Streaming and Signaling layer handles real-time P2P communication on top of the DLT. Think of it as the "internet" of Ixian - messages, calls, data streams.
+
+### DLT Network
+The Distributed Ledger handles transactions, IXI Names registration, and consensus. Think of it as the "blockchain" of Ixian - but with collaborative work consensus (PoCW).
+
+### IXI Names
+Human-readable names (like 'alice' or 'mycompany') that resolve to addresses, endpoints, or metadata. Decentralized DNS without centralized authorities.
+
+**[Learn more in Architecture docs ->](./architecture)**
+
+---
+
+## Tools & Resources
+
+### SDKs & Libraries
+
+- **[Ixian-Core](https://github.com/ixian-platform/Ixian-Core)** - Core SDK (C#/.NET)
+- **[QuIXI](https://github.com/ixian-platform/QuIXI)** - Gateway bridge
+- **[Spixi Mini Apps SDK](https://github.com/ixian-platform/Spixi-Mini-Apps)** - JavaScript SDK
+
+### Development Networks
+
+**Three network environments are available:**
+
+| Environment | Purpose | Isolation | Tokens | Use Case |
+|------------|---------|-----------|--------|----------|
+| **Regtest** | Local testing via Docker Sandbox | Completely isolated, local-only | Auto-generated | Development, CI/CD, testing |
+| **Testnet** | Public test network | Separate blockchain, public participation | Free (testnet only) | Integration testing, pre-deployment validation |
+| **Mainnet** | Production network | The live Ixian network | Real IXI value | Production deployment |
+
+**Connection endpoints:**
+- **Testnet seed node**: `seedtest1.ixian.io:11234`
+- **Mainnet seed node**: `seed1.ixian.io:10234`
+- **Local Regtest** (Docker): `localhost:10234` or Docker service hostnames
+
+### APIs & References
+
+- **[DLT RPC Reference](./reference/dlt)** - Blockchain query APIs
+- **[S2 API Reference](./reference/s2)** - Streaming network APIs
+- **[QuIXI REST API](./reference/quixi)** - Gateway endpoints
+- **[Data Structures](./architecture/10_data-structures)** - Protocol formats
+
+### Community
+
+- **[Discord](https://discord.gg/pdJNVhv)** - Get help, share projects
+- **[Telegram](https://t.me/ixian_official_ENG)** - Community discussion
+- **[GitHub](https://github.com/ixian-platform)** - Source code, issues
+
+---
+
+## Example Projects
+
+### Open Source Apps
+
+Learn from production applications:
+
+**Spixi Messenger** - Full-featured P2P messenger  
+[github.com/ixian-platform/Spixi](https://github.com/ixian-platform/Spixi)
+
+**QuIXI Examples** - IoT devices and integrations  
+[github.com/ixian-platform/QuIXI/Examples](https://github.com/ixian-platform/QuIXI/tree/master/Examples)
+
+**Mini Apps Collection** - Games, tools, utilities  
+[github.com/ixian-platform/Spixi-Mini-Apps/apps](https://github.com/ixian-platform/Spixi-Mini-Apps/tree/master/apps)
+
+---
+
+## Choose Your Starting Point
+
+### I want to build...
+
+**-> Web apps without servers**  
+Start: [Spixi Mini Apps Quickstart](./developers/quickstart/spixi-mini-app)  
+See: [Serverless P2P Apps Guide](./developers/howto/serverless-p2p-apps)
+
+**-> AI chatbots without API costs**  
+Start: [QuIXI Bridge Quickstart](./developers/quickstart/quixi-bridge)  
+See: [Decentralized AI Chatbot Guide](./developers/howto/decentralized-ai-chatbot)
+
+**-> IoT devices without cloud**  
+Start: [QuIXI Bridge Quickstart](./developers/quickstart/quixi-bridge)  
+See: [IoT Without Cloud Guide](./developers/howto/iot-without-cloud)
+
+**-> Secure financial apps**  
+Start: [Client App Quickstart](./developers/quickstart/client-app)  
+See: [Post-Quantum Security Guide](./developers/howto/post-quantum-security)
+
+**-> Custom blockchain features**  
+Start: [Client App Quickstart](./developers/quickstart/client-app)  
+Read: [Architecture Documentation](./architecture)
+
+**-> To understand the technology**  
+Read: [System Architecture](./architecture/system-architecture)  
+Read: [IXI Names Architecture](./architecture/ixi-names-architecture)
+
+---
+
+## FAQ
+
+### Do I need to run a node?
+
+**For Mini Apps:** No, Spixi handles connectivity  
+**For QuIXI:** No, QuIXI is your lightweight node  
+**For Client Apps:** No, it's embedded in your app  
+
+### What programming languages are supported?
+
+**Directly:** C# (.NET) via Ixian-Core  
+**Via QuIXI:** Any language (REST API)  
+**Mini Apps:** JavaScript (HTML/CSS/JS)
+
+### Is there a testnet?
+
+Yes! Use `networkType = testnet` in config and connect to `seedtest1.ixian.io:11234`.
+
+### Where do I get help?
+
+**Technical questions and General discussion:**  
+- [Discord](https://discord.gg/pdJNVhv)
+- [Telegram](https://t.me/ixian_official_ENG)
+**Bug reports:** [GitHub Issues](https://github.com/ixian-platform)  
+
+---
+
+## What's Next?
+
+1. **Pick a quickstart** based on your background
+2. **Build something** in 30-60 minutes
+3. **Read a how-to guide** to understand what's possible
+4. **Join Discord and Telegram** to share what you're building
+5. **Deploy to mainnet** when ready
+
+**Welcome to truly decentralized development.** No fine print, no hidden servers, no monthly bills waiting to surprise you.
+
+Start building the post-cloud, post-quantum future.

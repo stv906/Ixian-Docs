@@ -1,0 +1,112 @@
+---
+title: S2 Node Configuration
+description: A complete reference for the Ixian S2 node configuration file (ixian.cfg) and its command-line arguments.
+---
+
+## Introduction
+
+An Ixian S2 node's behavior is managed through a configuration file (by default, `ixian.cfg`) and command-line arguments. The node first reads the configuration file on startup, and any settings provided as command-line flags will override the corresponding options in the file.
+
+This document provides a comprehensive guide to all configuration parameters for running and maintaining an Ixian S2 node.
+
+---
+
+## Configuration File (`ixian.cfg`)
+
+The configuration file uses a simple `key = value` format. Each option must be on its own line. Lines starting with a semicolon (`;`) are treated as comments.
+
+**Example `ixian.cfg`:**
+
+```ini
+; Set the S2 P2P port for the mainnet
+s2Port = 10235
+
+; Set the JSON-RPC API port
+apiPort = 8001
+
+; Allow API access from the local machine
+apiAllowIp = 127.0.0.1
+
+; Set the network type to testnet
+networkType = testnet
+```
+
+### General Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `networkType` | `string` | Sets the network to operate on. Can be `mainnet`, `testnet`, or `regtest`. |
+| `externalIp` | `string` | The node's public IP address. Overrides the node's automatic detection. |
+| `checksumLock`| `string` | A custom string for the seeding checksum. This is only necessary when setting up a private network. |
+
+### Network & API Options
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `s2Port` | `integer` | The TCP port for S2 peer-to-peer (P2P) network communication. |
+| `testnetS2Port` | `integer` | The S2 P2P port to use when operating in testnet mode. |
+| `apiPort` | `integer` | The TCP port for the JSON-RPC API server. |
+| `testnetApiPort` | `integer` | The API port to use when operating in testnet mode. |
+| `apiAllowIp` | `string` | Whitelists an IP address for API access. This parameter can be used multiple times. |
+| `apiBind` | `string` | Binds the API server to a specific local IP address. Can be specified multiple times. |
+| `addApiUser` | `string` | Adds a required `user:password` credential for API access. Can be specified multiple times. |
+| `addPeer` | `string` | Adds a seed node for the mainnet. Using this will clear the default list. Can be used multiple times. |
+| `addTestnetPeer`| `string` | Adds a seed node for the testnet. Using this will clear the default list. Can be used multiple times. |
+
+### Logging & Node Behavior
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `maxLogSize` | `integer` | The maximum size of a single log file in Megabytes (MB). |
+| `maxLogCount` | `integer` | The maximum number of historical log files to keep (log rotation). |
+| `logVerbosity` | `integer` | A bitmask to set logging detail. Add numbers for combined verbosity: Trace=1, Info=2, Warn=4, Error=8. (e.g., `14` for Info+Warn+Error). |
+| `disableWebStart`| `integer` | Set to `1` to prevent the node from automatically opening the API URL in a browser on startup. |
+| `blockNotify` | `string` | A command to execute when the connected DLT network reports a new block. |
+
+---
+
+## Command-Line Arguments
+
+Command-line flags are processed after the config file and will take precedence over any settings defined there.
+
+### General Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-h`, `--help` | - | Displays the help screen and exits. |
+| `-v`, `--version` | - | Displays the S2 node version and exits. |
+| `-t`, `--testnet` | - | Starts the node in testnet mode. Overrides `networkType` in the config file. |
+| `--networkType` | `string` | Explicitly sets the network type. Can be `mainnet`, `testnet`, or `regtest`. |
+| `--config` | `filepath` | Specifies the path to the configuration file (default: `ixian.cfg`). |
+
+### Node Operation Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `-c`, `--clean` | - | Deletes cache, log, and peer data files before starting. |
+| `-x`, `--changepass`| - | Prompts to change the password of the wallet specified with `-w`. |
+| `-p`, `--port` | `port` | Sets the S2 P2P network port. |
+| `-a`, `--apiport` | `port` | Sets the JSON-RPC API port. |
+| `-i`, `--ip` | `ip_address`| Sets the external IP address. |
+| `-w`, `--wallet` | `filepath` | Specifies the path to the wallet file (default: `ixian.wal`). |
+| `-n`, `--node` | `ip:port` | Connects to a specific DLT seed node, ignoring the default list. |
+| `--disableWebStart`| - | Disables opening the API URL in a browser on startup. |
+| `--verboseOutput`| - | Enables verbose logging directly to the console output. |
+
+### Logging Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--maxLogSize` | `megabytes` | Sets the maximum log file size in MB. |
+| `--maxLogCount` | `count` | Sets the maximum number of log files to keep. |
+| `--logVerbosity` | `integer` | Sets the logging verbosity using the bitmask (Trace=1, Info=2, Warn=4, Error=8). |
+
+### Developer & Debug Flags
+
+| Flag | Parameter | Description |
+| :--- | :--- | :--- |
+| `--walletPassword`| `password` | **(UNSAFE)** Provides the wallet password directly on the command line. Use with caution. |
+| `--generateWallet`| - | Generates a new wallet file and exits. **Testnet only.** |
+| `--checksumLock` | `string` | Sets the checksum lock for private networks. |
+| `--netdump` | `filepath` | Dumps network message details to the specified file for debugging. |
+| `--testClient` | - | Runs the node in a special test client mode for debugging purposes. |

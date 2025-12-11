@@ -1,0 +1,144 @@
+---
+title: getTransaction
+description: Retrieves a transaction by its unique ID, searching both the memory pool and the blockchain.
+status: Finalized
+---
+
+## Introduction
+
+The `getTransaction` method is a fundamental endpoint for querying the Ixian DLT. It allows you to fetch the complete details of a single transaction by providing its unique transaction identifier (ID).
+
+The node will first search for the transaction among unconfirmed transactions in its memory pool. If it's not found there, it will then search the historical, confirmed transactions on the blockchain. This allows for tracking a transaction throughout its entire lifecycle.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | Yes | The unique identifier (hash) of the transaction to retrieve. The endpoint can handle both V8 and legacy transaction ID formats. |
+| `hex` | `boolean` | No | If present and set to `true`, the response will be the raw, hex-encoded transaction data instead of a JSON object. Defaults to `false`. |
+
+### Example POST Request
+
+```json
+POST /getTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "getTransaction",
+  "params": {
+    "id": "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (with `hex` option)
+
+```
+GET /getTransaction?id=stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR&hex=true
+```
+
+---
+
+## Response
+
+The response format depends on the `hex` parameter.
+
+### Result 1: `Transaction` Object (default)
+
+If `hex` is `false` or omitted, the `result` is the standard `Transaction` object.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `string` | The unique transaction identifier. |
+| `version` | `int` | The transaction version number. |
+| `blockHeight` | `long` | The block height at which this transaction can be included. |
+| `type` | `int` | The transaction type code (e.g., `0` for standard, `2` for signing). |
+| `amount` | `string` | The primary amount being transferred. |
+| `fee` | `string` | The fee paid for the transaction. |
+| `from` | `map` | A map of source addresses to the amounts they contributed. |
+| `to` | `map` | A map of recipient addresses to the amounts they received. |
+| `pubKey` | `string` | The public key of the sender. |
+| `nonce` | `int` | A sequential number used to prevent transaction replay. |
+| `timestamp` | `long` | The Unix timestamp of when the transaction was created. |
+| `signature` | `string` | The cryptographic signature of the transaction. |
+| `applied` | `long` | The block height at which the transaction was successfully applied. `0` if not yet applied. |
+| `checksum` | `string` | The checksum of the transaction data. |
+| `data` | `string` | Optional data field, often used for specialized transaction types. |
+| `totalAmount` | `string` | The sum of all `from` amounts (or `to` amounts plus `fee`). |
+
+#### Example Success Response (JSON)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "id": "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR",
+    "version": 7,
+    "blockHeight": "69441",
+    "nonce": "0",
+    "type": "2",
+    "amount": "1000.06798237",
+    "fee": "0.00000000",
+    "from": {
+      "1": "1000.06798237"
+    },
+    "to": {
+      "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo": "495.42577190",
+      "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm": "504.64221047"
+    },
+    "pubKey": "1ixianinfinimine234234234234234234234234234242HP",
+    "timestamp": "1763058181",
+    "signature": "5374616b65",
+    "data": "fd820b0100",
+    "checksum": "8073214d02f539cd96b22b0176ac63b057822edf1a1f35f71a28cf25b3839125d093ee6b3baa0d5c62cb8a1e",
+    "totalAmount": "1000.06798237",
+    "applied": "69442"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Result 2: Hex-Encoded String
+
+If `hex` is `true`, the `result` is a single string containing the raw, serialized transaction data.
+
+#### Example Success Response (Hex)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "0700fd200d010001010005402a8648ce2021008282f711243e69636b6c696666...",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Transaction not found."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Search Order:** The node prioritizes the transaction memory pool (unapplied/unconfirmed transactions) in its search. If no transaction with the given ID is found there, it proceeds to search the blockchain (applied/confirmed transactions).
+*   **Legacy ID Support:** The `id` parameter is backward-compatible and will be correctly processed even if it is in an older format. The node internally converts it to the V8 format for the lookup.

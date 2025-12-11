@@ -1,0 +1,35 @@
+---
+title: sectorNodes (19)
+description: Responds to a `getSectorNodes` request with a list of presence records for that sector.
+status: Finalized
+---
+
+The `sectorNodes` message is the response to a `getSectorNodes` request. It provides the requester with a list of full presence objects for nodes that belong to the specified network sector.
+
+This allows a node to discover and connect to the relevant peers for routing and other sector-specific operations.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sectorPrefix` | `IxiBytes` | `10` | `10` | The 10-byte prefix of the sector this response is for. Echoes the value from the request. |
+| `presenceCount` | `IxiVarUInt` | `0` | | The number of `Presence` entries that follow in this message. |
+| `presences` | `Presence[]` | | | An array of `presenceCount` full presence entries. |
+
+### Presence Entry Structure
+
+Each entry in the `presences` array is a complete, serialized `Presence` object.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `presenceData` | `IxiBytes` | The full binary representation of a single `Presence` object. The internal structure of this object is defined in the **[Presences Data Structure](../../10_data-structures/presences)** document. |
+
+## Behavioral Notes
+
+-   A node receiving this message should parse the list of `Presence` objects.
+-   This information can be used to update local routing tables and to establish new connections with nodes in the target sector.

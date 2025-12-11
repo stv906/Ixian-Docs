@@ -1,0 +1,27 @@
+---
+title: rejectCall (16)
+description: Rejects an incoming call request.
+---
+
+The `rejectCall` message is sent by the recipient of a `requestCall` to refuse the incoming call. This terminates the call setup process. A reason for the rejection (e.g., "busy") may be included.
+
+This message is a specialized version of the `appRequestReject` message.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload follows the structure of an `AppDataMessage`.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `sessionId` | `IxiBytes` | * | * | The unique identifier of the call session being rejected. This MUST match the `sessionId` from the original `requestCall`. |
+| `data` | `IxiBytes` | 0 | * | Optional. May contain data indicating the reason for rejection, such as a "busy" or "declined" status code. |
+
+## Behavioral Notes
+
+*   **Trigger:** A client sends this message when the user rejects an incoming call, or if the call times out without an answer.
+*   **Implementation:** The client sends an `AppDataMessage` payload within a `SpixiMessage` of type `appRequestReject`.
+*   **Sender Action:** Upon receiving `rejectCall`, the original caller's client terminates the call attempt and updates the UI to show that the call was not answered or was declined.

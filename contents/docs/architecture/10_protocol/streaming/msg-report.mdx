@@ -1,0 +1,24 @@
+---
+title: msgReport (39)
+description: Reports a message for moderation or abuse.
+---
+
+The `msgReport` message is used by a user to report a specific message to a moderator, who is typically a bot managing a group or channel. This serves as a fundamental tool for community moderation.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains the unique ID of the message being reported.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `reportedMessageId` | `IxiBytes` | 16 | 64 | The unique ID of the message that is being reported for moderation. |
+
+## Behavioral Notes
+
+*   **Target Audience:** This message is almost exclusively sent to bot addresses. Standard clients receiving this message may ignore it, as moderation actions are the responsibility of the bot/service.
+*   **Moderator Action:** Upon receiving a `msgReport`, a bot should log the report, linking the `reportedMessageId`, the reporter (from the `StreamMessage` sender), and the original author of the reported message. The bot may then apply its moderation rules, such as automatic deletion, user warnings, or notifying human administrators.
+*   **Signature Requirement:** The `StreamMessage` carrying this report MUST be signed. The recipient bot uses this signature to verify the identity of the user filing the report, preventing anonymous or spoofed reports.

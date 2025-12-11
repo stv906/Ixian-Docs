@@ -1,0 +1,36 @@
+---
+title: IxiBytes (Length-Prefixed Byte Array)
+description: Technical specification for serializing variable-length byte arrays.
+status: Finalized
+---
+
+`IxiBytes` is the standard format for serializing variable-length binary data, such as addresses, public keys, and signatures, within the Ixian protocol.
+
+### On-Wire Serialization Format
+
+The format consists of two parts: a variable-length integer that specifies the length, followed by the raw data bytes.
+
+| Part | Data Type | Description |
+| :--- | :--- | :--- |
+| **Length** | `IxiVarUInt` | The number of bytes (`N`) in the `Data` field. |
+| **Data** | `byte[N]` | `N` bytes of raw binary data. |
+
+### Special Cases
+
+-   **Empty or Null Data:** If the byte array to be encoded is `null` or has a length of `0`, it is serialized as a single `IxiVarUInt` with the value `0`. No `Data` part follows. A decoder reading a length of `0` should interpret the result as a zero-length or `null` byte array.
+
+### Examples
+
+#### Example 1: `byte[] { 0xDE, 0xAD, 0xBE, 0xEF }`
+
+1.  **Data:** `DE AD BE EF`
+2.  **Length:** The data has a length of `4`.
+3.  **Length as `IxiVarUInt`:** `04`
+4.  **Final Serialized Form:** `04 DE AD BE EF`
+
+#### Example 2: An empty byte array `byte[] {}`
+
+1.  **Data:** (empty)
+2.  **Length:** The data has a length of `0`.
+3.  **Length as `IxiVarUInt`:** `00`
+4.  **Final Serialized Form:** `00`

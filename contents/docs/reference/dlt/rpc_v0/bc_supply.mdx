@@ -1,0 +1,68 @@
+---
+title: supply
+description: Retrieves the total calculated circulating supply of IXI coins.
+status: Finalized
+---
+
+## Introduction
+
+The `supply` method is a simple utility endpoint that provides the total current circulating supply of the native coin (IXI). It calculates this value by summing the balances of all wallets present in the node's local copy of the global wallet state.
+
+This is a fundamental endpoint for economic analysis, block explorers, and any service that needs to report on the total amount of currency in existence.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /supply
+Content-Type: application-json
+
+{
+  "jsonrpc": "2.0",
+  "method": "supply",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /supply
+```
+
+---
+
+## Response
+
+The response `result` is a single string representing the total coin supply.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The total circulating supply of IXI, formatted as a string to preserve precision. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "12701306963.42240288",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Live Calculation:** This value is not stored directly on the blockchain. The node calculates it on-the-fly by iterating through every wallet in its wallet state database and summing their balances. This ensures the value is always up-to-date with the latest block but may involve a brief computation time on the node.
+*   **State Dependency:** The accuracy of the returned supply is directly dependent on the node's synchronization status. If the node is not fully synchronized with the network, it will report an older, lower supply based on its outdated wallet state.
+*   **Read-Only Operation:** This is a safe, read-only query that does not alter the state of the node or the blockchain.

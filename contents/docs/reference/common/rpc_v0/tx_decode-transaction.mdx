@@ -1,0 +1,141 @@
+---
+title: decodeTransaction
+description: Decodes a raw, hex-encoded transaction string into its detailed JSON representation.
+status: Finalized
+---
+
+## Introduction
+
+The `decodeTransaction` method is a utility endpoint that deserializes a raw transaction from its hexadecimal string format into a structured, human-readable JSON object.
+
+This method serves as the counterpart to `createRawTransaction`. Its primary use is to allow applications, hardware wallets, or users to inspect the contents of a transaction before it is signed or broadcast to the network, ensuring all details like amounts, recipients, and fees are correct.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `transaction` | `string` | Yes | The raw transaction data, encoded as a hexadecimal string. |
+
+### Example POST Request
+
+```json
+POST /decodeTransaction
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "decodeTransaction",
+  "params": {
+    "transaction": "0700fd200d010001010005402a8648..."
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /decodeTransaction?transaction=0700fd200d010001010005402a8648...
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object, representing the decoded data from the raw hex string.
+
+### Result: `Transaction` Object Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `version` | `int` | The transaction version number. |
+| `id` | `string` | The unique transaction identifier. |
+| `type` | `int` | The transaction type code (e.g., `0` for a standard transfer). |
+| `amount` | `IXI.Amount` | The primary amount being transferred in the transaction. |
+| `fee` | `IXI.Amount` | The fee paid for the transaction. |
+| `fromList` | `map` | A map where keys are wallet addresses and values are `IXI.Amount` objects representing the funds sourced from each address. |
+| `toList` | `map` | A map where keys are recipient wallet addresses and values are `object`s containing the `amount` and optional `data`. |
+| `blockHeight` | `long` | The block height at which this transaction can be included. |
+| `nonce` | `int` | A sequential number used to prevent transaction replay. |
+| `timeStamp` | `long` | The Unix timestamp of when the transaction was created. |
+| `checksum` | `string` | The checksum of the transaction data. |
+| `signature` | `string` | The cryptographic signature of the transaction (null if unsigned). |
+| `pubKey` | `object` | An object containing the public key of the sender in various formats. |
+| `applied` | `long` | The block height at which the transaction was successfully applied. `0` if not yet applied. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "version": 7,
+    "id": "Af0gDQEAvIn5H9eCBfXL95+9Cmo+k7rP04E7ltRybHRQOBwm+Ox7K22BGVBAWXdcMes=",
+    "type": 0,
+    "amount": {
+      "amount": 100000000000
+    },
+    "fee": {
+      "amount": 1000000
+    },
+    "fromList": {
+      "AA==": {
+        "amount": 100001000000
+      }
+    },
+    "toList": {
+      "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo": {
+        "amount": {
+          "amount": 100000000000
+        }
+      }
+    },
+    "blockHeight": 68896,
+    "nonce": 42868,
+    "timeStamp": 0,
+    "checksum": "vIn5H9eCBfXL95+9Cmo+k7rP04E7ltRybHRQOBwm+Ox7K22BGVBAWXdcMes=",
+    "signature": null,
+    "pubKey": {
+      "version": 0,
+      "addressWithChecksum": "AIeMKxG8QDs3a8fE0zmSK707zziHIptGk+JlML2he42RA+zS",
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "addressNoChecksum": "AIeMKxG8QDs3a8fE0zmSK707zziHIptGk+JlML2he42R",
+      "sectorPrefix": "63OEZwCqNJNkWg==",
+      "pubKey": "AAIAAM1ZEI3yrsP0n6gMqY5ZDs4fIDGs3+yrApTypzC8a78ng0quc8lXJXezzcohSSmZedkoaDwO/i/vdXZShpiGZMG2pQ6EhnjKU8JZ3cfco3MbajP1f5VMDorN4QHW5RFq92CHbdfwGK7NE/wqdW1IH5fuCpEVMpujV23+H6ZeuEt9HeQokFlvbqfu7UC+nHRqyqah3hd2wgsXdn9n21FBUaefeEsZgEcA25nPAIej2r1KuGWoTaFTKIvtJvIS9MZbHJJjWD9lZggFQH5VI8z3mciAo+gWx6+MMpv0mSICXl0GYGqCrAC4tkXNsOwQH8Xx1TnDTkCOhIiYx3aaib0RMek2+S0zu6vlWBfzusPZZuvy9Jt8rI3Ph+QJdXox5Z5pUuWJTxhh8VYzc+Nmdl3Otf7wnKIEZvoLrmLkqFSP4anmnTE7NXMJDaKc6nz0ztzq6E6XNlH9wxHDz2wPlcCjgYuYmcq4pMU5gEH5RZ1it+RIHYZuWuHEnNByGnoXdu7Kd4W/waM31dnP+dc3GNiFZZWba/DWc1jdwPXwJS5q2LSSopLjx1No0X7ZQUivq5yYHski+eiHyJZahRK/iglWydRL/M657LYFohekZIczJiCNl1I5ZncQq0xinOF0wt0N5p6+1O+sgWPPKeYkHxwV3W6IKdWtXBlHYOBSbhA58l7dAwAAAAEAAQ=="
+    },
+    "applied": 0
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the required `transaction` parameter is missing from the request.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "transaction parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Operation:** This is a purely local utility function. It does not perform any network operations or consult the blockchain state.
+*   **No State Validation:** The method only decodes the provided data. It does not validate whether the transaction would be acceptable to the network (e.g., it does not check for sufficient funds, correct nonces, or valid signatures).
+*   **Signed vs. Unsigned:** The endpoint can decode both signed and unsigned transactions. If the transaction is unsigned, the `signature` field in the resulting JSON object will be `null`.

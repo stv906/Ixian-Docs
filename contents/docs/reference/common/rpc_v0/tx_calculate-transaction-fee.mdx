@@ -1,0 +1,104 @@
+---
+title: calculateTransactionFee
+description: Calculates the minimum required network fee for a given transaction without creating or broadcasting it.
+status: Finalized
+---
+
+## Introduction
+
+The `calculateTransactionFee` method provides a way to determine the minimum network fee for a potential transaction without actually creating or broadcasting it. It serves as a "dry run" or simulation of the transaction creation process.
+
+The endpoint uses the exact same internal logic and accepts the same parameters as [`addTransaction`](./tx_add-transaction). It constructs the transaction in memory to accurately calculate its final byte size, determines the corresponding fee, and returns only the fee amount.
+
+This is the recommended method for user interfaces that need to display the network fee to a user for confirmation before they commit to sending a transaction.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+This method accepts the exact same parameters as the [`addTransaction`](./tx_add-transaction) method. You must provide enough information to construct a realistic transaction, such as the recipients and the source wallet.
+
+**Key Parameters:**
+*   `to`: A hyphen-separated list of `address_amount` pairs. **Required.**
+*   `from`: (Optional) A list of specific inputs to use.
+*   `wallet`: The wallet address to source funds from (if `from` is omitted).
+
+For a complete list and format details, please see the `addTransaction` documentation.
+
+### Example POST Request
+
+```json
+POST /calculateTransactionFee
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "calculateTransactionFee",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "to": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo_12.5"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /calculateTransactionFee?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm&to=16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo_12.5
+```
+
+---
+
+## Response
+
+The response `result` is a single string representing the calculated fee.
+
+### Result Fields
+
+| Name   | Type        | Description                                                       |
+| :----- | :---------- | :---------------------------------------------------------------- |
+| `result` | `IxiNumber` | The calculated minimum transaction fee, returned as a string. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "0.01000000",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+If the simulated transaction cannot be created (e.g., insufficient funds in the wallet), the endpoint will return an error.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32001,
+        "message": "Balance is too low"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Simulation Only:** This endpoint **does not** create, sign, or broadcast any transaction. It is a read-only calculation.
+*   **Accuracy:** Because it uses the full transaction creation logic (including automatic input selection if `from` is not specified), the returned fee is the accurate, size-dependent fee that the real transaction would require.
+*   **Use Case:** The primary purpose of this method is to provide a fee estimate for user confirmation. A typical application flow would be:
+    1.  User enters transaction details.
+    2.  Application calls `calculateTransactionFee` to get the network cost.
+    3.  Application displays the amount, recipient, and fee to the user and asks for confirmation.
+    4.  Upon confirmation, the application calls `addTransaction` with the same parameters to execute the transaction.

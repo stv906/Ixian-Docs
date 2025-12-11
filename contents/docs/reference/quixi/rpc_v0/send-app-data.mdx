@@ -1,0 +1,132 @@
+---
+title: sendAppData
+description: Sends application-specific data to a contact, targeting either a unique app session or a general protocol.
+status: Finalized
+---
+
+## Introduction
+
+The `sendAppData` method is a high-level endpoint for building interactive applications and custom protocols on top of the Ixian S2 streaming layer. It enables developers to send arbitrary string-based data to a contact, routing it to a specific application instance (`appId`) or a general protocol handler (`protocolId`).
+
+This endpoint is the foundation for creating "mini-apps" within a Spixi-like environment, allowing for complex interactions like games, shared whiteboards, or custom service integrations. The choice between `appId` and `protocolId` determines the context of the message.
+
+---
+
+## Request
+
+Requests must be made using `HTTP POST` with a JSON body.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `address` | `string` | Yes | The Base58-encoded Ixian wallet address of the recipient contact. |
+| `data` | `string` | Yes | The payload to be sent, as a plain UTF-8 string. |
+| `appId` | `string` | Conditional | A unique string identifying a specific application **session**. Use this for sending data related to a specfic mini app. Required if `protocolId` is not provided. |
+| `protocolId` | `string` | Conditional | A string identifying a general application **protocol**. Use this for sending data to any mini app that supports the specified protocol. Required if `appId` is not provided. |
+
+### Example POST Request (Session-based)
+
+```json
+POST /sendAppData
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendAppData",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "appId": "chess-game",
+    "data": "{\"move\":\"e4\"}"
+  },
+  "id": 1
+}
+```
+
+### Example POST Request (Protocol-based)
+
+```json
+POST /sendAppData
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "sendAppData",
+  "params": {
+    "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+    "protocolId": "chess-protocol",
+    "data": "{\"status\":\"online\"}"
+  },
+  "id": 1
+}```
+
+---
+
+## Response
+
+If successful, the `result` is the full `Contact` object of the recipient.
+
+### Result: `Contact` Object
+
+The structure of the returned `Contact` object is identical to the one described in the [`contacts`](./contacts#result-contact-object-structure) documentation.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "walletAddress": {
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      ...
+    },
+    "nickname": "Viper",
+    "approved": true,
+    ...
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Responses
+
+If neither `appId` nor `protocolId` is provided:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "appId or protocolId parameter is missing"
+    }
+}
+```
+
+If the contact does not exist:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "contact doesn't exist"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **`appId` vs. `protocolId`:** This is the most important concept for this endpoint.
+    *   **`appId`:** Use this to identify a specific app. Currently the node hashes this string to create a `session_id`.
+    *   **`protocolId`:** Use this for general, non-app specific communication. The node hashes this string to create a `protocol_id`. For example, `protocolId: "tic-tac-toe-protocol"` could be used to send invites or broadcast a user's general status for that protocol/application.
+*   **Data Encoding:** The `data` parameter is sent as a standard UTF-8 string. It is often used to send serialized data formats like JSON.
+*   **No Local Persistence:** This method dispatches data to the network but does not save it to the local chat history. The calling application is responsible for managing its own state and persistence.
+*   **Prerequisite:** A secure communication channel must be fully established with the contact (`approved: true`).
+*   **End-to-End Encryption:** The data payload is fully end-to-end encrypted before transmission over the S2 network.

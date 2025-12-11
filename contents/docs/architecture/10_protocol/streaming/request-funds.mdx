@@ -1,0 +1,24 @@
+---
+title: requestFunds (6)
+description: A request for a payment from a contact.
+---
+
+The `requestFunds` message allows a user to ask a contact for a specific amount of $IXI. The recipient's client can then display this request to the user, allowing them to easily create a transaction to fulfill it.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string.
+
+## Payload Structure
+
+The payload contains a string representation of the amount being requested.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `amount` | `string` | 1 | * | The amount of IxiCash being requested, formatted as a string (e.g., "12.34"). |
+
+## Behavioral Notes
+
+*   **Sending:** The sender's client creates a message containing the desired amount as a string and sends it to the contact.
+*   **Receiving:** The recipient's client parses the `amount` string. It should then present a user interface element that clearly shows who is requesting funds and for how much, along with options to "Accept" or "Decline".
+*   **Fulfilling the Request:** If the user accepts, the client should pre-fill a transaction with the sender's address and the requested amount. The fulfillment is signaled by sending a `sentFunds` message or a `requestFundsResponse` message containing the resulting transaction ID.

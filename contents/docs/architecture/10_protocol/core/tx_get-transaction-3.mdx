@@ -1,0 +1,28 @@
+---
+title: getTransaction3 (58)
+description: Requests the full data for a single transaction by its ID.
+status: Planned Upgrade
+---
+
+The `getTransaction3` message is a request for the full binary data of a single, specific transaction, identified by its transaction ID (TxID).
+
+This is a more targeted version of [`getTransactions2`](./tx_get-transactions-2) and is used when a node needs to fetch just one particular transaction.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `transactionID` | `IxiBytes` | | | The transaction ID (hash) of the transaction being requested. |
+| `blockNum` | `IxiVarUInt`| `0` | | The block number that this transaction is expected to be in. `0` if the block is unknown or the transaction is from the mempool. |
+
+## Behavioral Notes
+
+-   A node sends this message to fetch a single missing transaction.
+-   The `blockNum` field provides a hint to the receiving peer about where to look for the transaction, which can optimize the lookup process (e.g., check a specific block's cache before searching the entire database).
+-   Upon receiving this message, a peer should find the requested transaction and send it back to the requester using a **[`transactionData2`](./tx_transaction-data-2)** message.
+-   If the transaction is not found, no response is required.

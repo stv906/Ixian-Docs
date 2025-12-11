@@ -1,0 +1,26 @@
+---
+title: sentFunds (5)
+description: A notification that funds have been sent.
+---
+
+The `sentFunds` message is a notification sent from one user to another to inform them that a transaction has been broadcast to the DLT network. It provides the Transaction ID (TxID) so the recipient can monitor the network for its confirmation.
+
+This is typically used to fulfill an informal payment arrangement or in response to a `requestFunds` message.
+
+### Core Data Types
+
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload contains the unique identifier of the transaction that was sent.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `transactionId` | `IxiBytes` | * | * | The Transaction ID (TxID) of the sent transaction. |
+
+## Behavioral Notes
+
+*   **Sending:** A user sends this message after creating and broadcasting a transaction to the recipient's address. The client packages the TxID as the payload.
+*   **Receiving:** Upon receiving a `sentFunds` message, the recipient's client should parse the `transactionId` and begin monitoring the DLT network for a transaction matching that ID. The client can then update the user interface to show a pending or incoming payment.
+*   **Informational:** This message is purely informational. The actual transfer of funds is governed by the DLT consensus rules, not by the delivery of this S2 message. The recipient should always verify the transaction's status on the blockchain.

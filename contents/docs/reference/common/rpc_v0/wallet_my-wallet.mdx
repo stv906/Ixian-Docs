@@ -1,0 +1,96 @@
+---
+title: myWallet
+description: Retrieves all addresses and their individual confirmed balances for a specific wallet.
+status: Finalized
+---
+
+## Introduction
+
+The `myWallet` method provides a detailed inventory of a specific wallet managed by the node. It returns a complete list of all addresses controlled by the wallet and the individual, confirmed (on-chain) balance for each of those addresses.
+
+This endpoint is useful for applications that need to display a detailed breakdown of a user's funds, showing exactly how the total balance is distributed across different addresses (e.g., primary address, change addresses).
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name     | Type     | Required | Description                                                                                             |
+| :------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `wallet` | `string` | No       | The base58-encoded Ixian wallet address to query. If omitted, it defaults to the node's primary wallet. |
+
+### Example POST Request
+
+```json
+POST /myWallet
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "myWallet",
+  "params": {
+    "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /myWallet?wallet=1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm
+```
+
+---
+
+## Response
+
+The response `result` is a JSON object that maps each address in the wallet to its corresponding balance.
+
+### Result Structure
+
+The `result` is a map (key-value object) where:
+*   **Keys** are the base58-encoded addresses controlled by the wallet.
+*   **Values** are the `IxiNumber` balances for each address, returned as strings.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm": "10500.75000000",
+    "14f2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9a0b1c2d3e4f": "1.25000000"
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+An error may be returned if, for example, the provided wallet address is in an invalid format.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid address format."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Confirmed vs. Spendable Balance:** It is critical to understand that this endpoint returns the **confirmed, on-chain balance** for each individual address. It does **not** subtract pending outgoing transactions. For the total *spendable* balance of the entire wallet, use the [`getTotalBalance`](./wallet_get-total-balance) method instead.
+*   **Multiple Addresses:** A single Ixian wallet can control many addresses. This method provides a comprehensive list of all addresses derived from the wallet's seed.
+*   **Precision:** Balances are returned as strings to maintain the full precision of the `IxiNumber` format. Client-side implementations should use a compatible big number library for any calculations.
+*   **Default Wallet:** If the `wallet` parameter is not provided, the query will execute on the default wallet loaded by the DLT node.

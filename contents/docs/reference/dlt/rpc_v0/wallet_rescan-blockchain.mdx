@@ -1,0 +1,89 @@
+---
+title: rescanBlockchain
+description: Initiates a background rescan of the blockchain to find transactions relevant to the node's loaded wallets.
+status: Finalized
+---
+
+## Introduction
+
+The `rescanBlockchain` method is a wallet maintenance and repair tool. It triggers a resource-intensive background process, the "Activity Scanner," which re-reads the entire blockchain from a specified block number.
+
+Its primary purpose is to rebuild a wallet's transaction history or correct a balance that has fallen out of sync. This might be necessary after importing a private key into a new wallet or if the node experienced a partial data corruption. The scanner examines every transaction in every block to find any that send funds to or from the addresses controlled by the wallets currently loaded on the node.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `from` | `integer` | No | The block number from which to start the rescan. If omitted, it defaults to `0`, scanning the entire blockchain. |
+
+### Example POST Request
+
+```json
+POST /rescanBlockchain
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "rescanBlockchain",
+  "params": {
+    "from": 50000
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (to scan from the beginning)
+
+```
+GET /rescanBlockchain
+```
+
+---
+
+## Response
+
+The `result` is a confirmation string indicating that the background process has started.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "Started activity rescan.",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if a rescan is already in progress when the command is called.
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32603,
+        "message": "Activity scanner is already running"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Asynchronous Operation:** This is a long-running, background task. The RPC call returns immediately, but the scan will continue in the background. The duration of the scan can range from minutes to many hours, depending on the size of the blockchain and the starting block number.
+*   **Resource Intensive:** A blockchain rescan is demanding on the node's resources, particularly disk I/O and CPU. Node performance for other tasks may be degraded while the scan is active.
+*   **Monitoring Progress:** You can monitor the status of an ongoing scan by calling the [`status`](./info_status) endpoint. The following fields are relevant:
+    *   `Blockchain Scanning Active`: Will be `true` during a rescan.
+    *   `Activity Scanner Last Block`: Shows the block number that the scanner has most recently processed, allowing you to track its progress.
+*   **Single Instance:** Only one instance of the Activity Scanner can run at a time. Attempting to start a new scan while one is already in progress will result in an error.

@@ -1,0 +1,66 @@
+---
+title: blockHeight
+description: Retrieves the current block height of the node's local blockchain.
+status: Finalized
+---
+
+## Introduction
+
+The `blockHeight` method is a simple utility endpoint that returns the block number (or "height") of the most recent block in the node's local copy of the blockchain.
+
+This provides a quick and lightweight way to check the node's synchronization progress without requesting the full `status` report.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /blockHeight
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "blockHeight",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /blockHeight```
+
+---
+
+## Response
+
+The response `result` is a single integer representing the node's current block height.
+
+### Result Fields
+
+| Name     | Type      | Description                                                               |
+| :------- | :-------- | :------------------------------------------------------------------------ |
+| `result` | `integer` | The block number of the latest block on the node's local blockchain copy. |
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": 5487181,
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Local Block Height:** This endpoint returns the height of the chain as known *by the queried node*. This value may lag behind the true network height if the node is still synchronizing. To compare the local height with the highest known network height, use the more comprehensive [`status`](./info_status) endpoint.
+*   **Use Case:** This method is ideal for quick, repeated polling to monitor a node's sync progress or for applications that need to reference the current block height without the overhead of the full status call.

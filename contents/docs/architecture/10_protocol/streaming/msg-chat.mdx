@@ -1,0 +1,27 @@
+---
+title: chat (0)
+description: A standard text chat message.
+---
+
+The `chat` message is used to send a standard, plain-text message to a contact or a group. It is the most common message type within the Spixi application layer. The payload contains the UTF-8 encoded text content.
+
+This message is sent within a `SpixiMessage` envelope, which specifies the `chat` type and the destination channel. The outer `StreamMessage` provides the secure, encrypted transport across the S2 network.
+
+### Core Data Types
+
+*   **`string`**: A standard UTF-8 encoded string. Per global serialization rules, its length is prefixed as a 7-bit encoded integer when serialized by the `SpixiMessage` layer, but the payload here is considered the raw string content.
+
+## Payload Structure
+
+The entire payload of a `chat` message consists of a single field containing the message text.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `messageText` | `string` | 1 | ~50KB | The UTF-8 encoded content of the chat message. The maximum size is constrained by the underlying `StreamMessage` limits. |
+
+## Behavioral Notes
+
+*   **Sending:** When a user sends a chat message, the client application constructs this message, places it within a `SpixiMessage`, and then wraps it in a `StreamMessage` of type `data`. The `StreamMessage` is then encrypted for the recipient and sent into the S2 network.
+*   **Receiving:** Upon receiving a `SpixiMessage` of type `chat`, the recipient's client must decode the `data` payload as a UTF-8 string to display it to the user.
+*   **Confirmation:** The `StreamMessage` containing a `chat` payload sets the `requireRcvConfirmation` flag. The receiving node is obligated to respond with a `msgReceived` message to confirm delivery.
+*   **Context:** The `channel` field in the `SpixiMessage` envelope indicates which conversation thread (e.g., a specific group chat channel) the message belongs to. For direct messages, this is typically channel `0`.

@@ -1,0 +1,116 @@
+---
+title: decodeNameData
+description: Decodes the raw, hex-encoded data payload from an Ixian Name System (IXI-NS) transaction into its JSON representation.
+status: Finalized
+---
+
+## Introduction
+
+The `decodeNameData` method is a specialized utility endpoint that deserializes the `data` field of a name-related transaction (Transaction Type 4). This allows developers and users to inspect the specific details of a name operation, such as a registration, capacity update, or recovery attempt, from its raw hexadecimal format.
+
+This method is the counterpart to the various name-related transaction creation endpoints (e.g., `registerName`, `updateNameCapacity`) and is essential for debugging or verifying the contents of an IXI-NS transaction before it is signed or broadcast.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `data` | `string` | Yes | The raw hexadecimal string from the `data` field of a Type 4 transaction. |
+
+### Example POST Request
+
+```json
+POST /decodeNameData
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "decodeNameData",
+  "params": {
+    "data": "0441409be670f26e3a9d0fa3e4da555e334e7b5db53d6fd88e9e2e13d5b6a0f5e3ed2166b39cf6dce8e8282a30ae5e11bab9d92676d134fe5edff4c73235e2aec6b7c50a032100878c2b11bc403b376bc7c4d339922bbd3bcf3887229b4693e26530bda17b8d91fc0b0200020000cd59108df2..."
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /decodeNameData?data=0441409be670f26e3a9d0fa3e4da555e334e7b5db53d6fd88e9e2e13d5b6a0f5e3ed2166b39cf6dce8e8282a30ae5e11bab9d92676d134fe5edff4c73235e2aec6b7c50a032100878c2b11bc403b376bc7c4d339922bbd3bcf3887229b4693e26530bda17b8d91fc0b0200020000cd59108df2...
+```
+
+---
+
+## Response
+
+The response `result` is a JSON object representing the decoded name data. The exact structure of this object varies depending on the name operation being performed.
+
+### Result Object Structure
+
+The returned object contains an `instruction` field that identifies the type of name operation. The other fields in the object depend on this value.
+
+#### Common Fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `instruction` | `int` | A numeric code for the name operation (e.g., 1 for Register, 3 for Update Capacity). |
+| `name` | `string` | The hashed version of the name, encoded in Base64. |
+| `sequence` | `long` | The sequence number for this operation, used to prevent replay attacks. |
+| `nextPkHash` | `Address` | The address that will own the name after this operation is confirmed. |
+| `signaturePk` | `string` | The Base64-encoded public key of the signer who authorized this operation. |
+| `signature` | `string` | The Base64-encoded cryptographic signature authorizing this operation. |
+
+#### Instruction-Specific Fields
+
+Additional fields will be present based on the `instruction` code. The example below shows the fields for an `updateNameCapacity` operation. Other operations like `registerName` or `updateNameRecord` will have different specific fields (e.g., `registrationTime`, `records[]`).
+
+### Example Success Response (for an `updateNameCapacity` operation)
+
+```json
+{
+  "result": {
+    "newCapacity": 10,
+    "sequence": 3,
+    "instruction": 4,
+    "name": "QJvmcPJuOp0Po+TaVV4zTntdtT1v2I6eLhPVtqD14+0hZrOc9tzo6CgqMK5eEbq52SZ20TT+Xt/0xzI14q7Gt8U=",
+    "nextPkHash": {
+      "version": 0,
+      "addressWithChecksum": "AIeMKxG8QDs3a8fE0zmSK707zziHIptGk+JlML2he42RA+zS",
+      "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "addressNoChecksum": "AIeMKxG8QDs3a8fE0zmSK707zziHIptGk+JlML2he42R",
+      "sectorPrefix": "63OEZwCqNJNkWg==",
+      "nonce": null,
+      "pubKey": null
+    },
+    "signaturePk": "AAIAAM1ZEI3yrsP0n6gMqY5ZDs4fIDGs3+yrApTypzC8a78ng0quc8lXJXezzcohSSmZedkoaDwO/i/vdXZShpiGZMG2pQ6EhnjKU8JZ3cfco3MbajP1f5VMDorN4QHW5RFq92CHbdfwGK7NE/wqdW1IH5fuCpEVMpujV23+H6ZeuEt9HeQokFlvbqfu7UC+nHRqyqah3hd2wgsXdn9n21FBUaefeEsZgEcA25nPAIej2r1KuGWoTaFTKIvtJvIS9MZbHJJjWD9lZggFQH5VI8z3mciAo+gWx6+MMpv0mSICXl0GYGqCrAC4tkXNsOwQH8Xx1TnDTkCOhIiYx3aaib0RMek2+S0zu6vlWBfzusPZZuvy9Jt8rI3Ph+QJdXox5Z5pUuWJTxhh8VYzc+Nmdl3Otf7wnKIEZvoLrmLkqFSP4anmnTE7NXMJDaKc6nz0ztzq6E6XNlH9wxHDz2wPlcCjgYuYmcq4pMU5gEH5RZ1it+RIHYZuWuHEnNByGnoXdu7Kd4W/waM31dnP+dc3GNiFZZWba/DWc1jdwPXwJS5q2LSSopLjx1No0X7ZQUivq5yYHski+eiHyJZahRK/iglWydRL/M657LYFohekZIczJiCNl1I5ZncQq0xinOF0wt0N5p6+1O+sgWPPKeYkHxwV3W6IKdWtXBlHYOBSbhA58l7dAwAAAAEAAQ==",
+    "signature": "BTX+mVvwEtlX0HCZ7TTD1CNU+JzMzfPNVD5Nk+dEyflE18rYk3o6hrWjWcdzP4NpT4X3S8lsVLZU9rIx6hMX8THtxUCZ8UgaqZKdN/yCPfrXLaF7jGgPwqvaAoSblx/Pki7XBgNT/eE9h4rflqj3Iku6awRv49q7xuxNf4ZkKKOXHRNbLQmLEj1VbF1y50z7WDnQ4RuKX6vv42fvEud6TN2rBS8a8NKvlxBGiTt4PQpclHJ/Kqfi55Cdtpc043kiNrTs8Xh9VsrHe3qxvXnwrfqYHSqKTAMMACwV6yz7+o+xsO/88aHhEqcR9botps2adPZ8XswSbwhEBxN5DOQILoAnaYG9RCwTTKl/b5EVT03XCO6PiwsvY7CJNHuqceUz+jpOFWJGu7uMXIoWHTFMhyJ/NPxJ5wGRpREWNA1FTs+D4c6TrcWVhySYiIQSmD1Rj57yHCgVxPAchPoKW380XSm3QA/a3AyGpE6vnDAysgCMym6+r4hCRl4dKa0tJWxlQzPMn1cYqFf6tyHoSS9Uc66fDhOLjLrZTPLwLzyUxaublHNWThgz08yysyNrBBEBLacw+dGxzmEvZ+pNMwcLgxXWN20NCMqwnQMv8DaWsR0u5HUwYlpwmA2etMEDmaHcZsQQPZqeRTJ5mJERq34trS6frRaOKyDw0CbPTh2AVJI="
+  },
+  "error": null,
+  "id": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "data parameter is missing"
+    }
+}```
+
+---
+
+## Behavioral Notes
+
+*   **Local Operation:** This is a purely local utility function. It does not perform any network operations or consult the blockchain state.
+*   **No State Validation:** The method only decodes the provided data. It does not validate whether the operation would be acceptable to the network (e.g., it does not check if the signature is valid for the current owner, if the sequence number is correct, or if the name has expired). It is a structural parser, not a semantic validator.

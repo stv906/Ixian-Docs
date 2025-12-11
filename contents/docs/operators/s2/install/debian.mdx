@@ -1,0 +1,141 @@
+---
+title: S2 Node setup on Ubuntu/Debian
+type: s2
+---
+
+Note: This guide should work for most apt-based distributions, such as:
+* Ubuntu, recent versions
+* Debian, recent versions
+* Devuan
+* Kali Linux
+* MX Linux
+* Mint
+
+IxianS2 was tested on Ubuntu (24.04+).
+
+# Installing an Ixian S2 Node on Linux (Debian/Ubuntu clones)
+
+## Prerequisites
+
+* Operating system: apt-based Linux distribution, such as Debian or Ubuntu
+* RAM: 4+ GB
+* CPU: i3/i5/i7/Xeon or AMD equivalent with at least 2GHz
+* Free Disk Space: 20+ GB
+* Internet Connection Speed: 10 Mbps symmetrical or higher, 100 Mbps recommended
+
+## Additional requirements
+* Ability to forward a port from the public internet to the machine running the S2 Node. (Default port is TCP 10235.)
+
+## Make sure you have the latest package repositories
+Before beginning Ixian installation, it is recommended to update your package manager to the latest package database. On Ubuntu-based systems this is done with the following command:
+```
+sudo apt update
+```
+
+## Install required software
+1. Install the dotnet 8.0 SDK following the guide for your Linux distribution here: [DotNet Installation Guide](https://learn.microsoft.com/en-us/dotnet/core/install/linux).
+
+2. Install additional required packages:
+```
+sudo apt install gcc git make unzip
+```
+
+3. Prepare a directory for the Ixian Project:
+```
+mkdir ~/Ixian
+cd ~/Ixian
+```
+
+4. Acquire the latest Ixian sources from github. Two repositories are required to build an S2 Relay node:
+```
+git clone -b master https://github.com/ixian-platform/Ixian-Core.git
+git clone -b master https://github.com/ixian-platform/Ixian-S2.git
+```
+The directory structure should look like this:
+```
+.
+..
+Ixian-Core
+Ixian-S2
+```
+
+5. Switch into the `Ixian-S2` directory and download the required NuGet packages:
+```
+cd Ixian-S2
+sh rebuild.sh
+```
+
+The script will build all necessary files, which will be located in '~/Ixian/Ixian-S2/IxianS2/bin/Release/net8.0/'
+
+6. Switch to the Ixian binaries folder:
+```
+cd ~/Ixian/Ixian-S2/IxianS2/bin/Release/net8.0/
+```
+
+The Ixian S2 node is now ready to start.
+
+## Running the software
+
+Switch to the Ixian S2 binaries folder and issue the command to start the IxianS2 software:
+```
+./IxianS2
+```
+
+If you're on a console-only environment with no GUI, issue this command instead:
+```
+./IxianS2 --disableWebStart
+```
+
+Alternatively you can also start the Ixian DLT with this command:
+```
+dotnet IxianS2.dll --disableWebStart
+```
+
+The output should look like this:
+
+![Ixian Console Output](/assets/images/guide_s2_deb_1.png)
+
+### Creating a wallet
+
+If this is the first time that you're starting Ixian S2, a new wallet will be generated for you. You have to set your new wallet's password to proceed. This password will be used to encrypt the ixian.wal wallet file and will be required every time you start the Ixian S2 node. The file is encrypted using AES-256.
+
+It is recommended to periodically copy the wallet to a safe location, preferably to an offline media (USB Key), or a different machine.
+The wallet file is called **ixian.wal**.
+
+### Verifying the status of the S2 Node
+
+While the node is running, it will display a logo and some basic information in the command window. Please do not close this window, as closing it will cause the S2 Node to shut down.
+
+![Ixian Run Information](/assets/images/guide_s2_deb_1.png)
+
+When the Ixian S2 Node first starts, the status text will display **connecting** while the software is retrieving the required information from the Ixian DLT network. When this process has been completed, the status text will change to **active**.
+
+## Upgrading the S2 Node software
+
+When a new version is released, you can upgrade the software using the following checklist:
+
+Note: It is recommended to backup the wallet file **ixian.wal** before performing any upgrade or changing any settings on the command line.
+
+Note: We assume that you have followed the above instructions and the Ixian directory names are as follows:
+| Directory | Path |
+| --- | --- |
+| Ixian-Core | ~/Ixian/Ixian-Core |
+| Ixian-S2 | ~/Ixian/Ixian-S2 |
+| Executable | ~/Ixian/Ixian-S2/IxianS2/bin/Release |
+
+If you have placed the Ixian source code folders elsewhere, change them in the below description. Furthermore, if you copied the executable files from the bin/Release folder someplace else, you will need to repeat the copy step to overwrite old executable files with new ones.
+
+0. Save the ixian wallet file: `cp ~/Ixian/Ixian-S2/IxianS2/bin/Release/ixian.wal ~/ixian.wal.backup`.
+1. Shutdown the Ixian S2 Node.
+2. Switch to the Ixian-Core directory: `cd ~/Ixian/Ixian-Core`.
+3. Update the sources to the latest version: `git pull`.
+4. Switch to the Ixian-S2 directory: `cd ~/Ixian/Ixian-S2`.
+5. Update the sources to the latest version: `git pull`.
+6. Run the rebuild script: `sh rebuild.sh`.
+7. (Optional) If you have copied the binaries elsewhere, repeat that step.
+8. Start the Ixian S2 Node again. The node will use the existing wallet file, so it will not need to generate a new wallet.
+
+
+## Configuration
+
+See [S2 Node Configuration options](../config) for details.

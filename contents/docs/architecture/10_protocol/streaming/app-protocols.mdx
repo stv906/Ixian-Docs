@@ -1,0 +1,24 @@
+---
+title: appProtocols (44)
+description: Provides the list of supported app protocols.
+---
+
+The `appProtocols` message is the response to a `getAppProtocols` request. It contains a list of custom, named application protocol identifiers that the sending node supports.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+The payload is an `AppProtocolsMessage` object.
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `count` | `IxiVarUInt` | 0 | * | The number of protocol ID entries that follow. |
+| `protocolIds` | `IxiBytes[]` | * | * | An array of `IxiBytes`, where each element is a unique identifier for a supported application protocol. |
+
+## Behavioral Notes
+
+*   **Recipient Action:** Upon receiving this message, the client caches the list of supported protocols for that contact. This allows it to know in advance whether it can send data using a specific protocol via the `appProtocolData` message.

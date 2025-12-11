@@ -1,0 +1,129 @@
+---
+title: recoverName
+description: Recovers control of a name using its designated recovery address, setting a new owner and new recovery address.
+status: Proposed
+---
+
+## Introduction
+
+The `recoverName` method is a critical security function that allows control of a name to be regained if the owner's private key is lost or compromised. This operation can only be initiated by the address designated as the `recoveryHash` during the name's initial registration.
+
+The method constructs and broadcasts a transaction that, when confirmed, assigns a new owner address (`nextPkHash`) and a new recovery address (`nextRecoveryHash`) to the name. This is a zero-cost operation, aside from the standard transaction fee.
+
+Authorization is provided via a cryptographic signature from the current recovery address. The node can generate this signature automatically if it controls the recovery wallet; otherwise, the signature must be provided.
+
+---
+
+## Request
+
+Requests must be made using `HTTP POST` with a JSON body.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | Yes | The existing name to recover. |
+| `nextPkHash` | `string` | No | The Ixian address that will become the **new owner**. Defaults to the node's primary wallet address. |
+| `nextRecoveryHash` | `string` | No | The Ixian address that will become the **new recovery address**. Defaults to the node's primary wallet address. |
+| `sigPk` | `string` | No | The public key (as an Address) of the **current recovery address**. Required if `sig` is provided. |
+| `sig` | `string` | No | A Base64-encoded signature from the **current recovery address** authorizing the recovery. If omitted, the node will attempt to sign automatically. |
+
+### Example POST Request (Automatic Signing)
+
+This is used when the node's loaded wallet is the designated recovery address for the name.
+
+```json
+POST /recoverName
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "recoverName",
+  "params": {
+    "name": "my-cool-name",
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d",
+    "nextRecoveryHash": "1A2b...newRecoveryAddress...4d5e"
+  },
+  "id": 1
+}
+```
+
+### Example POST Request (External Signing)
+
+This is used when the recovery key is held in an external wallet. The `sig` is a signature over the checksum of the recovery operation details.
+
+```json
+POST /recoverName
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "recoverName",
+  "params": {
+    "name": "my-cool-name",
+    "nextPkHash": "1B2v...newOwnerAddress...3C4d",
+    "nextRecoveryHash": "1A2b...newRecoveryAddress...4d5e",
+    "sigPk": "1GjP...currentRecoveryPubKey...hMA",
+    "sig": "a359c7733f83...signatureData...ad94cf2f02f3c94c5ab9b9473564e183"
+  },
+  "id": 1
+}
+```
+
+---
+
+## Response
+
+The response `result` is the standard `Transaction` object for the name recovery.
+
+### Result: `Transaction` Object Structure
+
+A successful call returns a full `Transaction` object.
+
+*   **`type`**: Will be `4`.
+*   **`to`**: The recipient address will be the network's special address for name operations.
+*   **`amount`**: Will be `0.00000000`.
+*   **`data`**: A hex-encoded string containing the serialized recovery details, including the new owner, new recovery hash, and the authorizing signature.
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "id": "416-GmLELpqteeTLv551uUtyLADHGw2SxgfPH5EBQn8YVe2PjMZFJqaFYW1GQbCa",
+    "version": 7,
+    "blockHeight": "416",
+    "nonce": "501522",
+    "signature": "b58cc4abea30a...ba2a6a0ab227b63e2a9b9439259d7453fc38d",
+    "pubKey": "JHgSS7hbUNnYWs...U2j3NFmiMazymoYwi5i2EPPWjtyTRYRN",
+    "data": "0541409be670f...a1c2d7f598025146472a435e47b48edb5b23f5bd",
+    "timestamp": "1711930988",
+    "type": "4",
+    "amount": "0.00000000",
+    "applied": "0",
+    "checksum": "307c3363308fee26da1464b54d4235e101bf2c4c31488d8c7d285f6d4385219c8ad99ad22e6c521abbdd29af",
+    "from": {
+      "1": "0.01500000"
+    },
+    "to": {
+      "125D6XDzTZzQUWsyQZmQZmQZmQZmQZmQZmQZmQZmQZmQb8t25": "0.00000000"
+    },
+    "fee": "0.01500000",
+    "totalAmount": "0.01500000"
+  },
+  "error": null,
+  "id": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Authorization by Recovery Key:** This is the most critical aspect of this method. The operation **must** be authorized by a signature from the private key corresponding to the name's designated `recoveryHash`. An incorrect signature will cause the transaction to be rejected by the network.
+*   **State Lookup:** The node must first query the DLT to fetch the current name record. This is necessary to retrieve the current `sequence` number, which is incremented to prevent replay attacks.
+*   **Zero Cost:** The recovery operation itself is free. Only a standard transaction `fee` is required, which is automatically funded from the node's primary wallet.
+*   **Irreversible Action:** Once a recovery transaction is confirmed on the blockchain, the name's owner and recovery addresses are permanently changed. The old owner key will no longer have any control over the name.
+*   **Automatic vs. External Signing:**
+    *   **Automatic:** If the `sig` parameter is omitted, the node will attempt to sign the recovery message. This will only succeed if the wallet corresponding to the name's `recoveryHash` is loaded on the node.
+    *   **External:** If the recovery key is on a separate device, the `sig` and `sigPk` parameters must be provided.

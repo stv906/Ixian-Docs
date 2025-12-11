@@ -101,7 +101,7 @@ export default function Search() {
             </div>
           </Anchor>
         </DialogClose>,
-        ...renderDocuments(doc.items || [], `${href}`),
+        ...renderDocuments(doc.items || [], `${parentHref}`),
       ]
     })
   }

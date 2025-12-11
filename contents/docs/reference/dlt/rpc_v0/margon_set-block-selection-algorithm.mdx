@@ -1,0 +1,96 @@
+---
+title: setBlockSelectionAlgorithm
+description: Configures the strategy used by the miner to select the next block to work on or pauses the miner.
+status: Finalized
+---
+
+## Introduction
+
+The `setBlockSelectionAlgorithm` method is an administrative endpoint for DLT nodes that are actively mining blocks. It allows an operator to dynamically change the strategy the miner uses to select which block tip to mine on next. It can also be used to pause and resume mining activity without restarting the node.
+
+Different algorithms can be advantageous under various network conditions, such as when dealing with small forks or network latency. This command provides miners with the flexibility to adapt their strategy in real-time.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `algorithm` | `integer` | Yes | A numeric code specifying the desired mining strategy or action. See the table below for valid options. |
+
+#### Algorithm Codes
+
+| Code | Algorithm Name | Description |
+| :--- | :--- | :--- |
+| `-1` | Pause Mining | Temporarily stops all mining activity. The miner process remains idle until a different algorithm is set. |
+| `0` | `lowestDifficulty` | The miner will always work on the block tip that has the lowest cumulative difficulty (i.e., the "heaviest" chain). |
+| `1` | `randomLowestDifficulty`| The miner identifies all available block tips that are tied for the lowest difficulty and randomly selects one to work on. This helps distribute mining power if there are multiple competing "heaviest" chains. |
+| `2` | `latestBlock` | The miner will always work on the most recently received block, regardless of its difficulty. This prioritizes the "longest" chain. |
+| `3` | `random` | The miner will randomly select from any of the available block tips to work on. This is generally used for network testing. |
+
+### Example POST Request
+
+```json
+POST /setBlockSelectionAlgorithm
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "setBlockSelectionAlgorithm",
+  "params": {
+    "algorithm": 1
+  },
+  "id": 1
+}
+```
+
+### Example GET Request (to pause the miner)
+
+```
+GET /setBlockSelectionAlgorithm?algorithm=-1
+```
+
+---
+
+## Response
+
+A successful response contains an empty string in the `result` field, indicating the command was accepted.
+
+### Example Success Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": "",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Invalid algorithm was specified"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **DLT Nodes Only:** This RPC call is specific to DLT nodes with the mining module enabled. It will have no effect on other node types (e.g., S2 nodes) or non-mining DLT nodes.
+*   **Immediate Effect:** The change in strategy takes effect immediately and will be used by the miner for its next cycle of work selection.
+*   **Pausing and Resuming:** Setting the algorithm to `-1` is a temporary pause. Mining can be resumed by calling the endpoint again with any valid algorithm code (`0` through `3`).
+*   **Strategic Choice:** The choice of algorithm can impact a miner's efficiency and the blocks they find. `lowestDifficulty` and `randomLowestDifficulty` are generally the safest and most common strategies for contributing to the canonical chain.
+*   **Security:** As this is a direct control for a node's mining operation, access to this RPC endpoint should be restricted to trusted administrators.

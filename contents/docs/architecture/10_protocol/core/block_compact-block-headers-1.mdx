@@ -1,0 +1,42 @@
+---
+title: compactBlockHeaders1 (50)
+description: Responds to a `getRelevantBlockTransactions` request with a series of compact block headers.
+status: Planned Upgrade
+---
+
+The `compactBlockHeaders1` message is the specialized response sent to a light client after it makes a `getRelevantBlockTransactions` request.
+
+This message serves two purposes:
+1.  It provides the client with the headers for the requested block range, allowing it to validate the chain's structure.
+2.  It echoes the original request parameters, confirming what data the response corresponds to.
+
+Crucially, this message only contains the **headers**. The actual transactions that matched the client's filter are sent in separate [`transactionsChunk3`](./tx_transactions-chunk-3) messages.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+
+## Payload Structure
+
+| Field | Data Type | Min | Max | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Entire Payload** | `byte[]` | | `50MB` | The total size of the message payload must not exceed the global maximum. |
+| `fromBlockNum` | `IxiVarUInt` | `1` | | **(Echoed)** The starting block number from the original request. |
+| `count` | `IxiVarUInt` | `1` | | **(Echoed)** The number of blocks requested in the original request. |
+| `cuckooFilter` | `IxiBytes` | | | **(Echoed)** The Cuckoo Filter from the original request. |
+| `compactHeaders` | `CompactHeader[]`| | | An array of one or more compact block header entries. |
+
+### Compact Header Entry Structure
+
+Each entry in the `compactHeaders` array is a serialized Block Header where the signatures have been stripped out to save space.
+
+| Field | Data Type | Description |
+| :--- | :--- | :--- |
+| `headerData` | `IxiBytes` | The binary representation of a single block header. The internal structure is a subset of the **[blockData2 message](./block_block-data-2)**, excluding the Block Body fields (signatures and transaction IDs). |
+
+## Behavioral Notes
+
+-   A light client receiving this message should parse the `compactHeaders` to build a local understanding of the blockchain's structure for the given range.
+-   This message provides the block context. The client should expect to receive `transactionsChunk3` messages that contain the transactions belonging to the blocks described in this message.
+-   The echoed fields (`fromBlockNum`, `count`, `cuckooFilter`) allow the client to confirm that this response corresponds to its original request.

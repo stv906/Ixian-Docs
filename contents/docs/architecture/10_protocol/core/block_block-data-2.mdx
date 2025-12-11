@@ -1,0 +1,40 @@
+---
+title: blockData2 (9)
+description: Transmits a complete, serialized Ixian Block object.
+status: Planned Upgrade
+---
+
+## Introduction
+
+The `blockData2` message is the network envelope for a complete Ixian Block. Its payload is the fully serialized block data structure, including its header, state checksums, consensus signatures, and transaction list.
+
+This message is the primary mechanism for propagating new blocks across the network and for fulfilling `getBlock3` requests from peers who need to synchronize their chain.
+
+The payload of this message is a complete, serialized Block. For a definitive, field-by-field specification of the block structure, checksum calculations, and conditional logic, refer to the canonical **[Block Data Structure documentation](../../10_data-structures/blocks)**.
+
+### Core Data Types
+
+*   **`IxiVarUInt`**: Variable-length unsigned integer. See **[IxiVarInt Encoding](../../10_data-structures/ixi-varint)**.
+*   **`IxiBytes`**: A byte array prefixed by its length as an `IxiVarUInt`. See **[IxiBytes Encoding](../../10_data-structures/ixi-bytes)**.
+*   **`IxiNumber`**: A variable-length integer used for token values. See **[IxiNumber Encoding](../../10_data-structures/ixi-number)**.
+
+---
+
+## Payload Summary
+
+The payload of the `blockData2` message is a single byte stream representing a complete block, serialized according to its **v10+ on-wire format**. The structure is composed of three distinct, concatenated sections:
+
+1.  **Block Header**: A variable-length section containing the block's core metadata, such as `blockNum`, `version`, `timestamp`, `difficulty`, state checksums, and parent hashes. This is the only part of the block that is hashed to produce the `blockChecksum`.
+
+2.  **Signatures**: A variable-length section containing the list of serialized `BlockSignature` structures from the Master Nodes that have validated this block.
+
+3.  **Transaction IDs**: A variable-length section containing the list of transaction IDs included in the block.
+
+For the precise layout, field definitions, and conditional logic (such as for superblocks), please consult the canonical **[Block Data Structure documentation](../../10_data-structures/blocks)**.
+
+---
+
+## Behavioral Notes
+
+*   A node broadcasts `blockData2` to its peers when it has validated a new block that extends the blockchain.
+*   A node sends `blockData2` in direct response to a `getBlock3` message from a peer requesting a specific block by its height or hash.
