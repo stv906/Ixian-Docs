@@ -33,7 +33,6 @@ POST /activity2
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "activity2",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -77,7 +76,6 @@ The response format is a standard JSON-RPC object, regardless of whether the req
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": [
     {
       "id": "stk-1000-1005-82WvDFcNVvrF5PQHZxWWSK6W38DBbnDqScr3fWwaHng2W3pTcSwsmzmzXSc9",
@@ -105,7 +103,6 @@ This error is returned if the node is not configured to provide the `ActivitySto
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

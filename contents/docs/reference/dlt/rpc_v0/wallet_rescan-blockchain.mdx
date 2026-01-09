@@ -29,7 +29,6 @@ POST /rescanBlockchain
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "rescanBlockchain",
   "params": {
     "from": 50000
@@ -54,7 +53,6 @@ The `result` is a confirmation string indicating that the background process has
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "Started activity rescan.",
   "id": 1,
   "error": null
@@ -67,7 +65,6 @@ This error is returned if a rescan is already in progress when the command is ca
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

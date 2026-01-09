@@ -29,7 +29,6 @@ POST /getFullBlock
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getFullBlock",
   "params": {
     "num": "69442"
@@ -64,7 +63,6 @@ The structure includes all fields from the [`getLastBlocks`](./bc_get-last-block
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "Block Number": "69442",
     "Version": "13",
@@ -88,7 +86,6 @@ This error is returned if the block at the specified `num` cannot be found.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

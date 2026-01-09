@@ -35,5 +35,5 @@ export const loadfromgithub = false
 export const terms = "https://www.ixian.io/terms-of-use"
 export const privacyPolicy = "https://www.ixian.io/privacy-policy"
 export const cookies = "https://www.ixian.io/cookie-policy"
-export const whitepaper = "/Ixian_DLT_Whitepaper_v0.9.4_PreRelease.pdf"
-export const whitepaperVersion = "v0.9.4"
+export const whitepaper = "/Ixian_Platform_Whitepaper_Draft_v0.9.9.pdf"
+export const whitepaperVersion = "v0.9.9"

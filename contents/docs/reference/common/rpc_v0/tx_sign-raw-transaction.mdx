@@ -29,7 +29,6 @@ POST /signRawTransaction
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "signRawTransaction",
   "params": {
     "transaction": "0700fd200d010001010005402a...0100010000"
@@ -56,7 +55,6 @@ The response `result` is a single hex-encoded string representing the complete, 
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "0700fd200d010001010005402a...563c7b1d44c900",
   "error": null,
   "id": 1
@@ -69,7 +67,6 @@ This error is returned if the mandatory `transaction` parameter is not included 
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

@@ -31,7 +31,6 @@ POST /acceptContact
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "acceptContact",
   "params": {
     "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -60,7 +59,6 @@ The structure of the returned `Contact` object is identical to the one described
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "walletAddress": {
       "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -82,7 +80,6 @@ If the contact does not exist in the friend list:
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {
@@ -96,7 +93,6 @@ If the `address` parameter is missing:
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

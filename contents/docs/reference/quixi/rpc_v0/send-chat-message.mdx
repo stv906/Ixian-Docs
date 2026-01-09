@@ -31,7 +31,6 @@ POST /sendChatMessage
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "sendChatMessage",
   "params": {
     "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -62,7 +61,6 @@ The structure of the returned `Contact` object is identical to the one described
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "walletAddress": {
       "base58Address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -83,7 +81,6 @@ If the contact does not exist:
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {
@@ -97,7 +94,6 @@ If a required parameter like `message` is missing:
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

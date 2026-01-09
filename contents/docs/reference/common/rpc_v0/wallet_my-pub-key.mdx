@@ -29,7 +29,6 @@ POST /myPubKey
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "myPubKey",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -60,7 +59,6 @@ The response `result` is a single hex-encoded string representing the public key
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "04a3f8c...9e5a5dbba6806b373a395795eaa0a78126cb455e7682fd275842d8e87c2b357fa7663f57b8d023070d4dd85a3d5ec1bff5244091383101e0ccc928f386ad995dfe10b8230a4fda055984f32859caaff4956fcabcbd941825fba67dae3bb488b25c752195b4b923153a9598308c48b83bb7c32091494403d7d33332bd1b794849242ac9c03f096985af863f86b422adcf7419e3f24529685375103f89f55191f255428398f6e61be60031dcea382c9caa09cbb85620c8535cc8142878539b7de8ae8070583ff61e63b9d02edee163fd082a31722778ba7b5c14645af78b8848c7acec20e565f985e9ef153371cef7",
   "id": 1,
   "error": null
@@ -73,7 +71,6 @@ An error may be returned if, for example, the provided wallet address is in an i
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

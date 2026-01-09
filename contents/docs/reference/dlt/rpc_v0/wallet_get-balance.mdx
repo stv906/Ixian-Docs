@@ -29,7 +29,6 @@ POST /getBalance
 Content-Type: application-json
 
 {
-  "jsonrpc": "2.0",
   "method": "getBalance",
   "params": {
     "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -60,7 +59,6 @@ The response `result` is a string representing the total balance of the specifie
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "12345.67890123",
   "id": 1,
   "error": null
@@ -73,7 +71,6 @@ This error is returned if the required `address` parameter is missing from the r
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

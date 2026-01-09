@@ -35,7 +35,6 @@ POST /sign
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "sign",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -67,7 +66,6 @@ The response `result` is a single hex-encoded string representing the generated 
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "6b26dd...cef7",
   "id": 1,
   "error": null
@@ -80,7 +78,6 @@ An error is returned if neither of the required data parameters is provided.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

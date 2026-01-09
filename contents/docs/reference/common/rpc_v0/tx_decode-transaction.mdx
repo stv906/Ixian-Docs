@@ -29,7 +29,6 @@ POST /decodeTransaction
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "decodeTransaction",
   "params": {
     "transaction": "0700fd200d010001010005402a8648..."
@@ -73,7 +72,6 @@ The response `result` is the standard `Transaction` object, representing the dec
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "version": 7,
     "id": "Af0gDQEAvIn5H9eCBfXL95+9Cmo+k7rP04E7ltRybHRQOBwm+Ox7K22BGVBAWXdcMes=",
@@ -122,7 +120,6 @@ This error is returned if the required `transaction` parameter is missing from t
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

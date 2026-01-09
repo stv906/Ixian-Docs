@@ -32,7 +32,6 @@ POST /getRegName
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getRegName",
   "params": {
     "name": "my-cool-name"
@@ -79,7 +78,6 @@ If `asBytes` is `false` or omitted, the `result` is a JSON object representing t
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "name": "QJvmcPJuOp0Po+TaVV4zTntdtT1v2I6eLhPVtqD14+0h...",
     "pkHash": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -108,7 +106,6 @@ If `asBytes` is `true`, the `result` is a single string containing the raw, seri
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "0141409be670f26e3a9d0fa3e4da555e334e7b5db53d6fd88e9e2e13d5b6a0f5e3ed...",
   "id": 1,
   "error": null
@@ -119,7 +116,6 @@ If `asBytes` is `true`, the `result` is a single string containing the raw, seri
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

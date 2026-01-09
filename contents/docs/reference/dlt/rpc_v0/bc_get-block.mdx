@@ -30,7 +30,6 @@ POST /getBlock
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getBlock",
   "params": {
     "num": "5480000"
@@ -80,7 +79,6 @@ When not requesting raw bytes, the result is a detailed JSON object containing t
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "Block Number": "5480000",
     "Version": "13",
@@ -109,7 +107,6 @@ When `bytes` is set to `"1"`, the result is a single string containing the hexad
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "0d00808b1500000000004a96210c76b29a66...",
   "id": 1,
   "error": null
@@ -122,7 +119,6 @@ This error is returned if the requested block number is not found in the node's 
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

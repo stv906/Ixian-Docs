@@ -36,7 +36,6 @@ POST /calculateTransactionFee
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "calculateTransactionFee",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
@@ -68,7 +67,6 @@ The response `result` is a single string representing the calculated fee.
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "0.01000000",
   "id": 1,
   "error": null
@@ -81,7 +79,6 @@ If the simulated transaction cannot be created (e.g., insufficient funds in the 
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

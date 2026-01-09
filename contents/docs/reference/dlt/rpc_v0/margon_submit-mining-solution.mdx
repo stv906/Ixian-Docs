@@ -34,7 +34,6 @@ POST /submitMiningSolution
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "submitMiningSolution",
   "params": {
     "nonce": "0000000000000000000000000000000000000000000000001a2b3c4d5e6f7g8h",
@@ -66,7 +65,6 @@ The `result` is a boolean value indicating whether the solution was valid and su
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": true,
   "id": 1,
   "error": null
@@ -79,7 +77,6 @@ This response is returned if the nonce is mathematically incorrect for the given
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": false,
   "id": 1,
   "error": null
@@ -90,7 +87,6 @@ This response is returned if the nonce is mathematically incorrect for the given
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

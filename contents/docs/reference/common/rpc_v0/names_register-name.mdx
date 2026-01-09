@@ -33,7 +33,6 @@ POST /registerName
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "registerName",
   "params": {
     "name": "my-cool-name",
@@ -100,13 +99,12 @@ A successful call returns a full `Transaction` object. Key fields for a name reg
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "result": null,
-    "id": 1,
-    "error": {
-        "code": -32602,
-        "message": "Missing parameter 'name'"
-    }
+  "result": null,
+  "id": 1,
+  "error": {
+      "code": -32602,
+      "message": "Missing parameter 'name'"
+  }
 }
 ```
 

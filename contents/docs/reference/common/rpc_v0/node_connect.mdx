@@ -29,7 +29,6 @@ POST /connect
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "connect",
   "params": {
     "to": "123.45.67.89:10234"
@@ -60,7 +59,6 @@ The response is a confirmation message indicating that the connection attempt ha
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "Connecting to node 123.45.67.89:10234",
   "id": 1,
   "error": null
@@ -73,7 +71,6 @@ This error is returned if the required `to` parameter is missing from the reques
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

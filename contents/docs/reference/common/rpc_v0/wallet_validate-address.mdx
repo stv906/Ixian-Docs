@@ -31,7 +31,6 @@ POST /validateAddress
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "validateAddress",
   "params": {
     "address": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -62,7 +61,6 @@ If the address is valid, the response `result` is a simple confirmation string. 
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "OK",
   "id": 1,
   "error": null
@@ -75,7 +73,6 @@ This error is returned if the address is not valid Base58Check or fails the chec
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

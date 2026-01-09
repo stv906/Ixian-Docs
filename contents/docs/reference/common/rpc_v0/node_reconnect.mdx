@@ -29,7 +29,6 @@ POST /reconnect
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "reconnect",
   "params": {
     "resetNetworkQueue": true
@@ -60,7 +59,6 @@ The response is a simple confirmation that the reconnection process has been ini
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "Reconnecting node to network now.",
   "id": 1,
   "error": null

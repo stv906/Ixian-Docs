@@ -30,7 +30,6 @@ POST /sendRawTransaction
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "sendRawTransaction",
   "params": {
     "transaction": "0700fd200d010001010005402a...563c7b1d44c900",
@@ -60,7 +59,6 @@ The structure is identical to the one defined in the [`addTransaction`](./tx_add
 ### Example Success Response
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "id": "68874-prFPNo1GeQ8HzwPMnuFEGSXiq9qRyUL7gFxiaE5FaKPL8BTZodJBcZ5L81n9",
     "version": 7,
@@ -78,7 +76,6 @@ The structure is identical to the one defined in the [`addTransaction`](./tx_add
 This error is returned if a mandatory parameter is not included in the request.
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

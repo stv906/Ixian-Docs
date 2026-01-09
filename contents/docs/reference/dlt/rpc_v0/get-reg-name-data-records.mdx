@@ -32,7 +32,6 @@ POST /getRegNameDataRecords
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getRegNameDataRecords",
   "params": {
     "name": "my-cool-name"
@@ -69,7 +68,6 @@ If `asBytes` is `false` or omitted, the `result` is a JSON array where each elem
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": [
     {
       "key": "hashed_key_for_ip...",
@@ -95,7 +93,6 @@ If `asBytes` is `true`, the `result` is a JSON array where each element is a str
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": [
     "0141409be670f2...",
     "0241409be670f2..."
@@ -109,7 +106,6 @@ If `asBytes` is `true`, the `result` is a JSON array where each element is a str
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

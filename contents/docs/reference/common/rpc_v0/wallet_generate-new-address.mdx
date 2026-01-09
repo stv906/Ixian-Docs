@@ -30,7 +30,6 @@ POST /generateNewAddress
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "generateNewAddress",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -61,7 +60,6 @@ The response `result` is a single string containing the newly generated base58-e
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "17f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e",
   "id": 1,
   "error": null
@@ -74,7 +72,6 @@ An error is returned if the address generation process fails internally.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

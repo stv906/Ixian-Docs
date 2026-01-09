@@ -37,7 +37,6 @@ POST /getSectorNodes
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getSectorNodes",
   "params": {
     "address": "16NBHjLGJnmWGWjoRj1Tz5TebgwhAtN2ewDThrDp1HfKuhJBo",
@@ -75,7 +74,6 @@ Each object in the array provides the address of an S2 Relay Node in multiple fo
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": [
     {
       "version": 1,
@@ -105,7 +103,6 @@ This error is returned if neither `address` nor `prefixHex` is provided.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

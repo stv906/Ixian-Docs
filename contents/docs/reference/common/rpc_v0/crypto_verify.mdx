@@ -32,7 +32,6 @@ POST /verify
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "verify",
   "params": {
     "publicKey": "04a3f8c...3371cef7",
@@ -65,7 +64,6 @@ The response `result` is a simple string indicating the outcome of the verificat
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "OK",
   "id": 1,
   "error": null
@@ -76,7 +74,6 @@ The response `result` is a simple string indicating the outcome of the verificat
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "FAIL",
   "id": 1,
   "error": null
@@ -89,7 +86,6 @@ An error is returned if a required parameter is missing.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

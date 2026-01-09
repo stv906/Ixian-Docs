@@ -30,7 +30,6 @@ POST /getTransaction
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "getTransaction",
   "params": {
     "id": "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR"
@@ -78,7 +77,6 @@ If `hex` is `false` or omitted, the `result` is the standard `Transaction` objec
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": {
     "id": "stk-69436-69441-imJSnWfxk9VPsDAHUuKSqpapv2Rh4NCZ97mAbPXBan9VSCiJY5A8k4LcBLaR",
     "version": 7,
@@ -115,7 +113,6 @@ If `hex` is `true`, the `result` is a single string containing the raw, serializ
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "0700fd200d010001010005402a8648ce2021008282f711243e69636b6c696666...",
   "id": 1,
   "error": null
@@ -126,7 +123,6 @@ If `hex` is `true`, the `result` is a single string containing the raw, serializ
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

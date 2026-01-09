@@ -30,7 +30,6 @@ POST /loadWallet
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "loadWallet",
   "params": {
     "file": "my_cold_storage.wal",
@@ -64,7 +63,6 @@ If the wallet is loaded and decrypted successfully, the response `result` is a s
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
   "id": 1,
   "error": null
@@ -77,7 +75,6 @@ An error is returned if decryption fails due to an incorrect password or if the 
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

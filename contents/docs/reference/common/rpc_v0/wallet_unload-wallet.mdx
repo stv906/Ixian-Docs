@@ -29,7 +29,6 @@ POST /unloadWallet
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "unloadWallet",
   "params": {
     "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm"
@@ -60,7 +59,6 @@ The response `result` is a simple string indicating the outcome of the operation
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "OK",
   "id": 1,
   "error": null
@@ -73,7 +71,6 @@ This response is returned if the specified wallet was not found among the loaded
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "FAIL",
   "id": 1,
   "error": null
@@ -86,7 +83,6 @@ An error is returned if the mandatory `wallet` parameter is missing.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {

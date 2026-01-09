@@ -34,7 +34,6 @@ POST /blacklistPeer
 Content-Type: application/json
 
 {
-  "jsonrpc": "2.0",
   "method": "blacklistPeer",
   "params": {
     "host": "198.51.100.123"
@@ -65,7 +64,6 @@ If the request is successful, the response `result` is a simple confirmation str
 
 ```json
 {
-  "jsonrpc": "2.0",
   "result": "OK",
   "id": 1,
   "error": null
@@ -78,7 +76,6 @@ An error may be returned if the wallet address format is invalid.
 
 ```json
 {
-    "jsonrpc": "2.0",
     "result": null,
     "id": 1,
     "error": {
