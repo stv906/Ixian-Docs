@@ -16,7 +16,7 @@ export function Footer() {
         <div className="flex flex-col gap-2 max-w-sm">
           <div className="flex gap-1 items-center">
             <Image src={logo} alt={"logo"} />
-            <TextElement type={"heading-xs"}>ixidocs</TextElement>
+            <TextElement type={"heading-xs"}>Ixian Docs</TextElement>
           </div>
           <div className="flex flex-col gap-2">
             <TextElement type={"label-md"}>
