@@ -119,9 +119,9 @@ If the contact does not exist:
 ## Behavioral Notes
 
 *   **`appId` vs. `protocolId`:** This is the most important concept for this endpoint.
-    *   **`appId`:** Use this to identify a specific app. Currently the node hashes this string to create a `session_id`.
-    *   **`protocolId`:** Use this for general, non-app specific communication. The node hashes this string to create a `protocol_id`. For example, `protocolId: "tic-tac-toe-protocol"` could be used to send invites or broadcast a user's general status for that protocol/application.
+    *   **`appId`:** Use this to broadcast data to a specific app. Currently the node hashes this string to create a `session_id`.
+    *   **`protocolId`:** Use this for general, non-app specific communication. The node hashes this string to create a `protocol_id`. For example, `protocolId: "tic-tac-toe-protocol"` could be used to broadcast to any app supporting the "tic-tac-toe-protocol", instead of locking it down to a specific app.
 *   **Data Encoding:** The `data` parameter is sent as a standard UTF-8 string. It is often used to send serialized data formats like JSON.
 *   **No Local Persistence:** This method dispatches data to the network but does not save it to the local chat history. The calling application is responsible for managing its own state and persistence.
 *   **Prerequisite:** A secure communication channel must be fully established with the contact (`approved: true`).
-*   **End-to-End Encryption:** The data payload is fully end-to-end encrypted before transmission over the S2 network.
+*   **Dual End-to-End Encryption:** The data payload is fully end-to-end encrypted before transmission over the S2 network.

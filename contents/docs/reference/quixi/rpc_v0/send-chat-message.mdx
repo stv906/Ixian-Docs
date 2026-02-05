@@ -108,7 +108,7 @@ If a required parameter like `message` is missing:
 ## Behavioral Notes
 
 *   **Prerequisite:** A secure communication channel must be fully established with the contact before messages can be sent. The contact must exist in the local friend list and have a status of `approved`.
-*   **End-to-End Encryption:** The `message` content is encrypted locally using the established session keys before being transmitted. Only the intended recipient can decrypt it.
+*   **Dual End-to-End Encryption:** The `message` content is encrypted locally using the established session keys before being transmitted. Only the intended recipient can decrypt it.
 *   **Local Persistence:** The message is added to the node's local message history for that contact *before* it is sent over the network. A successful API response confirms the message has been queued for sending, not that it has been delivered.
 *   **Channels:** Channels are logical streams within a single contact connection, allowing for different types of communication (e.g., chat, file transfers, application data) to be multiplexed. Channel `0` is typically used for standard text chat.
 *   **Asynchronous Delivery:** Network delivery is asynchronous. The actual time of delivery depends on network conditions and the recipient's online status.

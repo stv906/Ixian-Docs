@@ -111,5 +111,5 @@ If a required parameter like `data` is missing:
 *   **Structured Data vs. Chat:** This endpoint is for application-to-application communication. The `data` is a raw byte payload (sent as hex) and is not intended for direct display as a chat message. Use `sendChatMessage` for human-readable text.
 *   **No Local Persistence:** Unlike `sendChatMessage`, this method does **not** automatically save the message to the local history. It is a "fire-and-forget" dispatch of a data packet to the network. The calling application is responsible for any desired local persistence.
 *   **Prerequisite:** A secure communication channel must be fully established with the contact (`approved: true`).
-*   **End-to-End Encryption:** The `data` payload is end-to-end encrypted using the established session keys before being transmitted over the S2 network.
+*   **Dual End-to-End Encryption:** The `data` payload is end-to-end encrypted using the established session keys before being transmitted over the S2 network.
 *   **Channels:** Channels allow for multiplexing different streams of application data. For example, channel `0` might be for chat, while channel `1` is used for custom application signals sent via this method.

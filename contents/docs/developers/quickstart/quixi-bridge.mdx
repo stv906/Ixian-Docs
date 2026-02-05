@@ -64,15 +64,15 @@ Edit `ixian.cfg`:
 # Network settings - choose one:
 networkType = mainnet
 # Mainnet (production):
-addPeer = seed1.ixian.io:10234
+# addPeer = seed1.ixian.io:10234
 # Testnet (testing with real network):
-# addPeer = seedtest1.ixian.io:11234
+# addTestnetPeer = seedtest1.ixian.io:11234
 # Regtest (local Docker sandbox):
-# addPeer = 10.24.231.1:10234
+# addTestnetPeer = 10.24.231.1:10234
 
 # API settings
 apiPort = 8001                      # REST API port
-apiBind = 127.0.0.1                 # Bind to localhost (use 0.0.0.0 for public)
+apiBind = http://127.0.0.1:8001/         # Bind to localhost (use 0.0.0.0 for public)
 apiAllowIp = *                      # Allow all IPs (* means all, or comma-separated list)
 addApiUser = admin:password123      # Basic auth credentials
 
@@ -95,7 +95,7 @@ name = my-quixi
 
 ### Important Security Notes
 - Change default `addApiUser` credentials
-- Use `apiBind = 127.0.0.1` unless you need external access
+- Use `apiBind = http://127.0.0.1:8001/` unless you need external access
 - For production, use proper authentication and proxy with TLS
 - Keep your wallet file secure (contains private keys)
 
@@ -748,7 +748,7 @@ if __name__ == "__main__":
 ### Cannot connect to peers
 - Verify `networkType = testnet` for testnet or `mainnet` for mainnet
 - Check firewall settings
-- Try different seed nodes in `addPeer` setting
+- Try different seed nodes in `addPeer` or `addTestnetPeer` setting
 
 ### MQTT/RabbitMQ connection fails
 - Verify broker is running: `systemctl status mosquitto` or `systemctl status rabbitmq-server`

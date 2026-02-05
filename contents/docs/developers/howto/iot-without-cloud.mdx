@@ -76,7 +76,7 @@ You build a smart device. It needs to communicate. Cloud IoT pricing varies dram
 **No vendor lock-in** - You control everything  
 **Can't be deprecated** - Decentralized network  
 **No central points of failure** - Network resilience through distributed architecture  
-**Privacy by default** - End-to-end encrypted (dual AES-256-GCM + ChaCha20-Poly1305)  
+**Privacy by default** - End-to-end encrypted (AES-256-GCM + ChaCha20-Poly1305)  
 **Works offline** - Local network P2P  
 **Post-quantum secure** - Production ML-KEM (FIPS 203) + RSA-4096 + ECDH  
 **Starling scaling** - Sector-based routing enables billion-device scalability  
@@ -206,13 +206,13 @@ Create `ixian.cfg`:
 
 ```ini
 # Network settings (mainnet)
-addPeer = seed1.ixian.io:10234
-# For testnet, use: addPeer = seedtest1.ixian.io:11234
-# For local Regtest (Docker), use: addPeer = 10.24.231.1:10234
+# addPeer = seed1.ixian.io:10234
+# For testnet, use: addTestnetPeer = seedtest1.ixian.io:11234
+# For local Regtest (Docker), use: addTestnetPeer = 10.24.231.1:10234
 
 # API settings
 apiPort = 8001
-apiBind = 127.0.0.1
+apiBind = http://127.0.0.1:8001/
 addApiUser = admin:changeme123
 
 # MQTT integration
@@ -521,7 +521,7 @@ Device: 🤖 Available commands:
 ```
 
 **Total latency:** ~20ms-1s for worldwide communication  
-**Security:** Post-quantum encrypted end-to-end (dual AES-256 + ChaCha20-Poly1305)  
+**Security:** Post-quantum encrypted end-to-end (AES-256 + ChaCha20-Poly1305)  
 **Cost:** $0  
 
 ### QuIXI's Role
@@ -650,7 +650,7 @@ Cloud costs depend on your usage and scale:
 |---------|---------|-------------|
 | Authentication | X.509 certs | Cryptographic addresses |
 | Key Exchange | TLS 1.3 | Hybrid post-quantum (RSA-4096+ECDH+ML-KEM-1024) |
-| Data encryption | AES-256 | Dual AES-256-GCM + ChaCha20-Poly1305 (layered) |
+| Data encryption | AES-256 | AES-256-GCM + ChaCha20-Poly1305 (layered) |
 | Trust model | AWS controls CAs | Self-authenticated (no third parties) |
 | Certificate expiry | Manual renewal | No certificates needed |
 | Quantum-resistant | No | Yes (ML-KEM-1024 per NIST FIPS 203) |

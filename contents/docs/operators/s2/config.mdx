@@ -22,8 +22,8 @@ The file uses a `key = value` format.
 | `apiPort` | `8001` | The local port for the JSON-RPC API. |
 | `externalIp` | `203.0.113.42`| Your node's public IP address. Critical for other nodes to connect to you. |
 | `apiAllowIp` | `127.0.0.1` | **Security:** Whitelists an IP to access the API. Use multiple lines for multiple IPs. |
-| `apiBind` | `127.0.0.1` | **Security:** Binds the API to a specific local IP. `127.0.0.1` is recommended for security. |
-| `addPeer` | `192.168.1.10:10234`| The address of an initial node to connect to. Can be used multiple times. |
+| `apiBind` | `http://127.0.0.1:8001/` | **Security:** Binds the API to a specific local IP. `127.0.0.1` is recommended for security. |
+| `addTestnetPeer` | `192.168.1.10:10234`| The address of an initial node to connect to. Can be used multiple times. |
 | `logVerbosity`| `14` | Sets logging detail (Info=2, Warn=4, Error=8). `14` is a good default (2+4+8). |
 
 

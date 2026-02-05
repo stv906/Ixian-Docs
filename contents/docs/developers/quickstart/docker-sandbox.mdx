@@ -132,12 +132,12 @@ The sandbox uses Docker's internal networking with port mapping:
 - `10.24.231.1:10234` - DLT Node 1 P2P port
 - `10.24.232.128:10235` - DLT Node 2 P2P port
 - `10.24.232.129+:10600-10609` - S2 nodes P2P ports
-- Use these in your app's `addPeer` or connection configuration
+- Use these in your app's `addTestnetPeer` or connection configuration
 
 **Example configurations:**
 ```ini
 # QuIXI config (connecting to sandbox)
-addPeer = 10.24.231.1:10234
+addTestnetPeer = 10.24.231.1:10234
 networkType = regtest
 
 # API testing from host
