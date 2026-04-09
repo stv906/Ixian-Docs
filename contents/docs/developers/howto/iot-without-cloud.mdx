@@ -172,7 +172,7 @@ sudo apt update && sudo apt upgrade -y
 #### 2. Install Dependencies
 
 ```bash
-# Install .NET 8
+# Install .NET 10
 curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0
 echo 'export DOTNET_ROOT=$HOME/.dotnet' >> ~/.bashrc
 echo 'export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools' >> ~/.bashrc
@@ -197,7 +197,7 @@ git clone https://github.com/ixian-platform/QuIXI.git
 cd QuIXI
 dotnet build -c Release
 
-cd QuIXI/bin/Release/net8.0
+cd QuIXI/bin/Release/net10.0
 ```
 
 #### 4. Configure QuIXI
@@ -420,7 +420,7 @@ Create `start.sh`:
 #!/usr/bin/env bash
 
 # Start QuIXI in background
-cd ~/QuIXI/QuIXI/bin/Release/net8.0
+cd ~/QuIXI/QuIXI/bin/Release/net10.0
 ./QuIXI &
 QUIXI_PID=$!
 
