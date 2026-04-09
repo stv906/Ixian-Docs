@@ -4,7 +4,7 @@ description: Responds to a transaction request with a chunk of full transaction 
 status: Planned Upgrade
 ---
 
-The `transactionsChunk3` message is the response to various transaction requests, including `getTransactions2` and `getRelevantBlockTransactions`. It contains a batch of complete, serialized transaction objects.
+The `transactionsChunk3` message is the response to various transaction requests, including `getTransactions2` and `getBlockHeaders4`. It contains a batch of complete, serialized transaction objects.
 
 If the total number of transactions to be sent is large, they will be split across multiple `transactionsChunk3` messages to respect the network's maximum message size.
 

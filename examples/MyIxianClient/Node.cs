@@ -559,7 +559,7 @@ namespace IxianClient
                         HandleKeepAlivePresence(data, endpoint);
                         break;
 
-                    case ProtocolMessageCode.compactBlockHeaders1:
+                    case ProtocolMessageCode.blockHeaders4:
                         {
                             using (MemoryStream m = new MemoryStream(data))
                             {

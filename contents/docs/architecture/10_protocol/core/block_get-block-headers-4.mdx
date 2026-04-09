@@ -1,10 +1,10 @@
 ---
-title: getRelevantBlockTransactions (49)
+title: getBlockHeaders4 (49)
 description: Requests transactions that are relevant to a specific set of addresses over a range of blocks.
 status: Planned Upgrade
 ---
 
-The `getRelevantBlockTransactions` message is a specialized request designed for light clients. It allows a client to download only the transactions that are relevant to its own wallet addresses, significantly reducing bandwidth and storage requirements.
+The `getBlockHeaders4` message is a specialized request designed for light clients. It allows a client to download only the transactions that are relevant to its own wallet addresses, significantly reducing bandwidth and storage requirements.
 
 Relevance is determined by a **Cuckoo Filter**, a compact, probabilistic data structure that contains a representation of the client's wallet addresses.
 

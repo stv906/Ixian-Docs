@@ -63,15 +63,15 @@ The following rules apply to all message payloads unless specified otherwise.
 | Name | Code | Description |
 |------|------|--------------|
 | [getBlockHeaders3](./core/block_get-block-headers-3) | `46` | Requests block headers by height range or locator. |
+| [getBlockHeaders4](./core/block_get-block-headers-4) | `49` | Requests block headers by height range or locator. |
 | [blockHeaders3](./core/block_block-headers-3) | `47` | Returns full block headers. |
-| [compactBlockHeaders1](./core/block_compact-block-headers-1) | `50` | Returns compact (reduced) block headers for fast sync. |
+| [blockHeaders4](./core/block_block-headers-4) | `50` | Returns block headers for fast sync. |
 | [getBlock3](./core/block_get-block-3) | `55` | Requests full block by hash or height. |
 | [blockData2](./core/block_block-data-2) | `9` | Full block data response (transactions, signatures, metadata). |
 | [blockSignature2](./core/block_block-signature-2) | `13` | Announces or relays a block signature. |
 | [getBlockSignatures2](./core/block_get-block-signatures-2) | `14` | Requests block signatures for a specific block. |
 | [getSignatures3](./core/block_get-signatures-3) | `15` | Requests signatures using the latest format. |
 | [signaturesChunk2](./core/block_signatures-chunk-2) | `17` | Chunked response containing one or more signatures. |
-| [getRelevantBlockTransactions](./core/block_get-relevant-block-transactions) | `49` | Requests only transactions relevant to a peer for a given block. |
 
 ---
 
