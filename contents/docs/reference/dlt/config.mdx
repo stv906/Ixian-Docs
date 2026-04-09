@@ -38,6 +38,8 @@ dataFolderPath = /opt/ixian/data
 | `networkType` | `string` | Sets the network to operate on. Can be `mainnet`, `testnet`, or `regtest`. |
 | `externalIp` | `string` | The node's public IP address. Overrides automatic detection. |
 | `checksumLock`| `string` | A custom string for the seeding checksum, used only for private networks. |
+| `wallet` | `filepath` | Specifies the path to the wallet file (default: `ixian.wal`). |
+| `walletPassword`| `password` | Provides the wallet password. |
 
 ### Network & API Options
 
@@ -65,7 +67,8 @@ dataFolderPath = /opt/ixian/data
 | `logFolderPath` | `filepath` | Specifies the directory to store log files. |
 | `activityFolderPath` | `filepath` | Specifies the directory to store activity data. |
 | `blockStorage` | `string` | The storage engine for blocks and transactions. Can be `SQLite` or `RocksDB`. |
-| `maxDatabaseCache`| `ulong` | The maximum RAM in bytes to allocate for the RocksDB cache. |
+| `blocksDbCache` | `ulong` | The maximum RAM in bytes to allocate for the RocksDB Blocks cache. |
+| `activityDbCache` | `ulong` | The maximum RAM in bytes to allocate for the RocksDB Activity cache. |
 
 ### Node Behavior Options
 
@@ -128,7 +131,8 @@ Command-line arguments are processed after the configuration file and will overr
 | `--dataFolderPath` | `filepath` | Specifies the directory for blockchain data. |
 | `--logFolderPath` | `filepath` | Specifies the directory for log files. |
 | `--activityFolderPath` | `filepath` | Specifies the directory for activity data. |
-| `--maxDatabaseCache` | `bytes` | Sets the maximum RAM in bytes to use for the RocksDB cache. |
+| `--blocksDbCache` | `ulong` | The maximum RAM in bytes to allocate for the RocksDB Blocks cache. |
+| `--activityDbCache` | `ulong` | The maximum RAM in bytes to allocate for the RocksDB Activity cache. |
 | `--verifyStorage`| - | Performs a full integrity check of the local blockchain storage on startup. |
 | `--optimizeDBStorage`| - | Manually triggers a compaction of all databases before the node starts. This can take a significant amount of time. |
 
