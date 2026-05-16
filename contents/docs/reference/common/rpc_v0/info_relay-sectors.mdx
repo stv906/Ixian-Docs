@@ -1,0 +1,68 @@
+---
+title: relaySectors
+description: Retrieves a debug dump of the relay sectors.
+status: Finalized
+---
+
+## Introduction
+
+The `relaySectors` method is an information endpoint that provides a debug dump of the node's internal relay sectors. Relay sectors organize nodes within the P2P network to optimize message routing and bandwidth.
+
+This endpoint is primarily intended for network diagnostics and debugging.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /relaySectors
+Content-Type: application/json
+
+{
+  "method": "relaySectors",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /relaySectors
+```
+
+---
+
+## Response
+
+The response is an object representing the internal state of the relay sectors.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `object` | An object containing the debug dump of the relay sectors, including sector assignments and nodes. |
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "sectors": [
+        // sector data
+    ]
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Debug Tool:** The structure of the returned `result` object is subject to change depending on internal implementation details, as it is a debug dump. It should not be relied upon for critical production logic.

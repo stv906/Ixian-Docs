@@ -20,18 +20,19 @@ Requests can be made using either `HTTP POST` with a JSON body (recommended for 
 
 | Name               | Type     | Required | Description                                                                                                                                                             |
 | :----------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. See **Custom Formats** below for details.                                                                            |
+| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. The address can be a standard Ixian address or an [Extended Address](../../../architecture/10_data-structures/extended-addresses). See **Custom Formats** below for details.                                                                            |
 | `from`             | `string` | No       | **Advanced.** A hyphen-separated list of `address_amount` pairs to use as inputs. If omitted, the node will automatically select inputs from the specified wallet.      |
 | `wallet`           | `string` | No       | The base58-encoded address of the wallet to use for signing and sourcing funds. Required if the node manages multiple wallets.                                          |
 | `primaryAddress`   | `string` | No       | If the wallet has multiple keys, this specifies which address to use. Defaults to the wallet's primary address.                                                          |
 | `fee`              | `string` | No       | A specific `IxiNumber` fee for the transaction. If omitted, the fee is calculated automatically based on the final transaction size.                                  |
 | `autofee`          | `string` | No       | If `"true"` and `from` is specified, the final transaction fee is automatically added to the amount of the *first* input in the `from` list. See **Behavioral Notes**. |
 | `relayNodeAddress` | `string` | No       | **Client-only.** The address of a specific S2 node to use for relaying the transaction. If omitted, the client selects a random connected node.                       |
+| `requestId`        | `string` | No       | Optional request identifier for tracking the transaction.                                                                                                               |
 
 ### Custom `to` and `from` Format
 
 The `to` and `from` parameters use a special string format to encode multiple recipients or inputs:
-*   Each entry is composed of an `address` and an `amount` separated by an underscore (`_`).
+*   Each entry is composed of an `address` (which can be a standard address or an Extended Address) and an `amount` separated by an underscore (`_`).
 *   Multiple entries are separated by a hyphen (`-`).
 
 **Example:** `16NBH...Bo_1000-1EXSq...Wm_50.25` sends 1000 IXI to the first address and 50.25 IXI to the second.

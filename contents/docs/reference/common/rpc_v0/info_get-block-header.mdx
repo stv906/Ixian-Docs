@@ -1,0 +1,94 @@
+---
+title: getBlockHeader
+description: Retrieves the header information for a specific block.
+status: Finalized
+---
+
+## Introduction
+
+The `getBlockHeader` method is used to fetch the header data of a specific block by its height (number). It can return the data either as a structured JSON object or as a raw hex string representing the serialized block header.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name    | Type     | Required | Description                                                                                    |
+| :------ | :------- | :------- | :--------------------------------------------------------------------------------------------- |
+| `num`   | `string` | Yes      | The block height (block number) of the block to retrieve.                                      |
+| `bytes` | `string` | No       | If set to `"1"`, the endpoint returns the raw serialized block bytes as a hex string. Defaults to `"0"`. |
+
+### Example POST Request
+
+```json
+POST /getBlockHeader
+Content-Type: application/json
+
+{
+  "method": "getBlockHeader",
+  "params": {
+    "num": "68874"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /getBlockHeader?num=68874
+```
+
+---
+
+## Response
+
+The response format depends on the `bytes` parameter. By default, it returns a structured JSON dictionary of the block header.
+
+### Result Structure (bytes="0" or absent)
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `object` | A dictionary containing detailed fields from the block header, such as `Block Number`, `Version`, `Block Checksum`, `Timestamp`, and signatures. |
+
+### Example Success Response
+
+```json
+{
+  "result": {
+    "Block Number": "68874",
+    "Version": "7",
+    "Block Checksum": "932a7...8b82",
+    "Last Block Checksum": "1b2c3...4d5e",
+    "Timestamp": "1763041074",
+    "Transaction count": "1"
+    // ... other block fields
+  },
+  "id": 1,
+  "error": null
+}
+```
+
+### Result Structure (bytes="1")
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The hex-encoded string of the raw serialized block header. |
+
+### Example Error Response
+
+This error is returned if the requested block does not exist on the node.
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "Block not found."
+    }
+}
+```

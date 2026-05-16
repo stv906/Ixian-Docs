@@ -1,0 +1,63 @@
+---
+title: pauseClient
+description: Pauses both network and stream clients on the node.
+status: Finalized
+---
+
+## Introduction
+
+The `pauseClient` method is an administrative endpoint that pauses outgoing network client operations. Specifically, it suspends both the `NetworkClientManager` and the `StreamClientManager`. This halts the node from actively making outbound connections or sending data through these client managers, without fully shutting them down or dropping existing data structures.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /pauseClient
+Content-Type: application/json
+
+{
+  "method": "pauseClient",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /pauseClient
+```
+
+---
+
+## Response
+
+The response is a simple confirmation message indicating that the client operations are paused.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Network Client paused.". |
+
+### Example Success Response
+
+```json
+{
+  "result": "Network Client paused.",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Temporary Suspension:** Pausing the client modules temporarily halts their background operations. This is useful during high-load internal tasks, testing, or specific network debugging scenarios.
+*   **Reversible:** To unpause the client operations, use the corresponding [`resumeClient`](./node_resume-client) method.

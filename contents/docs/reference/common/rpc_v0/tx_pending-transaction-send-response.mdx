@@ -1,0 +1,90 @@
+---
+title: pendingTransactionSendResponse
+description: Responds to a pending transaction send request with payment instructions.
+status: Finalized
+---
+
+## Introduction
+
+The `pendingTransactionSendResponse` method is used in custom P2P transaction modes to respond to a pending transaction send request. It allows the node to provide specific payment instructions back to the requester.
+
+**Note:** This method is only available when the node is configured to use `P2PTransactionMode.Custom`.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name                  | Type     | Required | Description                                                                |
+| :-------------------- | :------- | :------- | :------------------------------------------------------------------------- |
+| `requestId`           | `string` | Yes      | The unique identifier of the pending request being responded to.           |
+| `paymentInstructions` | `string` | Yes      | The base58-encoded extended address containing the payment instructions. |
+
+### Example POST Request
+
+```json
+POST /pendingTransactionSendResponse
+Content-Type: application/json
+
+{
+  "method": "pendingTransactionSendResponse",
+  "params": {
+    "requestId": "a1b2c3d4...",
+    "paymentInstructions": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm_tag"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /pendingTransactionSendResponse?requestId=a1b2c3d4...&paymentInstructions=1EXSqPpj..._tag
+```
+
+---
+
+## Response
+
+The response confirms that the instructions were sent successfully.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | An empty string indicating success. |
+
+### Example Success Response
+
+```json
+{
+  "result": "",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error occurs if the node is not in Custom transaction mode.
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32600,
+        "message": "This method is only available in Custom transaction mode."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Mode Restriction:** The node's `p2pTransactionMode` configuration must be set to `Custom` for this method to function.
+*   **Request matching:** The provided `requestId` must correspond to a valid pending request currently tracked by the node's socket connections. If it does not exist, an error is returned.

@@ -1,0 +1,42 @@
+---
+title: submitSigningSolution
+description: Submits a proof-of-work signing solution for block signatures.
+---
+
+### `submitSigningSolution`
+
+Submits a calculated Proof-of-Work solution generated for signing a specific block.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `solution` | string | Base64-encoded string representing the PoW solution. |
+| `blockHeight` | string | The block height corresponding to the solution. |
+
+#### Returns
+
+| Type | Description |
+| ---- | ----------- |
+| null | Returns `null` on success, or an error object if missing parameters. |
+
+#### Example
+
+```json
+// Request
+{
+  "method": "submitSigningSolution",
+  "params": {
+    "solution": "base64encoded...",
+    "blockHeight": "10000"
+  },
+  "id": 1
+}
+
+// Response
+{
+  "result": null,
+  "error": null,
+  "id": 1
+}
+```

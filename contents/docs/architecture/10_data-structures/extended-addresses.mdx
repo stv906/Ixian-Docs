@@ -1,0 +1,132 @@
+---
+title: Extended Addresses
+description: Technical specification for Extended Addresses, which encode payment intent and routing information alongside a standard Ixian address.
+---
+
+An **Extended Address** is a superset of a standard [Ixian Address](./addresses). It wraps a base address with an additional **payment flag** and an optional **tag**, enabling the sender to express _how_ a payment should be delivered, not just _where_.
+
+Extended Addresses are the standard format used in the Ixian JSON API and in Spixi clients. A receiver that understands Extended Addresses can use the embedded flag to choose the most appropriate payment flow. For example, requesting a fresh one-time address from an online recipient, or delivering funds to an offline wallet through the S2 streaming network.
+
+> **Note:** Extended Addresses are a higher-level construct. They are never stored on-chain directly. The on-chain `toAddress` field in a transaction always contains a plain, base address (without checksum).
+
+---
+
+## Why Extended Addresses?
+
+Most blockchain systems rely on a single delivery path: the sender broadcasts a transaction to the network, and the recipient must actively poll the chain to discover it. Ixian takes a fundamentally different approach.
+
+Extended Addresses make it possible for the network to use a **dual-path delivery model**:
+
+| Path | Route | Purpose |
+| :--- | :---- | :------ |
+| **Blockchain path** | Sender → DLT network → all nodes | Consensus, finality, permanent record |
+| **Direct P2P path** | Sender → recipient (via S2 streaming) | Instant, reliable transaction delivery |
+
+Because the Extended Address encodes *how* to reach the recipient, the sender can simultaneously submit the transaction to the blockchain **and** deliver it directly to the recipient over the Ixian S2 streaming protocol.
+
+### Benefits
+
+*   **Push, not poll.** Recipients receive transactions as they happen. There is no need to scan blocks, maintain filters, or recover missed events.
+*   **Instant awareness.** The direct P2P path delivers the transaction to the recipient the moment it is broadcast, well before it settles on-chain.
+*   **Reduced infrastructure burden.** Light clients do not need to continuously sync block headers or maintain complex bloom/cuckoo filters just to detect incoming payments.
+*   **Decentralized SPV.** The combination of direct delivery and on-chain finality means any client, including a mobile wallet with no full node can achieve simplified payment verification without trusting a third-party server.
+
+> **Transactions are delivered, not discovered.**
+
+This design eliminates a whole class of problems common in traditional blockchain clients: missed transactions due to filter mismatches, delayed detection, re-org handling complexity, and reliance on centralized notification infrastructure.
+
+---
+
+## Payment Flags
+
+The `AddressPaymentFlag` value embedded in an Extended Address controls the payment delivery mode.
+
+| Value | Name | Description |
+| :---- | :--- | :---------- |
+| `0` | `Primary` | No special handling. The address is used exactly as a standard Ixian address. This is the default mode and is compatible with DLT nodes and legacy flows. |
+| `1` | `End2End` | The **recipient must be online**. The sender connects to the `RoutingAddress` via the S2 streaming protocol and requests one-time payment instructions. The recipient returns a fresh address for the actual funds transfer, improving privacy. An optional `tag` (e.g. an order ID) may be included. |
+| `2` | `OfflineTag` | The **recipient may be offline**. Funds are sent to the address directly, and the transaction is also forwarded via S2 for fast delivery. An optional `tag` may be included. Privacy is not enhanced. |
+| `3` | `OfflineAddress` | The **recipient may be offline**. A separate `RoutingAddress` is used to deliver the transaction over S2, while the `PaymentAddress` (which can be generated on-demand by the recipient) receives the actual funds. This provides both privacy and offline capability. |
+
+> **Note:** The `OfflineAddress` flag (`3`) is the only mode where `RoutingAddress` and `PaymentAddress` differ. In all other modes, both fields point to the same address.
+
+---
+
+## Constraints
+
+*   The `RoutingAddress` **must not** have a nonce (it must be a base address).
+*   The `tag` field is **limited to 16 bytes**.
+*   A `Primary` Extended Address with no tag is serialized as a plain address string with no extension suffix.
+
+---
+
+## Textual (Base58) Representation
+
+The textual form of an Extended Address is designed to be backward-compatible. A `Primary` address with no tag is indistinguishable from a plain address string.
+
+For all other flags or when a tag is present, an **extension suffix** is appended to the standard Base58 address string, separated by an underscore (`_`):
+
+```
+<Base58PaymentAddress>_<Base58ExtendedData>
+```
+
+For example:
+```
+2jqT...XYZ_3kRm...ABC
+```
+
+The suffix (`Base58ExtendedData`) is a Base58-encoded byte sequence with the following internal structure:
+
+| Part | Size | Description |
+| :--- | :--- | :---------- |
+| `flag` | 1 byte | The `AddressPaymentFlag` value (`IxiVarInt`). |
+| `routingAddress` | 33 or 45 bytes | *(Only present when `flag == OfflineAddress`)* The raw binary routing address **without** checksum. Its version byte determines the length (see [Address Versions](./addresses#address-versions)). |
+| `tag` | 0–16 bytes | *(Optional)* The raw tag bytes, present only if a tag was provided. |
+| `checksum` | 3 bytes | First 3 bytes of `sha3_512sqTrunc(flag \|\| [routingAddress] \|\| [tag])`, used to detect corruption. |
+
+### Parsing the Textual Form
+
+1.  Split the string on the first `_` delimiter.
+2.  The **left** part is a standard Base58-encoded payment address (with its own checksum). Decode and validate it normally per the [Address specification](./addresses#checksum-and-textual-representation).
+3.  The **right** part (if present) is the Base58-encoded extended data block. Decode it and:
+    a. Verify the 3-byte trailing checksum: `sha3_512sqTrunc(allBytes[0 .. len-3], 3)` must equal `allBytes[len-3 .. len]`.
+    b. Read `flag` as the first byte.
+    c. If `flag == OfflineAddress (3)`: read the routing address starting at byte 1 (its length is determined by `Address.addressVersionLengths[byte[1]]`), then read remaining bytes (if any) as the tag.
+    d. Otherwise: read remaining bytes (if any, before the checksum) as the tag.
+
+---
+
+## Binary Serialization
+
+The binary format is used in protocol messages and internal serialization (e.g., when passed as `IxiBytes`). It uses the standard `IxiBytes` framing for variable-length fields.
+
+| Field | Data Type | Description |
+| :--- | :--- | :---------- |
+| `paymentAddress` | `IxiBytes` | The payment address **without checksum**. |
+| `flag` | `IxiVarUInt` | The `AddressPaymentFlag` value. |
+| `routingAddress` | `IxiBytes` | *(Only present when `flag == OfflineAddress`)* The routing address **without checksum**. |
+| `tag` | `IxiBytes` | The optional tag bytes. Zero-length `IxiBytes` if no tag. |
+
+> **Note:** In the binary format, the `OfflineAddress` routing address is written as a separate `IxiBytes` field. This differs from the textual format, where the routing address length is inferred from its version byte.
+
+---
+
+## Behavioral Summary
+
+| Flag | RoutingAddress | PaymentAddress | Tag Allowed | Recipient Online? | Privacy |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| `Primary` | = PaymentAddress | base address | ✓ | No | Standard |
+| `End2End` | = PaymentAddress | base address | ✓ | **Required** | High (one-time address) |
+| `OfflineTag` | = PaymentAddress | base address | ✓ | No | Standard |
+| `OfflineAddress` | separate routing address | separate payment address | ✓ | No | High (separate routing) |
+
+---
+
+## Validation
+
+An Extended Address string can be validated by attempting to construct an `ExtendedAddress` object from it. Construction fails (throws) if:
+
+*   The payment address Base58 decoding fails or its checksum is invalid.
+*   The extended data checksum does not match.
+*   The tag exceeds 16 bytes.
+*   The routing address contains a nonce.

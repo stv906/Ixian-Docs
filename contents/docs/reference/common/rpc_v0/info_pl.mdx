@@ -1,0 +1,70 @@
+---
+title: pl
+description: Retrieves the complete Presence List currently known to the node.
+status: Finalized
+---
+
+## Introduction
+
+The `pl` method is an information endpoint that returns the complete Presence List currently tracked by the node. The Presence List contains active nodes on the network, their addresses, types, and connection details.
+
+---
+
+## Request
+
+This method does not accept any parameters. Requests can be made using either `HTTP POST` or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /pl
+Content-Type: application/json
+
+{
+  "method": "pl",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /pl
+```
+
+---
+
+## Response
+
+The response is an array containing all presences.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `array` | An array of `Presence` objects representing all known active nodes. |
+
+### Example Success Response
+
+```json
+{
+  "result": [
+    {
+      "wallet": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
+      "type": "M",
+      "address": "12.34.56.78:10000",
+      "device": "desktop",
+      "timestamp": 1678886400
+    }
+  ],
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Size Warning:** On a large network, the full Presence List can be substantial. Use this endpoint with caution as it returns the entire list at once.

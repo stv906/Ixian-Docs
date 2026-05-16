@@ -1,0 +1,40 @@
+---
+title: getSigningChallenge
+description: Retrieves the current signing PoW challenge for the node.
+---
+
+### `getSigningChallenge`
+
+Returns the current Proof-of-Work challenge required for generating block signatures. This is used by external miners assisting the node with block signatures.
+
+#### Parameters
+
+This endpoint does not require any parameters.
+
+#### Returns
+
+| Type | Description |
+| ---- | ----------- |
+| object | An object containing the current challenge parameters, typically returning `Node.signerPowMiner.GetChallenge()`. |
+
+#### Example
+
+```json
+// Request
+{
+  "method": "getSigningChallenge",
+  "params": {},
+  "id": 1
+}
+
+// Response
+{
+  "result": {
+    "blockNum": 10000,
+    "challenge": "base64encoded...",
+    "difficulty": "100"
+  },
+  "error": null,
+  "id": 1
+}
+```

@@ -1,0 +1,42 @@
+---
+title: regnamelist
+description: Returns a list of all Registered Name records stored on the node.
+---
+
+### `regnamelist`
+
+Returns an array of `RegisteredNameRecord` objects from the node's registered name state. This is primarily a debugging command.
+
+#### Parameters
+
+This endpoint does not require any parameters.
+
+#### Returns
+
+| Type | Description |
+| ---- | ----------- |
+| array | An array of `RegisteredNameRecord` objects representing registered names. |
+
+#### Example
+
+```json
+// Request
+{
+  "method": "regnamelist",
+  "params": {},
+  "id": 1
+}
+
+// Response
+{
+  "result": [
+    {
+      "name": "example",
+      "expirationBlock": 500000,
+      "address": "1xyz..."
+    }
+  ],
+  "error": null,
+  "id": 1
+}
+```

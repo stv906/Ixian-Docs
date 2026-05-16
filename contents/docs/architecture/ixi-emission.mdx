@@ -31,28 +31,25 @@ New IXI coins are generated with every new block. These "block rewards" are dist
 
 ### Signing Rewards
 
-The signing reward is the primary mechanism for new coin issuance and is distributed to the Master Nodes that validate and sign blocks. The reward structure began with an inflationary model tied to the circulating supply and later transitioned to a fixed schedule with periodic "halvings."
+The signing reward is the primary mechanism for new coin issuance and is distributed to the Master Nodes that validate and sign blocks. The reward structure began with an inflationary model tied to the circulating supply and later transitioned to a fixed schedule with periodic adjustments.
 
-| Block Number Range | Reward per Block | Description |
-| :--- | :--- | :--- |
-| **1 to 86,400** | `~0.1%` of supply (per-block) | Initial high-inflation phase. |
-| **86,401 to 1,801,999** | `~5%` of supply (per-block) | Main inflationary phase. |
-| **1,802,000 to 6,307,199** | `576 IXI` | First fixed reward era. |
-| **6,307,200 to 9,460,799** | `288 IXI` | First halving. |
-| **9,460,800 to 12,614,399**| `144 IXI` | Second halving. |
-| **12,614,400 to 15,767,999**| `72 IXI` | Third halving. |
-| **15,768,000 and above** | `36 IXI` | Final, perpetual signing reward. |
+| Block Number Range | Reward per Block |
+| :--- | :--- |
+| **1 to 86,400** | `~0.1%` of supply (per-block) |
+| **86,401 to 1,801,999** | `~5%` of supply (per-block) |
+| **1,802,000 to 6,307,199** | `576 IXI` |
+| **6,307,200 to 9,460,799** | `864 IXI` |
+| **9,460,800 to 12,614,399**| `432 IXI` |
+| **12,614,400 to 15,767,999**| `81 IXI` |
+| **15,768,000 to 105,119,999**| `45 IXI` |
+| **105,120,000 and above** | `36 IXI` |
 
 ### Argon2 Mining Rewards
 
-The mining reward was a legacy mechanism for initial coin distribution. This reward also followed a halving schedule and has a fixed expiration date.
+The mining reward was a legacy mechanism for initial coin distribution. This reward also has a fixed expiration date.
 
-| Block Number Range | Reward per Block | Description |
-| :--- | :--- | :--- |
-| **1 to 1,051,199** | Linearly increases from an initial base of `10 IXI`. The formula `((blockNum * 9) / 2 + 10000) * 100000` approximates this growth. | First year |
-| **1,051,200 to 1,801,999** | `4740.40 IXI` | Second year (pre-adjustment) |
-| **1,802,000 to 6,307,199** | `2304 IXI` | First fixed reward era. |
-| **6,307,200 to 9,460,799** | `1152 IXI` | First halving. |
-| **9,460,800 to 12,614,399**| `576 IXI` | Second halving. |
-| **12,614,400 to 105,119,999** | `18 IXI` | Final reward era. |
-| **105,120,000 and above** | `0 IXI` | Argon2 PoW mining is permanently expired. |
+| Block Number Range | Reward per Block |
+| :--- | :--- |
+| **1 to 1,051,199** | Linearly increases from an initial base of `10 IXI`. The formula `((blockNum * 9) / 2 + 10000) * 100000` approximates this growth. |
+| **1,051,200 to 1,801,999** | `4740.40 IXI` |
+| **1,802,000 to 6,307,199** | `2304 IXI` |

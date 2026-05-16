@@ -1,0 +1,63 @@
+---
+title: resumenetworkoperations
+description: Resumes network operations and connects to peers after a node was isolated.
+status: Finalized
+---
+
+## Introduction
+
+The `resumenetworkoperations` method is an administrative endpoint that reverses the effect of the [`isolate`](./node_isolate) command. It instructs the node to resume its peer-to-peer networking activities and begin connecting to the network again.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /resumenetworkoperations
+Content-Type: application/json
+
+{
+  "method": "resumenetworkoperations",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /resumenetworkoperations
+```
+
+---
+
+## Response
+
+The response is a confirmation message indicating that network operations have resumed.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Reconnecting to network now.". |
+
+### Example Success Response
+
+```json
+{
+  "result": "Reconnecting to network now.",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Restoring Connectivity:** This command reactivates the node's network modules, prompting it to discover peers and establish both incoming and outgoing connections.
+*   **Counterpart to Isolate:** This is the specific mechanism for bringing a node back online after it has been explicitly disconnected using the `isolate` command.

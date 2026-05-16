@@ -18,10 +18,12 @@ Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` wit
 
 ### Parameters
 
-| Name               | Type     | Required | Description                                                    |
-| :----------------- | :------- | :------- | :------------------------------------------------------------- |
-| `transaction`      | `string` | Yes      | The hex-encoded string of the raw, **signed** transaction.     |
-| `relayNodeAddress` | `string` | Yes      | The base58-encoded address of the S2 node to use for relaying the transaction to the DLT network. |
+| Name                 | Type     | Required | Description                                                    |
+| :------------------- | :------- | :------- | :------------------------------------------------------------- |
+| `transaction`        | `string` | Yes      | The hex-encoded string of the raw, **signed** transaction.     |
+| `relayNodeAddress`   | `string` | Yes      | The base58-encoded address of the S2 node to use for relaying the transaction to the DLT network. |
+| `extendedAddresses`  | `string` | Yes      | A base58-encoded extended address associated with the transaction. |
+| `requestId`          | `string` | No       | Optional request identifier for tracking the transaction.      |
 
 ### Example POST Request
 

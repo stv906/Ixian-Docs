@@ -25,7 +25,7 @@ This method accepts all the same transaction-building parameters as [`addTransac
 
 | Name               | Type     | Required | Description                                                                                                                                                             |
 | :----------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. See **Custom Formats** below.                                                                                        |
+| `to`               | `string` | Yes      | A hyphen-separated list of `address_amount` pairs. The address can be a standard Ixian address or an [Extended Address](../../../architecture/10_data-structures/extended-addresses). See **Custom Formats** below.                                                                                        |
 | `from`             | `string` | No       | **Advanced.** A list of `address_amount` pairs to use as inputs. If omitted, the node automatically selects inputs.                                                     |
 | `wallet`           | `string` | No       | The base58-encoded address of the wallet to use. Required if the node manages multiple wallets.                                                                         |
 | `primaryAddress`   | `string` | No       | Specifies which address to use from the wallet. Defaults to the primary address.                                                                                        |
@@ -39,7 +39,7 @@ This method accepts all the same transaction-building parameters as [`addTransac
 ### Custom `to` and `from` Format
 
 The `to` and `from` parameters use a special string format:
-*   Each entry is an `address` and an `amount` separated by an underscore (`_`).
+*   Each entry is an `address` (which can be a standard address or an Extended Address) and an `amount` separated by an underscore (`_`).
 *   Multiple entries are separated by a hyphen (`-`).
 
 **Example:** `16NBH...Bo_1000-1EXSq...Wm_50.25`

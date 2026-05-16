@@ -1,0 +1,87 @@
+---
+title: resolveExtendedAddress
+description: Resolves an Extended Address to process associated stream processor actions.
+status: Finalized
+---
+
+## Introduction
+
+The `resolveExtendedAddress` method queries the node's `CoreStreamProcessor` to resolve the final routing instructions for an Extended Address before making a transaction. This might involve P2P communication if the address requires dynamic resolution.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name              | Type     | Required | Description                                                                      |
+| :---------------- | :------- | :------- | :------------------------------------------------------------------------------- |
+| `extendedAddress` | `string` | Yes      | The base58-encoded extended address to resolve.                                  |
+| `amount`          | `string` | No       | The intended `IxiNumber` amount for the transaction. Defaults to `0`.            |
+
+### Example POST Request
+
+```json
+POST /resolveExtendedAddress
+Content-Type: application/json
+
+{
+  "method": "resolveExtendedAddress",
+  "params": {
+    "extendedAddress": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm...",
+    "amount": "10.0"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /resolveExtendedAddress?extendedAddress=1EXSqPpj49Zm...&amount=10.0
+```
+
+---
+
+## Response
+
+The response is a confirmation containing the resolved Extended Address.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The string representation of the resolved Extended Address. |
+
+### Example Success Response
+
+```json
+{
+  "result": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm...",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if the extended address string cannot be parsed.
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "extendedAddress parameter is invalid: ..."
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Asynchronous Processing:** This endpoint awaits the `CoreStreamProcessor`, which might require establishing stream connections and querying other nodes. The request may take some time to complete depending on network conditions.

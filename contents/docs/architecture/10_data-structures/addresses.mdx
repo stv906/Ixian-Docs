@@ -93,3 +93,9 @@ Future address versions are planned to support post-quantum and other modern sig
 Every address has an associated **Sector Prefix**, which is a 10-byte identifier used for network-level routing or sharding. It is deterministically derived from the address itself.
 
 *   **Derivation:** `sectorPrefix = sha3_512Trunc(addressNoChecksum, 10)`
+
+---
+
+## See Also
+
+*   **[Extended Addresses](./extended-addresses)** - How a standard address is extended with a payment flag and optional tag to express delivery intent (online handshake, offline delivery, or enhanced privacy).

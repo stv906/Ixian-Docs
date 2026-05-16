@@ -23,6 +23,9 @@ These methods are used to control the node's process and manage its P2P network 
 | [`isolate`](./rpc_v0/node_isolate) | Immediately disconnects the node from all peers. |
 | [`blacklistPeer`](./rpc_v0/node_blacklist-peer) | Adds a peer's IP address to the blacklist, preventing future connections. |
 | [`clearPeerBlacklist`](./rpc_v0/node_clear-peer-blacklist) | Clears all entries from the peer blacklist. |
+| [`pauseClient`](./rpc_v0/node_pause-client) | Temporarily pauses a connected client. |
+| [`resumeClient`](./rpc_v0/node_resume-client) | Resumes a previously paused client connection. |
+| [`resumenetworkoperations`](./rpc_v0/node_resume-network-operations) | Resumes all network operations. |
 
 ---
 
@@ -38,6 +41,8 @@ These methods are used to handle the node's local wallets, including loading, un
 | [`generateNewAddress`](./rpc_v0/wallet_generate-new-address) | Generates a new address for the primary loaded wallet. |
 | [`getWalletBackup`](./rpc_v0/wallet_get-wallet-backup) | Retrieves a Base64-encoded backup of the primary wallet file. |
 | [`getViewingWallet`](./rpc_v0/wallet_get-viewing-wallet) | Creates a new wallet file that only has viewing permissions. |
+| [`extendAddress`](./rpc_v0/address_extend-address) | Creates an extended address. |
+| [`resolveExtendedAddress`](./rpc_v0/address_resolve-extended-address) | Resolves an extended address. |
 
 ---
 
@@ -53,6 +58,8 @@ These methods are used to create, sign, decode, and broadcast transactions to th
 | [`signRawTransaction`](./rpc_v0/tx_sign-raw-transaction) | Signs a raw, hex-encoded transaction with the primary wallet's key. |
 | [`sendRawTransaction`](./rpc_v0/tx_send-raw-transaction) | Broadcasts a signed, raw, hex-encoded transaction to the network. |
 | [`decodeRawTransaction`](./rpc_v0/tx_decode-raw-transaction) | Decodes a raw, hex-encoded transaction into its JSON representation. |
+| [`decodeTransaction`](./rpc_v0/tx_decode-transaction) | Decodes a transaction. |
+| [`pendingTransactionSendResponse`](./rpc_v0/tx_pending-transaction-send-response) | Retrieves the send response for a pending transaction. |
 
 ---
 
@@ -87,6 +94,10 @@ These methods are used to get status, balances, and other data from the node and
 | [`getPresence`](./rpc_v0/info_get-presence) | Retrieves the presence data for a specific Ixian address. |
 | [`getSectorNodes`](./rpc_v0/info_get-sector-nodes) | Retrieves the list of S2 nodes responsible for a given sector. |
 | [`activity2`](./rpc_v0/wallet_activity-2) | Retrieves the transaction history for a specific wallet address. |
+| [`activity`](./rpc_v0/wallet_activity) | Retrieves the transaction history. |
+| [`getBlockHeader`](./rpc_v0/info_get-block-header) | Retrieves the block header. |
+| [`pl`](./rpc_v0/info_pl) | Retrieves the presence list. |
+| [`relaySectors`](./rpc_v0/info_relay-sectors) | Retrieves relay sectors. |
 
 ---
 

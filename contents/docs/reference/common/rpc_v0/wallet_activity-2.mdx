@@ -59,18 +59,19 @@ The response format is a standard JSON-RPC object, regardless of whether the req
 
 ### Result: `ActivityObject` Structure
 
-| Name            | Type              | Description                                                                                                  |
-| :-------------- | :---------------- | :----------------------------------------------------------------------------------------------------------- |
-| `id`            | `string`          | A unique identifier for this activity entry. This value is used in the `fromId` parameter for pagination.      |
-| `seedHash`      | `string`          | The Base64-encoded seed hash of the associated wallet.                                                       |
-| `walletAddress` | `string`          | The base58-encoded address of the wallet this activity belongs to.                                           |
-| `addressList`   | `object`          | A map of related addresses to `IxiNumber` values involved in the activity.                                   |
-| `type`          | `integer`         | An enum value identifying the type of the activity. See the `ActivityType` table below.                        |
-| `data`          | `any \| null`     | Optional, type-specific data associated with the activity.                                                   |
-| `value`         | `IxiNumber`       | The primary value of the activity, represented as a string to preserve precision.                            |
-| `timestamp`     | `integer`         | The Unix Epoch timestamp (in seconds) when the event occurred.                                               |
-| `status`        | `integer`         | An enum value indicating the status of the activity. See the `ActivityStatus` table below.                     |
-| `blockHeight`   | `integer`         | The block number in which this activity was recorded.                                                        |
+| Name                 | Type              | Description                                                                                                  |
+| :------------------- | :---------------- | :----------------------------------------------------------------------------------------------------------- |
+| `id`                 | `string`          | A unique identifier for this activity entry. This value is used in the `fromId` parameter for pagination.      |
+| `seedHash`           | `string`          | The Base64-encoded seed hash of the associated wallet.                                                       |
+| `type`               | `integer`         | An enum value identifying the type of the activity. See the `ActivityType` table below.                        |
+| `timestamp`          | `integer`         | The Unix Epoch timestamp (in seconds) when the event occurred.                                               |
+| `status`             | `integer`         | An enum value indicating the status of the activity. See the `ActivityStatus` table below.                     |
+| `fromAddressList`    | `object`          | A map of sender addresses to their `IxiNumber` values involved in the activity.                               |
+| `toAddressList`      | `object`          | A map of recipient addresses to their `IxiNumber` values involved in the activity.                            |
+| `value`              | `IxiNumber`       | The primary value of the activity, represented as a string to preserve precision.                            |
+| `fee`                | `IxiNumber`       | The fee associated with the transaction, represented as a string.                                            |
+| `appliedBlockHeight` | `integer`         | The block number in which this activity was recorded.                                                        |
+| `transaction`        | `object \| null`  | The full transaction object associated with the activity, if available.                                      |
 
 ### Example Success Response
 
@@ -78,22 +79,25 @@ The response format is a standard JSON-RPC object, regardless of whether the req
 {
   "result": [
     {
-      "id": "stk-1000-1005-82WvDFcNVvrF5PQHZxWWSK6W38DBbnDqScr3fWwaHng2W3pTcSwsmzmzXSc9",
+      "id": "stk-478387-478392-22NsqTQCGkWa6gyRHYsQbbJNCvC8vVzer6WnV4g9ThuHDdtKkpcKGMfiYGneA",
       "seedHash": "AIeMKxG8QDs3a8fE0zmSKw==",
-      "walletAddress": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm",
-      "addressList": {
-        "1ixianinfinimine234234234234234234234234234242HP": "1000.00004400"
-      },
       "type": 201,
-      "data": null,
-      "value": "947.39176322",
-      "timestamp": 1760956674,
+      "timestamp": 1776981957,
       "status": 2,
-      "blockHeight": 1006
+      "fromAddressList": {
+        "1ixianinfinimine234234234234234234234234234242HP": "50991.87446676"
+      },
+      "toAddressList": {
+        "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm": "32920.16494997"
+      },
+      "value": "32920.16494997",
+      "fee": "0.00000000",
+      "appliedBlockHeight": 478393,
+      "transaction": null
     }
   ],
-  "id": 1,
-  "error": null
+  "error": null,
+  "id": null
 }
 ```
 
@@ -130,11 +134,14 @@ This error is returned if the node is not configured to provide the `ActivitySto
 
 ### `ActivityStatus`
 
-| Value | Name    | Description                                                 |
-| :---- | :------ | :---------------------------------------------------------- |
-| `1`   | Pending | The activity is not yet confirmed in the blockchain.        |
-| `2`   | Final   | The activity is finalized and included in the blockchain.   |
-| `3`   | Error   | The activity resulted in an error or was rejected.          |
+| Value | Name     | Description                                                 |
+| :---- | :------- | :---------------------------------------------------------- |
+| `1`   | Pending  | The activity is not yet confirmed in the blockchain.        |
+| `2`   | Final    | The activity is finalized and included in the blockchain.   |
+| `3`   | Expired  | The activity has expired.                                   |
+| `4`   | Reverted | The activity was reverted (e.g., due to a block reorg).     |
+| `5`   | Rejected | The activity was rejected.                                  |
+| `6`   | Unknown  | The activity status is unknown.                             |
 
 ---
 

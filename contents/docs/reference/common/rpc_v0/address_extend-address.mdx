@@ -1,0 +1,89 @@
+---
+title: extendAddress
+description: Constructs an Extended Address from its components.
+status: Finalized
+---
+
+## Introduction
+
+The `extendAddress` method is a utility endpoint that allows you to construct an Extended Address structure using a base address, a payment flag, and a specific tag. Extended addresses allow tagging payments with extra data, specific routing logic, and end-to-end communication routing.
+
+---
+
+## Request
+
+Requests can be made using either `HTTP POST` with a JSON body or `HTTP GET` with URL query parameters.
+
+### Parameters
+
+| Name             | Type     | Required | Description                                                                                             |
+| :--------------- | :------- | :------- | :------------------------------------------------------------------------------------------------------ |
+| `flag`           | `string` | Yes      | An integer representing the `AddressPaymentFlag` (e.g., Primary=0, End2End=1, OfflineTag=2, OfflineAddress=3). |
+| `tag`            | `string` | Yes      | A hex-encoded string to use as the tag for the extended address.                                        |
+| `paymentAddress` | `string` | No       | The base58-encoded Ixian address to use for payment. Required only if `flag` is `3` (OfflineAddress).     |
+
+### Example POST Request
+
+```json
+POST /extendAddress
+Content-Type: application/json
+
+{
+  "method": "extendAddress",
+  "params": {
+    "flag": "2",
+    "tag": "aabbccddeeff"
+  },
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /extendAddress?flag=2&tag=aabbccddeeff
+```
+
+---
+
+## Response
+
+The response is a confirmation containing the constructed Extended Address.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | The base58-encoded string representation of the constructed Extended Address. |
+
+### Example Success Response
+
+```json
+{
+  "result": "1EXSqPpj49ZmKiWF8stsMsMXVnSfkee7EzTaBakwNn9sJdaWm...",
+  "id": 1,
+  "error": null
+}
+```
+
+### Example Error Response
+
+This error is returned if a required parameter for the specified flag is missing.
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32602,
+        "message": "paymentAddress parameter is missing"
+    }
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Wallet Binding:** For `Primary`, `End2End`, and `OfflineTag` flags, the node automatically uses its primary wallet address as the routing address.
+*   **Flag Requirements:** The `OfflineAddress` flag strictly requires the `paymentAddress` parameter to define where the offline payment should be routed.

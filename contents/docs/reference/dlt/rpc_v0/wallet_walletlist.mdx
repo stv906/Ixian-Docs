@@ -1,0 +1,58 @@
+---
+title: walletlist
+description: Returns a list of wallets from the DLT node's memory.
+---
+
+### `walletlist`
+
+Returns a list of wallets currently stored in the node's wallet state. Note that this is primarily for debugging and returns a limited set of wallets (capped to 50).
+
+#### Parameters
+
+This endpoint does not require any parameters.
+
+#### Returns
+
+| Type | Description |
+| ---- | ----------- |
+| array | An array of wallet state objects. |
+
+#### Wallet Object
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `id` | string | The address of the wallet. |
+| `balance` | string | The balance of the wallet. |
+| `type` | string | The type of the wallet. |
+| `requiredSigs` | string | The number of required signatures for the wallet. |
+| `allowedSigners` | string | A list of allowed signers or `"null"`. |
+| `extraData` | string | Extra data associated with the wallet, or `"null"`. |
+| `publicKey` | string | The public key hash of the wallet, or `"null"`. |
+
+#### Example
+
+```json
+// Request
+{
+  "method": "walletlist",
+  "params": {},
+  "id": 1
+}
+
+// Response
+{
+  "result": [
+    {
+      "id": "1xyz...",
+      "balance": "100.00000000",
+      "type": "1",
+      "requiredSigs": "1",
+      "allowedSigners": "null",
+      "extraData": "null",
+      "publicKey": "a1b2c3d4..."
+    }
+  ],
+  "error": null,
+  "id": 1
+}
+```

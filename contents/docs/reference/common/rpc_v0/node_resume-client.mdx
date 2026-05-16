@@ -1,0 +1,62 @@
+---
+title: resumeClient
+description: Resumes network and stream clients after they have been paused.
+status: Finalized
+---
+
+## Introduction
+
+The `resumeClient` method is an administrative endpoint that reverses the effect of the [`pauseClient`](./node_pause-client) command. It instructs the `NetworkClientManager` and `StreamClientManager` to resume their normal background operations.
+
+---
+
+## Request
+
+The request takes no parameters. It can be made using either `HTTP POST` with an empty JSON body or `HTTP GET`.
+
+### Example POST Request
+
+```json
+POST /resumeClient
+Content-Type: application/json
+
+{
+  "method": "resumeClient",
+  "params": {},
+  "id": 1
+}
+```
+
+### Example GET Request
+
+```
+GET /resumeClient
+```
+
+---
+
+## Response
+
+The response is a confirmation message indicating that the client operations have resumed.
+
+### Result Structure
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `result` | `string` | A confirmation message, "Network Client resumed.". |
+
+### Example Success Response
+
+```json
+{
+  "result": "Network Client resumed.",
+  "id": 1,
+  "error": null
+}
+```
+
+---
+
+## Behavioral Notes
+
+*   **Restoring Operation:** This command reactivates the client background threads, allowing the node to once again actively manage its outbound connections and streams.

@@ -1,0 +1,37 @@
+---
+title: activity
+description: Deprecated. Retrieves historical activities.
+status: Finalized
+---
+
+## Introduction
+
+> [!WARNING]
+> This endpoint is deprecated and will always return an error. Please use the [`activity2`](./wallet_activity-2) endpoint instead.
+
+The `activity` method was previously used to query historical activities for a wallet. It has been replaced by `activity2`.
+
+---
+
+## Request
+
+Requests to this endpoint will be rejected.
+
+---
+
+## Response
+
+The response is always an error indicating that the endpoint is deprecated and instructing the caller to use `activity2`.
+
+### Example Error Response
+
+```json
+{
+    "result": null,
+    "id": 1,
+    "error": {
+        "code": -32600,
+        "message": "/activity has been deprecated, please use /activity2?wallet=&type=&count=&fromId=&descending="
+    }
+}
+```
